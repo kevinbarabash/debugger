@@ -24,21 +24,36 @@ define(function (require) {
         return b.objectExpression(props);
     }
 
-    var node;
+    var node, loc;
     var len = ast.program.body.length;
 
-    for (var i = 0; i < len; i++) {
-        var loc = ast.program.body[2 * i].loc;
+    loc = ast.program.body[0].loc;
+    node = b.expressionStatement(
+        b.yieldExpression(
+            createObjectExpression({
+                breakpoint: false,
+                start: createObjectExpression(loc.start),
+                end: createObjectExpression(loc.end)
+            }),
+            false
+        )
+    );
+    ast.program.body.splice(0, 0, node);
+
+    for (var i = 0; i < len - 1; i++) {
+        var loc = ast.program.body[2 * i + 2].loc;
+        var breakpoint = loc.start.line === 3;
         node = b.expressionStatement(
             b.yieldExpression(
                 createObjectExpression({
+                    breakpoint: breakpoint,
                     start: createObjectExpression(loc.start),
                     end: createObjectExpression(loc.end)
                 }),
                 false
             )
         );
-        ast.program.body.splice(2 * i + 1, 0, node);
+        ast.program.body.splice(2 * i + 2, 0, node);
     }
 
     var output = recast.print(ast).code;
@@ -56,13 +71,33 @@ define(function (require) {
     new Processing(canvas, sketchProc);
 
     var runner = createRunner(processing);
+
+    // TODO: export thes using requirejs
     window.step = function () {
         var result = runner.next();
         if (result.value) {
+            console.log(result);
             var stepCode = lines[result.value.start.line - 1];
             console.log("step: " + stepCode);
             return stepCode;
         }
+    };
+
+    window.run = function () {
+        var result = runner.next();
+        while (!result.done && !result.value.breakpoint) {
+            result = runner.next();
+        }
+        return result;
+    };
+
+    window.reset = function () {
+        with (processing) {
+            background(228);
+            fill(255, 255, 255);
+            rect(-10, -10, width + 20, height + 20);
+        }
+        runner = createRunner(processing);
     };
 
 });

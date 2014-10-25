@@ -7,13 +7,24 @@
     body {
       margin: 0;
     }
+    #debugControls {
+      padding: 10px;
+    }
+    button {
+      margin-right: 10px;
+    }
   </style>
   <script src="../bower_components/processing/processing.js"></script>
   <script src="../lib/recast.js"></script>
   <script src="../bower_components/requirejs/require.js"></script>
 </head>
 <body>
-<button id="stepButton">Step</button><span id="stepCode"></span><br>
+<div id="debugControls">
+  <button id="resetButton">Reset</button>
+  <button id="runButton">Run</button>
+  <button id="stepButton">Step</button>
+  <span id="stepCode"></span><br>
+</div>
 </body>
 </html>
 <script>
@@ -28,9 +39,31 @@
   require(["app"], function () {
     console.log("loaded");
 
-    var stepCode = document.getElementById("stepCode");
-    document.getElementById("stepButton").addEventListener("click", function (e) {
-        stepCode.innerText = step();
+    var stepCodeSpan = document.getElementById("stepCode");
+    var stepCodeButton = document.getElementById("stepButton");
+    var runButton = document.getElementById("runButton");
+
+    stepCodeButton.addEventListener("click", function (e) {
+      var stepCode = step();
+      if (stepCode) {
+        stepCodeSpan.innerText = stepCode;
+      } else {
+        stepCodeSpan.innerText = "";
+        runButton.setAttribute("disabled","");
+        stepCodeButton.setAttribute("disabled", "");
+      }
+    });
+    runButton.addEventListener("click", function (e) {
+      var result = run();
+      if (result.done) {
+        runButton.setAttribute("disabled","");
+        stepCodeButton.setAttribute("disabled", "");
+      }
+    });
+    document.getElementById("resetButton").addEventListener("click", function (e) {
+      reset();
+      runButton.removeAttribute("disabled");
+      stepCodeButton.removeAttribute("disabled");
     });
   });
 </script>
