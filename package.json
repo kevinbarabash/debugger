@@ -1,0 +1,27 @@
+{
+  "name": "js-step",
+  "version": "0.0.1",
+  "description": "Step through JavaScript using JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kevinb7/js-step.git"
+  },
+  "author": "Kevin Barabash <kevinb7@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kevinb7/js-step/issues"
+  },
+  "homepage": "https://github.com/kevinb7/js-step",
+  "dependencies": {
+    "recast": "^0.8.0"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.9",
+    "gulp-browserify": "^0.5.0",
+    "gulp-rename": "^1.2.0"
+  }
+}

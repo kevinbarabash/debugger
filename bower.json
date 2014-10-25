@@ -1,0 +1,21 @@
+{
+  "name": "js-step",
+  "version": "0.0.1",
+  "homepage": "https://github.com/kevinb7/js-step",
+  "authors": [
+    "Kevin Barabash <kevinb7@gmail.com>"
+  ],
+  "description": "Step through JavaScript using JavaScript",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "processing": "~1.4.8",
+    "requirejs": "~2.1.15"
+  }
+}
