@@ -10,7 +10,6 @@ code that you want to step through and communicate with js-step using postMessag
 - js-step is a work in progress and doesn't have support for a lot of things.
 
 ## TODO ##
-- automatic generation of debug code
 - interface to control execution
 - setting breakpoints
 - stepping inside user defined functions

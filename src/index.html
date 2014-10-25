@@ -8,13 +8,12 @@
       margin: 0;
     }
   </style>
-  <script src="../bower_components/escodegen/escodegen.browser.js"></script>
   <script src="../bower_components/processing/processing.js"></script>
   <script src="../lib/recast.js"></script>
   <script src="../bower_components/requirejs/require.js"></script>
 </head>
 <body>
-
+<button id="stepButton">Step</button><span id="stepCode"></span><br>
 </body>
 </html>
 <script>
@@ -28,5 +27,10 @@
 
   require(["app"], function () {
     console.log("loaded");
+
+    var stepCode = document.getElementById("stepCode");
+    document.getElementById("stepButton").addEventListener("click", function (e) {
+        stepCode.innerText = step();
+    });
   });
 </script>
