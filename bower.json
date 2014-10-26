@@ -15,7 +15,6 @@
     "tests"
   ],
   "dependencies": {
-    "processing": "~1.4.8",
-    "requirejs": "~2.1.15"
+    "processing": "~1.4.8"
   }
 }

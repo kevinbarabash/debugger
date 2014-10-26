@@ -1,4 +1,4 @@
-!function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.recast=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+!function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Stepper=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 
 },{}],2:[function(_dereq_,module,exports){
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
@@ -2236,8 +2236,8 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-}).call(this,_dereq_("MHxiDL"))
-},{"MHxiDL":9}],9:[function(_dereq_,module,exports){
+}).call(this,_dereq_("1YiZ5S"))
+},{"1YiZ5S":9}],9:[function(_dereq_,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2898,139 +2898,8 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-}).call(this,_dereq_("MHxiDL"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":10,"MHxiDL":9,"inherits":7}],12:[function(_dereq_,module,exports){
-(function (process){
-var types = _dereq_("./lib/types");
-var parse = _dereq_("./lib/parser").parse;
-var Printer = _dereq_("./lib/printer").Printer;
-
-function print(node, options) {
-    return new Printer(options).print(node);
-}
-
-function prettyPrint(node, options) {
-    return new Printer(options).printGenerically(node);
-}
-
-function run(transformer, options) {
-    return runFile(process.argv[2], transformer, options);
-}
-
-function runFile(path, transformer, options) {
-    _dereq_("fs").readFile(path, "utf-8", function(err, code) {
-        if (err) {
-            console.error(err);
-            return;
-        }
-
-        runString(code, transformer, options);
-    });
-}
-
-function defaultWriteback(output) {
-    process.stdout.write(output);
-}
-
-function runString(code, transformer, options) {
-    var writeback = options && options.writeback || defaultWriteback;
-    transformer(parse(code, options), function(node) {
-        writeback(print(node, options).code);
-    });
-}
-
-Object.defineProperties(exports, {
-    /**
-     * Parse a string of code into an augmented syntax tree suitable for
-     * arbitrary modification and reprinting.
-     */
-    parse: {
-        enumerable: true,
-        value: parse
-    },
-
-    /**
-     * Traverse and potentially modify an abstract syntax tree using a
-     * convenient visitor syntax:
-     *
-     *   recast.visit(ast, {
-     *     names: [],
-     *     visitIdentifier: function(path) {
-     *       var node = path.value;
-     *       this.visitor.names.push(node.name);
-     *       this.traverse(path);
-     *     }
-     *   });
-     */
-    visit: {
-        enumerable: true,
-        value: types.visit
-    },
-
-    /**
-     * Reprint a modified syntax tree using as much of the original source
-     * code as possible.
-     */
-    print: {
-        enumerable: true,
-        value: print
-    },
-
-    /**
-     * Print without attempting to reuse any original source code.
-     */
-    prettyPrint: {
-        enumerable: false,
-        value: prettyPrint
-    },
-
-    /**
-     * Customized version of require("ast-types").
-     */
-    types: {
-        enumerable: false,
-        value: types
-    },
-
-    /**
-     * Convenient command-line interface (see e.g. example/add-braces).
-     */
-    run: {
-        enumerable: false,
-        value: run
-    },
-
-    /**
-     * Useful utilities for implementing transformer functions.
-     */
-    Syntax: {
-        enumerable: false,
-        value: (function() {
-            var def = types.Type.def;
-            var Syntax = {};
-
-            Object.keys(types.namedTypes).forEach(function(name) {
-                if (def(name).buildable)
-                    Syntax[name] = name;
-            });
-
-            // These two types are buildable but do not technically count
-            // as syntax because they are not printable.
-            delete Syntax.SourceLocation;
-            delete Syntax.Position;
-
-            return Syntax;
-        })()
-    },
-
-    Visitor: {
-        enumerable: false,
-        value: _dereq_("./lib/visitor").Visitor
-    }
-});
-
-}).call(this,_dereq_("MHxiDL"))
-},{"./lib/parser":17,"./lib/printer":19,"./lib/types":20,"./lib/visitor":22,"MHxiDL":9,"fs":1}],13:[function(_dereq_,module,exports){
+}).call(this,_dereq_("1YiZ5S"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./support/isBuffer":10,"1YiZ5S":9,"inherits":7}],12:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var types = _dereq_("./types");
 var isArray = types.builtInTypes.array;
@@ -3338,7 +3207,7 @@ exports.printComments = function(comments, innerLines, options) {
     return concat(parts);
 };
 
-},{"./lines":14,"./types":20,"./util":21,"assert":2}],14:[function(_dereq_,module,exports){
+},{"./lines":13,"./types":19,"./util":20,"assert":2}],13:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var sourceMap = _dereq_("source-map");
 var normalizeOptions = _dereq_("./options").normalize;
@@ -4170,7 +4039,7 @@ Lp.concat = function(other) {
 // Lines.prototype will be fully populated.
 var emptyLines = fromString("");
 
-},{"./mapping":15,"./options":16,"./types":20,"./util":21,"assert":2,"private":44,"source-map":45}],15:[function(_dereq_,module,exports){
+},{"./mapping":14,"./options":15,"./types":19,"./util":20,"assert":2,"private":44,"source-map":45}],14:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var types = _dereq_("./types");
 var isString = types.builtInTypes.string;
@@ -4449,7 +4318,7 @@ function skipChars(
     return sourceCursor;
 }
 
-},{"./lines":14,"./types":20,"./util":21,"assert":2}],16:[function(_dereq_,module,exports){
+},{"./lines":13,"./types":19,"./util":20,"assert":2}],15:[function(_dereq_,module,exports){
 var defaults = {
     // If you want to use a different branch of esprima, or any other
     // module that supports a .parse function, pass that module object to
@@ -4529,7 +4398,7 @@ exports.normalize = function(options) {
     };
 };
 
-},{"esprima-fb":43}],17:[function(_dereq_,module,exports){
+},{"esprima-fb":43}],16:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var types = _dereq_("./types");
 var n = types.namedTypes;
@@ -4705,7 +4574,7 @@ function copyAst(node) {
     return node;
 }
 
-},{"./comments":13,"./lines":14,"./options":16,"./patcher":18,"./types":20,"assert":2}],18:[function(_dereq_,module,exports){
+},{"./comments":12,"./lines":13,"./options":15,"./patcher":17,"./types":19,"assert":2}],17:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var linesModule = _dereq_("./lines");
 var types = _dereq_("./types");
@@ -5026,7 +4895,7 @@ function findChildReprints(newPath, oldPath, reprints) {
     return true;
 }
 
-},{"./lines":14,"./types":20,"./util":21,"assert":2}],19:[function(_dereq_,module,exports){
+},{"./lines":13,"./types":19,"./util":20,"assert":2}],18:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var sourceMap = _dereq_("source-map");
 var printComments = _dereq_("./comments").printComments;
@@ -6250,7 +6119,7 @@ function maybeAddSemicolon(lines) {
     return lines;
 }
 
-},{"./comments":13,"./lines":14,"./options":16,"./patcher":18,"./types":20,"./util":21,"assert":2,"source-map":45}],20:[function(_dereq_,module,exports){
+},{"./comments":12,"./lines":13,"./options":15,"./patcher":17,"./types":19,"./util":20,"assert":2,"source-map":45}],19:[function(_dereq_,module,exports){
 var types = _dereq_("ast-types");
 var def = types.Type.def;
 
@@ -6263,7 +6132,7 @@ types.finalize();
 
 module.exports = types;
 
-},{"ast-types":37}],21:[function(_dereq_,module,exports){
+},{"ast-types":37}],20:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var getFieldValue = _dereq_("./types").getFieldValue;
 var sourceMap = _dereq_("source-map");
@@ -6406,7 +6275,7 @@ exports.composeSourceMaps = function(formerMap, latterMap) {
     return smg.toJSON();
 };
 
-},{"./types":20,"assert":2,"source-map":45}],22:[function(_dereq_,module,exports){
+},{"./types":19,"assert":2,"source-map":45}],21:[function(_dereq_,module,exports){
 var assert = _dereq_("assert");
 var Class = _dereq_("cls");
 var Node = _dereq_("./types").namedTypes.Node;
@@ -6526,7 +6395,138 @@ var Visitor = exports.Visitor = Class.extend({
     }
 });
 
-},{"./types":20,"assert":2,"cls":42}],23:[function(_dereq_,module,exports){
+},{"./types":19,"assert":2,"cls":42}],22:[function(_dereq_,module,exports){
+(function (process){
+var types = _dereq_("./lib/types");
+var parse = _dereq_("./lib/parser").parse;
+var Printer = _dereq_("./lib/printer").Printer;
+
+function print(node, options) {
+    return new Printer(options).print(node);
+}
+
+function prettyPrint(node, options) {
+    return new Printer(options).printGenerically(node);
+}
+
+function run(transformer, options) {
+    return runFile(process.argv[2], transformer, options);
+}
+
+function runFile(path, transformer, options) {
+    _dereq_("fs").readFile(path, "utf-8", function(err, code) {
+        if (err) {
+            console.error(err);
+            return;
+        }
+
+        runString(code, transformer, options);
+    });
+}
+
+function defaultWriteback(output) {
+    process.stdout.write(output);
+}
+
+function runString(code, transformer, options) {
+    var writeback = options && options.writeback || defaultWriteback;
+    transformer(parse(code, options), function(node) {
+        writeback(print(node, options).code);
+    });
+}
+
+Object.defineProperties(exports, {
+    /**
+     * Parse a string of code into an augmented syntax tree suitable for
+     * arbitrary modification and reprinting.
+     */
+    parse: {
+        enumerable: true,
+        value: parse
+    },
+
+    /**
+     * Traverse and potentially modify an abstract syntax tree using a
+     * convenient visitor syntax:
+     *
+     *   recast.visit(ast, {
+     *     names: [],
+     *     visitIdentifier: function(path) {
+     *       var node = path.value;
+     *       this.visitor.names.push(node.name);
+     *       this.traverse(path);
+     *     }
+     *   });
+     */
+    visit: {
+        enumerable: true,
+        value: types.visit
+    },
+
+    /**
+     * Reprint a modified syntax tree using as much of the original source
+     * code as possible.
+     */
+    print: {
+        enumerable: true,
+        value: print
+    },
+
+    /**
+     * Print without attempting to reuse any original source code.
+     */
+    prettyPrint: {
+        enumerable: false,
+        value: prettyPrint
+    },
+
+    /**
+     * Customized version of require("ast-types").
+     */
+    types: {
+        enumerable: false,
+        value: types
+    },
+
+    /**
+     * Convenient command-line interface (see e.g. example/add-braces).
+     */
+    run: {
+        enumerable: false,
+        value: run
+    },
+
+    /**
+     * Useful utilities for implementing transformer functions.
+     */
+    Syntax: {
+        enumerable: false,
+        value: (function() {
+            var def = types.Type.def;
+            var Syntax = {};
+
+            Object.keys(types.namedTypes).forEach(function(name) {
+                if (def(name).buildable)
+                    Syntax[name] = name;
+            });
+
+            // These two types are buildable but do not technically count
+            // as syntax because they are not printable.
+            delete Syntax.SourceLocation;
+            delete Syntax.Position;
+
+            return Syntax;
+        })()
+    },
+
+    Visitor: {
+        enumerable: false,
+        value: _dereq_("./lib/visitor").Visitor
+    }
+});
+
+}).call(this,_dereq_("1YiZ5S"))
+},{"./lib/parser":16,"./lib/printer":18,"./lib/types":19,"./lib/visitor":21,"1YiZ5S":9,"fs":1}],23:[function(_dereq_,module,exports){
 var types = _dereq_("../lib/types");
 var Type = types.Type;
 var def = Type.def;
@@ -10166,8 +10166,8 @@ function DeprecationError(namespace, message, stack) {
   return error
 }
 
-}).call(this,_dereq_("MHxiDL"))
-},{"./lib/compat":41,"MHxiDL":9,"events":6,"path":8}],39:[function(_dereq_,module,exports){
+}).call(this,_dereq_("1YiZ5S"))
+},{"./lib/compat":41,"1YiZ5S":9,"events":6,"path":8}],39:[function(_dereq_,module,exports){
 (function (Buffer){
 /*!
  * depd
@@ -19515,7 +19515,99 @@ function amdefine(module, requireFn) {
 
 module.exports = amdefine;
 
-}).call(this,_dereq_("MHxiDL"),"/node_modules/source-map/node_modules/amdefine/amdefine.js")
-},{"MHxiDL":9,"path":8}]},{},[12])
-(12)
+}).call(this,_dereq_("1YiZ5S"),"/../node_modules/recast/node_modules/source-map/node_modules/amdefine/amdefine.js")
+},{"1YiZ5S":9,"path":8}],55:[function(_dereq_,module,exports){
+var recast = _dereq_("recast");
+
+function Stepper(context) {
+    this.context = context;
+    this.lines = {};
+    this.b = recast.types.builders;
+}
+
+Stepper.prototype.load = function (code) {
+    this.debugCode = this.generateDebugCode(code);
+    this.stepIterator = ((new Function(this.debugCode))())(this.context);
+};
+
+Stepper.prototype.reset = function () {
+    this.stepIterator = ((new Function(this.debugCode))())(this.context);
+};
+
+Stepper.prototype.run = function () {
+    while (!this.halted()) {
+        this.stepOver();
+    }
+};
+
+Stepper.prototype.stepOver = function () {
+    return this.stepIterator.next();
+};
+
+Stepper.prototype.stepIn = function () {
+    throw "'stepIn' isn't implemented yet";
+};
+
+Stepper.prototype.stepOut = function () {
+    throw "'stepOut' isn't implemented yet";
+};
+
+
+Stepper.prototype.halted = function () {
+
+};
+
+Stepper.prototype.paused = function () {
+
+};
+
+
+Stepper.prototype.createObjectExpression = function (obj) {
+    var props = [];
+    for (var prop in obj) {
+        var val = typeof obj[prop] === 'object' ? obj[prop] : this.b.literal(obj[prop]);
+        props.push(this.b.property('init', this.b.literal(prop), val));
+    }
+    return this.b.objectExpression(props);
+};
+
+Stepper.prototype.generateDebugCode = function (code) {
+    var ast = recast.parse(code);
+
+    ast.program.body.forEach(function (statement) {
+        var loc = statement.loc;
+        if (loc !== null) {
+            this.lines[loc.start.line] = statement;
+        }
+    }, this);
+
+    var len = ast.program.body.length;
+    this.insertYield(ast.program, 0);
+    for (var i = 0; i < len - 1; i++) {
+        this.insertYield(ast.program, 2 * i + 2);
+    }
+
+    return "return function*(){\nwith(arguments[0]){\n"
+        + recast.print(ast).code + "\n}\n}"
+};
+
+Stepper.prototype.insertYield = function (program, index) {
+    var loc = program.body[index].loc;
+    var node = this.b.expressionStatement(
+        this.b.yieldExpression(
+            this.createObjectExpression({
+                breakpoint: false,
+                start: this.createObjectExpression(loc.start),
+                end: this.createObjectExpression(loc.end)
+            }),
+            false
+        )
+    );
+    program.body.splice(index, 0, node);
+};
+
+module.exports = Stepper;
+
+},{"recast":22}]},{},[55])
+(55)
 });
