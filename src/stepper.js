@@ -4,18 +4,17 @@ function Stepper(context) {
     this.context = context;
     this.lines = {};
     this.b = recast.types.builders;
-
-    this.done = false;
-    this.loc = null;
 }
 
 Stepper.prototype.load = function (code) {
     this.debugCode = this.generateDebugCode(code);
-    this.stepIterator = ((new Function(this.debugCode))())(this.context);
+    this.reset();
 };
 
 Stepper.prototype.reset = function () {
     this.stepIterator = ((new Function(this.debugCode))())(this.context);
+    this.done = false;
+    this.loc = null;
 };
 
 Stepper.prototype.run = function () {
