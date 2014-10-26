@@ -35,8 +35,8 @@
         }
     });
     runButton.addEventListener("click", function (e) {
-        var result = run();
-        if (result.done) {
+        stepper.run();
+        if (stepper.done) {
             runButton.setAttribute("disabled","");
             stepCodeButton.setAttribute("disabled", "");
         }

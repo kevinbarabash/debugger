@@ -26,14 +26,6 @@ window.step = function () {
     }
 };
 
-window.run = function () {
-    var result = stepper.stepOver();
-    while (!result.done && !result.value.breakpoint) {
-        result = stepper.stepOver();
-    }
-    return result;
-};
-
 window.reset = function () {
     with (processing) {
         background(228);

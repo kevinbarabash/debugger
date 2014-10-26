@@ -19523,6 +19523,9 @@ function Stepper(context) {
     this.context = context;
     this.lines = {};
     this.b = recast.types.builders;
+
+    this.done = false;
+    this.loc = null;
 }
 
 Stepper.prototype.load = function (code) {
@@ -19538,10 +19541,14 @@ Stepper.prototype.run = function () {
     while (!this.halted()) {
         this.stepOver();
     }
+    console.log("run finished");
 };
 
 Stepper.prototype.stepOver = function () {
-    return this.stepIterator.next();
+    var result = this.stepIterator.next();
+    this.done = result.done;
+    this.loc = result.value;
+    return result;
 };
 
 Stepper.prototype.stepIn = function () {
@@ -19554,7 +19561,7 @@ Stepper.prototype.stepOut = function () {
 
 
 Stepper.prototype.halted = function () {
-
+    return this.done;
 };
 
 Stepper.prototype.paused = function () {
