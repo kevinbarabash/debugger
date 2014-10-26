@@ -16,21 +16,41 @@ var code = "size(400, 400);\n" +
     "ellipse(200,200,50,50);";
 
 stepper.load(code);
+stepper.addBreakpoint(3);
 
 var lines = code.split("\n");
 
-window.step = function () {
+var stepCodeSpan = document.getElementById("stepCode");
+var stepCodeButton = document.getElementById("stepButton");
+var runButton = document.getElementById("runButton");
+
+stepCodeButton.addEventListener("click", function (e) {
     var result = stepper.stepOver();
     if (result.value) {
-        return lines[result.value.start.line - 1];
+        stepCodeSpan.innerText = lines[result.value.start.line - 1];
+    } else {
+        stepCodeSpan.innerText = "";
+        runButton.setAttribute("disabled","");
+        stepCodeButton.setAttribute("disabled", "");
     }
-};
+});
 
-window.reset = function () {
+runButton.addEventListener("click", function (e) {
+    stepper.run();
+    if (stepper.done) {
+        runButton.setAttribute("disabled","");
+        stepCodeButton.setAttribute("disabled", "");
+    }
+});
+
+document.getElementById("resetButton").addEventListener("click", function (e) {
     with (processing) {
         background(228);
         fill(255, 255, 255);
         rect(-10, -10, width + 20, height + 20);
     }
     stepper.reset();
-};
+
+    runButton.removeAttribute("disabled");
+    stepCodeButton.removeAttribute("disabled");
+});

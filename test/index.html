@@ -18,33 +18,3 @@
 </body>
 </html>
 <script src="test.js"></script>
-<script>
-
-    var stepCodeSpan = document.getElementById("stepCode");
-    var stepCodeButton = document.getElementById("stepButton");
-    var runButton = document.getElementById("runButton");
-
-    stepCodeButton.addEventListener("click", function (e) {
-        var stepCode = step();
-        if (stepCode) {
-            stepCodeSpan.innerText = stepCode;
-        } else {
-            stepCodeSpan.innerText = "";
-            runButton.setAttribute("disabled","");
-            stepCodeButton.setAttribute("disabled", "");
-        }
-    });
-    runButton.addEventListener("click", function (e) {
-        stepper.run();
-        if (stepper.done) {
-            runButton.setAttribute("disabled","");
-            stepCodeButton.setAttribute("disabled", "");
-        }
-    });
-    document.getElementById("resetButton").addEventListener("click", function (e) {
-        reset();
-        runButton.removeAttribute("disabled");
-        stepCodeButton.removeAttribute("disabled");
-    });
-
-</script>

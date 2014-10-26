@@ -19522,6 +19522,7 @@ var recast = _dereq_("recast");
 function Stepper(context) {
     this.context = context;
     this.lines = {};
+    this.yields = {};
     this.b = recast.types.builders;
 }
 
@@ -19538,7 +19539,12 @@ Stepper.prototype.reset = function () {
 
 Stepper.prototype.run = function () {
     while (!this.halted()) {
-        this.stepOver();
+        var result = this.stepOver();
+
+        if (result.value && result.value.breakpoint) {
+            console.log("breakpoint hit");
+            return;
+        }
     }
     console.log("run finished");
 };
@@ -19567,6 +19573,28 @@ Stepper.prototype.paused = function () {
 
 };
 
+Stepper.prototype.addBreakpoint = function (lineno) {
+    if (this.yields.hasOwnProperty(lineno)) {
+        var props = this.yields[lineno].argument.properties;
+        // TODO: replace with lodash
+        for (var i = 0; i < props.length; i++) {
+            var prop = props[i];
+            if (prop.key.value === "breakpoint") {
+                prop.value.value = true;
+
+                // TODO: figure out how to set breakpoints while stepping
+                this.debugCode = "return function*(){\nwith(arguments[0]){\n"
+                    + recast.print(this.ast).code + "\n}\n}";
+                this.stepIterator = ((new Function(this.debugCode))())(this.context);
+            }
+        }
+    }
+};
+
+Stepper.prototype.removeBreakpoint = function (lineno) {
+
+};
+
 
 Stepper.prototype.createObjectExpression = function (obj) {
     var props = [];
@@ -19577,24 +19605,25 @@ Stepper.prototype.createObjectExpression = function (obj) {
     return this.b.objectExpression(props);
 };
 
+// TODO: split this into generateAST and generateDebugCode
 Stepper.prototype.generateDebugCode = function (code) {
-    var ast = recast.parse(code);
+    this.ast = recast.parse(code);
 
-    ast.program.body.forEach(function (statement) {
+    this.ast.program.body.forEach(function (statement) {
         var loc = statement.loc;
         if (loc !== null) {
             this.lines[loc.start.line] = statement;
         }
     }, this);
 
-    var len = ast.program.body.length;
-    this.insertYield(ast.program, 0);
+    var len = this.ast.program.body.length;
+    this.insertYield(this.ast.program, 0);
     for (var i = 0; i < len - 1; i++) {
-        this.insertYield(ast.program, 2 * i + 2);
+        this.insertYield(this.ast.program, 2 * i + 2);
     }
 
     return "return function*(){\nwith(arguments[0]){\n"
-        + recast.print(ast).code + "\n}\n}"
+        + recast.print(this.ast).code + "\n}\n}";
 };
 
 Stepper.prototype.insertYield = function (program, index) {
@@ -19609,6 +19638,8 @@ Stepper.prototype.insertYield = function (program, index) {
             false
         )
     );
+
+    this.yields[loc.start.line] = node.expression;
     program.body.splice(index, 0, node);
 };
 
