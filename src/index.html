@@ -14,8 +14,8 @@
       margin-right: 10px;
     }
   </style>
+  <!--<script src="../lib/recast.js"></script>-->
   <script src="../bower_components/processing/processing.js"></script>
-  <script src="../lib/recast.js"></script>
   <script src="../bower_components/requirejs/require.js"></script>
 </head>
 <body>
@@ -30,9 +30,13 @@
 <script>
   requirejs.config({
     baseUrl: "./js",
+    shim: {
+      recast: {
+        exports: "recast"
+      }
+    },
     paths: {
-      esprima: "../../bower_components/esprima/esprima",
-      app: "../app"
+      recast: "../../lib/recast"
     }
   });
 
