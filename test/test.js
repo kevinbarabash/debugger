@@ -16,7 +16,8 @@ var code = "size(400, 400);\n" +
     "ellipse(200,200,50,50);";
 
 stepper.load(code);
-stepper.addBreakpoint(3);
+stepper.setBreakpoint(3);
+stepper.setBreakpoint(5);
 
 var lines = code.split("\n");
 

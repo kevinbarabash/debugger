@@ -1,9 +1,9 @@
-var recast = require("recast");
+/*global recast */
 
 function Stepper(context) {
     this.context = context;
     this.lines = {};
-    this.yields = {};
+    this.breakpoints = {};
     this.b = recast.types.builders;
 }
 
@@ -22,9 +22,11 @@ Stepper.prototype.run = function () {
     while (!this.halted()) {
         var result = this.stepOver();
 
-        if (result.value && result.value.breakpoint) {
-            console.log("breakpoint hit");
-            return;
+        if (result.value && result.value.lineno) {
+            if (this.breakpoints[result.value.lineno]) {
+                console.log("breakpoint hit");
+                return result;
+            }
         }
     }
     console.log("run finished");
@@ -54,26 +56,12 @@ Stepper.prototype.paused = function () {
 
 };
 
-Stepper.prototype.addBreakpoint = function (lineno) {
-    if (this.yields.hasOwnProperty(lineno)) {
-        var props = this.yields[lineno].argument.properties;
-        // TODO: replace with lodash
-        for (var i = 0; i < props.length; i++) {
-            var prop = props[i];
-            if (prop.key.value === "breakpoint") {
-                prop.value.value = true;
-
-                // TODO: figure out how to set breakpoints while stepping
-                this.debugCode = "return function*(){\nwith(arguments[0]){\n"
-                    + recast.print(this.ast).code + "\n}\n}";
-                this.stepIterator = ((new Function(this.debugCode))())(this.context);
-            }
-        }
-    }
+Stepper.prototype.setBreakpoint = function (lineno) {
+    this.breakpoints[lineno] = true;
 };
 
-Stepper.prototype.removeBreakpoint = function (lineno) {
-
+Stepper.prototype.clearBreakpoint = function (lineno) {
+    delete this.breakpoints[lineno];
 };
 
 
@@ -86,7 +74,6 @@ Stepper.prototype.createObjectExpression = function (obj) {
     return this.b.objectExpression(props);
 };
 
-// TODO: split this into generateAST and generateDebugCode
 Stepper.prototype.generateDebugCode = function (code) {
     this.ast = recast.parse(code);
 
@@ -112,16 +99,13 @@ Stepper.prototype.insertYield = function (program, index) {
     var node = this.b.expressionStatement(
         this.b.yieldExpression(
             this.createObjectExpression({
-                breakpoint: false,
-                start: this.createObjectExpression(loc.start),
-                end: this.createObjectExpression(loc.end)
+                lineno: loc.start.line
             }),
             false
         )
     );
 
-    this.yields[loc.start.line] = node.expression;
     program.body.splice(index, 0, node);
 };
 
-module.exports = Stepper;
+//module.exports = Stepper;
