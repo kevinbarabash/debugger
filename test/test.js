@@ -13,7 +13,9 @@ var code = "size(400, 400);\n" +
     "fill(255,0,0);\n" +
     "ellipse(100,100,50,50);\n" +
     "fill(0,0,255);\n" +
-    "ellipse(200,200,50,50);";
+    "for (var i = 0; i < 5; i++) {\n" +
+    "  ellipse(100 + i * 60,200,50,50);\n" +
+    "}";
 
 stepper.load(code);
 stepper.setBreakpoint(3);
@@ -28,7 +30,7 @@ var runButton = document.getElementById("runButton");
 stepCodeButton.addEventListener("click", function (e) {
     var result = stepper.stepOver();
     if (result.value) {
-        stepCodeSpan.innerText = lines[result.value.start.line - 1];
+        stepCodeSpan.innerText = lines[result.value.lineno - 1];
     } else {
         stepCodeSpan.innerText = "";
         runButton.setAttribute("disabled","");

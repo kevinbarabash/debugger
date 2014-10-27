@@ -9,6 +9,7 @@ function Stepper(context) {
 
 Stepper.prototype.load = function (code) {
     this.debugCode = this.generateDebugCode(code);
+    console.log(this.debugCode);
     this.reset();
 };
 
@@ -84,15 +85,45 @@ Stepper.prototype.generateDebugCode = function (code) {
         }
     }, this);
 
-    var len = this.ast.program.body.length;
-    this.insertYield(this.ast.program, 0);
-    for (var i = 0; i < len - 1; i++) {
-        this.insertYield(this.ast.program, 2 * i + 2);
-    }
+    this.handleProgram(this.ast.program);
 
     return "return function*(){\nwith(arguments[0]){\n"
         + recast.print(this.ast).code + "\n}\n}";
 };
+
+// TODO: create an Injector object
+// TODO: refactor to use ast-walker
+Stepper.prototype.handleProgram = function (program) {
+    // depth first
+    var i;
+    var len = program.body.length;
+
+    for (i = 0; i < len; i++) {
+        var statement = program.body[i];
+        if (statement.type === "ForStatement") {
+            this.handleForStatement(statement);
+        }
+    }
+
+    this.insertYield(program, 0);
+    for (i = 0; i < len - 1; i++) {
+        this.insertYield(program, 2 * i + 2);
+    }
+};
+
+Stepper.prototype.handleForStatement = function (forStatement) {
+    this.handleBlockStatement(forStatement.body);
+};
+
+Stepper.prototype.handleBlockStatement = function (blockStatement) {
+    var len = blockStatement.body.length;
+    this.insertYield(blockStatement, 0);    // is this necessary?
+    for (var i = 0; i < len - 1; i++) {
+        this.insertYield(blockStatement, 2 * i + 2);
+    }
+};
+
+//Stepper.prototype.handleFor
 
 Stepper.prototype.insertYield = function (program, index) {
     var loc = program.body[index].loc;
