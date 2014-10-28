@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <link rel="stylesheet" href="../bower_components/mocha/mocha.css"/>
+</head>
+<body>
+<div id="mocha"></div>
+<script src="../lib/recast.js"></script>
+<script src="../src/stepper.js"></script>
+<script src="../bower_components/mocha/mocha.js"></script>
+<script src="../bower_components/expect/index.js"></script>
+<script src="sinon.js"></script>
+<script>mocha.setup('bdd')</script>
+</body>
+</html>
+<script src="stepper-spec.js"></script>
+<script>
+
+//    mocha.checkLeaks();
+    if (window.mochaPhantomJS) {
+        mochaPhantomJS.run();
+    } else {
+        mocha.run();
+    }
+
+</script>

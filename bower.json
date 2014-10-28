@@ -16,5 +16,9 @@
   ],
   "dependencies": {
     "processing": "~1.4.8"
+  },
+  "devDependencies": {
+    "mocha": "~2.0.1",
+    "expect": "~0.3.1"
   }
 }

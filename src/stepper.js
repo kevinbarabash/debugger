@@ -9,7 +9,6 @@ function Stepper(context) {
 
 Stepper.prototype.load = function (code) {
     this.debugCode = this.generateDebugCode(code);
-    console.log(this.debugCode);
     this.reset();
 };
 
@@ -23,6 +22,7 @@ Stepper.prototype.run = function () {
     while (!this.halted()) {
         var result = this.stepOver();
 
+        // result returns the lineno of the next line
         if (result.value && result.value.lineno) {
             if (this.breakpoints[result.value.lineno]) {
                 console.log("breakpoint hit");
@@ -48,7 +48,6 @@ Stepper.prototype.stepOut = function () {
     throw "'stepOut' isn't implemented yet";
 };
 
-
 Stepper.prototype.halted = function () {
     return this.done;
 };
@@ -64,7 +63,6 @@ Stepper.prototype.setBreakpoint = function (lineno) {
 Stepper.prototype.clearBreakpoint = function (lineno) {
     delete this.breakpoints[lineno];
 };
-
 
 Stepper.prototype.createObjectExpression = function (obj) {
     var props = [];
