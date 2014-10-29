@@ -1,14 +1,38 @@
-/*global recast */
+/*global recast, esprima, escodegen */
+
+function buildYieldLineno(lineno) {
+    return {
+        type: "ExpressionStatement",
+        expression: {
+            type: "YieldExpression",
+            argument: {
+                type: "ObjectExpression",
+                properties: [{
+                    type: "Property",
+                    key: {
+                        type: "Identifier",
+                        name: "lineno"
+                    },
+                    value: {
+                        type: "Literal",
+                        value: lineno
+                    },
+                    kind: "init"
+                }]
+            }
+        }
+    }
+}
 
 function Stepper(context) {
     this.context = context;
     this.lines = {};
     this.breakpoints = {};
-    this.b = recast.types.builders;
 }
 
 Stepper.prototype.load = function (code) {
     this.debugCode = this.generateDebugCode(code);
+    console.log(this.debugCode);
     this.reset();
 };
 
@@ -64,29 +88,21 @@ Stepper.prototype.clearBreakpoint = function (lineno) {
     delete this.breakpoints[lineno];
 };
 
-Stepper.prototype.createObjectExpression = function (obj) {
-    var props = [];
-    for (var prop in obj) {
-        var val = typeof obj[prop] === 'object' ? obj[prop] : this.b.literal(obj[prop]);
-        props.push(this.b.property('init', this.b.literal(prop), val));
-    }
-    return this.b.objectExpression(props);
-};
 
 Stepper.prototype.generateDebugCode = function (code) {
-    this.ast = recast.parse(code);
+    this.ast = esprima.parse(code, { loc: true });
 
-    this.ast.program.body.forEach(function (statement) {
+    this.ast.body.forEach(function (statement) {
         var loc = statement.loc;
         if (loc !== null) {
             this.lines[loc.start.line] = statement;
         }
     }, this);
 
-    this.handleProgram(this.ast.program);
+    this.handleProgram(this.ast);
 
     return "return function*(){\nwith(arguments[0]){\n"
-        + recast.print(this.ast).code + "\n}\n}";
+        + escodegen.generate(this.ast) + "\n}\n}";
 };
 
 // TODO: create an Injector object
@@ -121,20 +137,9 @@ Stepper.prototype.handleBlockStatement = function (blockStatement) {
     }
 };
 
-//Stepper.prototype.handleFor
-
 Stepper.prototype.insertYield = function (program, index) {
     var loc = program.body[index].loc;
-    var node = this.b.expressionStatement(
-        this.b.yieldExpression(
-            this.createObjectExpression({
-                lineno: loc.start.line
-            }),
-            false
-        )
-    );
+    var node = buildYieldLineno(loc.start.line);
 
     program.body.splice(index, 0, node);
 };
-
-//module.exports = Stepper;

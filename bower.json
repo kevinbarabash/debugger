@@ -15,7 +15,9 @@
     "tests"
   ],
   "dependencies": {
-    "processing": "~1.4.8"
+    "processing": "~1.4.8",
+    "esprima": "~1.2.2",
+    "escodegen": "~1.4.1"
   },
   "devDependencies": {
     "mocha": "~2.0.1",

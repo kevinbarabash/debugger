@@ -16,9 +16,7 @@
     "url": "https://github.com/kevinb7/js-step/issues"
   },
   "homepage": "https://github.com/kevinb7/js-step",
-  "dependencies": {
-    "recast": "^0.8.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "gulp": "^3.8.9",
     "gulp-browserify": "^0.5.0",
