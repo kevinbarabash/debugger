@@ -506,5 +506,26 @@ describe('Stepper', function () {
             stepper.run();
             expect(context.rect.callCount).to.be(2);
         });
+
+        describe("Functions", function () {
+            beforeEach(function () {
+                var code = "var foo = function () {\n" +
+                    "  fill(255,0,0);\n" +
+                    "  rect(100,100,300,200);\n" +
+                    "};\n" +
+                    "foo();";
+
+                stepper.load(code);
+            });
+
+            it("should break inside functions", function () {
+                stepper.setBreakpoint(3);
+                stepper.run();
+                expect(context.fill.calledWith(255,0,0)).to.be(true);
+                expect(context.rect.callCount).to.be(0);
+                stepper.run();
+                expect(context.rect.calledWith(100,100,300,200)).to.be(true);
+            });
+        });
     });
 });
