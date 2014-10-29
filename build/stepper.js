@@ -284,6 +284,9 @@ var builder = {
     },
 
     createLiteral: function (value) {
+        if (value === undefined) {
+            throw "literal value undefined";
+        }
         return {
             type: "Literal",
             value: value
@@ -323,14 +326,23 @@ Injector.prototype.onExit = function(node) {
         for (i = 0; i < len - 1; i++) {
             this.insertYield(node, 2 * i + 2);
         }
+//    } else if (node.type === "BlockStatement") {
+//        len = node.body.length;
+//        for (i = 0; i < len - 1; i++) {
+//            this.insertYield(node, 2 * i + 1);
+//        }
     } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
         node.generator = true;
     } else if (node.type === "ExpressionStatement") {
         if (node.expression.type === "CallExpression") {
             var name = node.expression.callee.name;
-            if (!this.context[name]) {  // yield only if it's a user defined function
+            if (name !== undefined && !this.context[name]) {  // yield only if it's a user defined function
                 node.expression = builder.createYieldExpression(
-                    builder.createObjectExpression({ generator: node.expression })
+                    builder.createObjectExpression({
+                        generator: node.expression,
+                        lineno: node.loc.start.line,
+                        name: name  // so that we can display a callstack later
+                    })
                 );
             }
         }
@@ -348,14 +360,45 @@ Injector.prototype.insertYield = function (program, index) {
     program.body.splice(index, 0, node);
 };
 
+function Stack () {
+    this.values = [];
+}
+
+Stack.prototype.isEmpty = function () {
+    return this.values.length === 0;
+};
+
+Stack.prototype.push = function (value) {
+    this.values.push(value);
+};
+
+Stack.prototype.pop = function () {
+    return this.values.pop();
+};
+
+Stack.prototype.peek = function () {
+    return this.values[this.values.length - 1];
+};
+
 /*global recast, esprima, escodegen, Injector */
 
 function Stepper(context) {
+    if (!this.willYield()) {
+        throw "this browser is not supported";
+    }
     this.context = context;
     this.injector = new Injector(this.context);
     this.lines = {};
     this.breakpoints = {};
 }
+
+Stepper.prototype.willYield = function () {
+    try{
+        return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
+    }catch(e){
+        return false;
+    }
+};
 
 Stepper.prototype.load = function (code) {
     this.debugCode = this.generateDebugCode(code);
@@ -387,6 +430,29 @@ Stepper.prototype.run = function () {
     console.log("run finished");
 };
 
+Stepper.prototype.runScope = function () {
+    if (!this.scopes.isEmpty()) {
+        while (true) {
+            var result = this.scopes.peek().next();
+
+            if (result.value && result.value.lineno) {
+                if (this.breakpoints[result.value.lineno]) {
+                    console.log("breakpoint hit");
+                    return result;
+                }
+            }
+
+            if (result.done) {
+                break;
+            } else if (result.value.generator) {
+                this.scopes.push(result.value.generator);
+                this.runScope();
+                this.scopes.pop();
+            }
+        }
+    }
+};
+
 Stepper.prototype.stepOver = function () {
     var value;
 
@@ -395,9 +461,46 @@ Stepper.prototype.stepOver = function () {
 
         if (result.done) {
             this.scopes.pop();
+            if (this.scopes.isEmpty()) {
+                console.log("halted");
+                return { done: true };
+            }
+            result = this.scopes.peek().next();
         } else if (result.value.generator) {
             this.scopes.push(result.value.generator);
-        } 
+            this.runScope();
+            this.scopes.pop();
+            result = this.scopes.peek().next();
+        }
+
+        value = result.value;   // contains lineno
+        this.done = false;
+    } else {
+        this.done = true;
+    }
+    return {
+        done: this.done,
+        value: value
+    }
+};
+
+Stepper.prototype.stepIn = function () {
+    var value;
+
+    if (!this.scopes.isEmpty()) {
+        var result = this.scopes.peek().next();
+
+        if (result.done) {
+            this.scopes.pop();
+            if (this.scopes.isEmpty()) {
+                console.log("halted");
+                return { done: true };
+            }
+            result = this.scopes.peek().next();
+        } else if (result.value.generator) {
+            this.scopes.push(result.value.generator);
+            result = this.scopes.peek().next();
+        }
 
         value = result.value;
         this.done = false;
@@ -410,12 +513,28 @@ Stepper.prototype.stepOver = function () {
     }
 };
 
-Stepper.prototype.stepIn = function () {
-    throw "'stepIn' isn't implemented yet";
-};
-
 Stepper.prototype.stepOut = function () {
-    throw "'stepOut' isn't implemented yet";
+    var value;
+
+    if (!this.scopes.isEmpty()) {
+        this.runScope();
+        this.scopes.pop();
+
+        if (this.scopes.isEmpty()) {
+            console.log("halted");
+            return { done: true };
+        }
+
+        var result = this.scopes.peek().next();
+        value = result.value;
+        this.done = false;
+    } else {
+        this.done = true;
+    }
+    return {
+        done: this.done,
+        value: value
+    }
 };
 
 Stepper.prototype.halted = function () {
@@ -449,24 +568,4 @@ Stepper.prototype.generateDebugCode = function (code) {
 
     return "return function*(){\nwith(arguments[0]){\n"
         + escodegen.generate(this.ast) + "\n}\n}";
-};
-
-function Stack () {
-    this.values = [];
-}
-
-Stack.prototype.isEmpty = function () {
-    return this.values.length === 0;
-};
-
-Stack.prototype.push = function (value) {
-    this.values.push(value);
-};
-
-Stack.prototype.pop = function () {
-    return this.values.pop();
-};
-
-Stack.prototype.peek = function () {
-    return this.values[this.values.length - 1];
 };

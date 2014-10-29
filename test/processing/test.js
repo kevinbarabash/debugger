@@ -10,50 +10,69 @@ var stepper = new Stepper(processing);
 
 var code = "size(400, 400);\n" +
     "background(128);\n" +
-    "fill(255,0,0);\n" +
-    "ellipse(100,100,50,50);\n" +
-    "fill(0,0,255);\n" +
-    "for (var i = 0; i < 5; i++) {\n" +
-    "  ellipse(100 + i * 60,200,50,50);\n" +
-    "}\n" +
+//    "fill(255,0,0);\n" +
+//    "ellipse(100,100,50,50);\n" +
+//    "fill(0,0,255);\n" +
+//    "for (var i = 0; i < 2; i++) {\n" +
+//    "  ellipse(100 + i * 60,200,50,50);\n" +
+//    "}\n" +
     "function foo() {\n" +
+    "  console.log('foo');\n" +
     "  console.log('foo');\n" +
     "}\n" +
     "var bar = function() {\n" +
     "  console.log('bar');\n" +
+    "  console.log('bar');\n" +
+    "  foo();\n" +
     "}\n" +
     "foo();\n" +
     "bar();";
 
-code = "size(400, 400);\n" +
-    "background(128);\n";
+//code = "size(400, 400);\n" +
+//    "background(128);\n";
 
 stepper.load(code);
-stepper.setBreakpoint(3);
-stepper.setBreakpoint(5);
+//stepper.setBreakpoint(3);
+//stepper.setBreakpoint(5);
+console.log(stepper.debugCode);
 
 var lines = code.split("\n");
 
 var stepCodeSpan = document.getElementById("stepCode");
-var stepCodeButton = document.getElementById("stepButton");
-var runButton = document.getElementById("runButton");
 
-stepCodeButton.addEventListener("click", function (e) {
+var stepOverButton = document.getElementById("stepOverButton");
+var stepInButton = document.getElementById("stepInButton");
+var stepOutButton = document.getElementById("stepOutButton");
+
+stepOverButton.addEventListener("click", function (e) {
     var result = stepper.stepOver();
     if (result.value) {
         stepCodeSpan.innerText = lines[result.value.lineno - 1];
-    } else {
-        stepCodeSpan.innerText = "";
-        runButton.setAttribute("disabled","");
-        stepCodeButton.setAttribute("disabled", "");
     }
 });
 
+stepInButton.addEventListener("click", function (e) {
+    var result = stepper.stepIn();
+    if (result.value) {
+        stepCodeSpan.innerText = lines[result.value.lineno - 1];
+    }
+});
+
+stepOutButton.addEventListener("click", function (e) {
+    var result = stepper.stepOut();
+    if (result.value) {
+        stepCodeSpan.innerText = lines[result.value.lineno - 1];
+    }
+});
+
+var runButton = document.getElementById("runButton");
 runButton.addEventListener("click", function (e) {
     stepper.run();
     if (stepper.done) {
         runButton.setAttribute("disabled","");
-        stepCodeButton.setAttribute("disabled", "");
+        stepOverButton.setAttribute("disabled", "");
+        stepInButton.setAttribute("disabled", "");
+        stepOutButton.setAttribute("disabled", "");
     }
 });
 
@@ -66,5 +85,7 @@ document.getElementById("resetButton").addEventListener("click", function (e) {
     stepper.reset();
 
     runButton.removeAttribute("disabled");
-    stepCodeButton.removeAttribute("disabled");
+    stepOverButton.removeAttribute("disabled");
+    stepInButton.removeAttribute("disabled");
+    stepOutButton.removeAttribute("disabled");
 });

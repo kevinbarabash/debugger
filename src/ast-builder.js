@@ -56,6 +56,9 @@ var builder = {
     },
 
     createLiteral: function (value) {
+        if (value === undefined) {
+            throw "literal value undefined";
+        }
         return {
             type: "Literal",
             value: value

@@ -30,14 +30,23 @@ Injector.prototype.onExit = function(node) {
         for (i = 0; i < len - 1; i++) {
             this.insertYield(node, 2 * i + 2);
         }
+//    } else if (node.type === "BlockStatement") {
+//        len = node.body.length;
+//        for (i = 0; i < len - 1; i++) {
+//            this.insertYield(node, 2 * i + 1);
+//        }
     } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
         node.generator = true;
     } else if (node.type === "ExpressionStatement") {
         if (node.expression.type === "CallExpression") {
             var name = node.expression.callee.name;
-            if (!this.context[name]) {  // yield only if it's a user defined function
+            if (name !== undefined && !this.context[name]) {  // yield only if it's a user defined function
                 node.expression = builder.createYieldExpression(
-                    builder.createObjectExpression({ generator: node.expression })
+                    builder.createObjectExpression({
+                        generator: node.expression,
+                        lineno: node.loc.start.line,
+                        name: name  // so that we can display a callstack later
+                    })
                 );
             }
         }

@@ -12,6 +12,7 @@ var src = [
     "./external/ast-walker/src/walker.js",
     "./src/ast-builder.js",
     "./src/injector.js",
+    "./src/stack.js",
     "./src/stepper.js"
 ];
 
