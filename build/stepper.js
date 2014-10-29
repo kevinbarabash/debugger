@@ -1,0 +1,414 @@
+/* simple tree walker for Parser API style AST trees */
+
+function Walker() {
+    this.enter = function (node) { };
+    this.exit = function (node) { };
+}
+
+Walker.prototype.walk = function (node) {
+    if (!node) {
+        return; // TODO: proper validation
+        // for now we assume that the AST is properly formed
+    }
+    this.enter(node);
+    this[node.type](node);
+    this.exit(node);
+};
+
+Walker.prototype.walkEach = function (nodes) {
+    for (var i = 0; i < nodes.length; i++) {
+        this.walk(nodes[i]);
+    }
+};
+
+Walker.prototype.AssignmentExpression = function (node) {
+    this.walk(node.left);
+    this.walk(node.right);
+};
+
+Walker.prototype.ArrayExpression = function (node) {
+    this.walkEach(node.elements);
+};
+
+Walker.prototype.BlockStatement = function (node) {
+    this.walkEach(node.body);
+};
+
+Walker.prototype.BinaryExpression = function (node) {
+    this.walk(node.left);
+    this.walk(node.right);
+};
+
+Walker.prototype.BreakStatement = function (node) {
+    this.walk(node.label);
+};
+
+Walker.prototype.CallExpression = function (node) {
+    this.walk(node.callee);
+    this.walkEach(node.arguments);
+};
+
+Walker.prototype.CatchClause = function (node) {
+    this.walk(node.param);
+    this.walk(node.guard);
+    this.walk(node.body);
+};
+
+Walker.prototype.ConditionalExpression = function (node) {
+    this.walk(node.test);
+    this.walk(node.alternate);
+    this.walk(node.consequent);
+};
+
+Walker.prototype.ContinueStatement = function (node) {
+    this.walk(node.label);
+};
+
+Walker.prototype.DoWhileStatement = function (node) {
+    this.walk(node.body);
+    this.walk(node.test);
+};
+
+Walker.prototype.DebuggerStatement = function (node) {
+
+};
+
+Walker.prototype.EmptyStatement = function (node) {
+
+};
+
+Walker.prototype.ExpressionStatement = function (node) {
+    this.walk(node.expression);
+};
+
+Walker.prototype.ForStatement = function (node) {
+    this.walk(node.init);
+    this.walk(node.test);
+    this.walk(node.update);
+    this.walk(node.body);
+};
+
+Walker.prototype.ForInStatement = function (node) {
+    this.walk(node.left);
+    this.walk(node.right);
+    this.walk(node.body);
+};
+
+Walker.prototype.ForOfStatement = function (node) {
+    this.walk(node.left);
+    this.walk(node.right);
+    this.walk(node.body);
+};
+
+Walker.prototype.FunctionDeclaration = function (node) {
+    this.walk(node.id);
+    this.walkEach(node.params);
+    this.walk(node.rest);
+    this.walk(node.body);
+};
+
+Walker.prototype.FunctionExpression = function (node) {
+    this.walk(node.id);
+    this.walkEach(node.params);
+    this.walk(node.rest);
+    this.walk(node.body);
+};
+
+Walker.prototype.Identifier = function (node) {
+
+};
+
+Walker.prototype.IfStatement = function (node) {
+    this.walk(node.text);
+    this.walk(node.consequent);
+    this.walk(node.alternate);
+};
+
+Walker.prototype.Literal = function (node) {
+
+};
+
+Walker.prototype.LabeledStatement = function (node) {
+    this.walk(node.body);
+};
+
+Walker.prototype.LogicalExpression = function (node) {
+    this.walk(node.left);
+    this.walk(node.right);
+};
+
+Walker.prototype.MemberExpression = function (node) {
+    this.walk(node.object);
+    this.walk(node.property);
+};
+
+Walker.prototype.NewExpression = function (node) {
+    this.walk(node.callee);
+    this.walk(node.arguments);
+};
+
+Walker.prototype.ObjectExpression = function (node) {
+    this.walkEach(node.properties);
+};
+
+Walker.prototype.Program = function (node) {
+    this.walkEach(node.body);
+};
+
+Walker.prototype.Property = function (node) {
+    this.walk(node.key);
+    this.walk(node.value);
+};
+
+Walker.prototype.ReturnStatement = function (node) {
+    this.walk(node.argument);
+};
+
+Walker.prototype.SequenceExpression = function (node) {
+    this.walkEach(node.expressions);
+};
+
+Walker.prototype.SwitchStatement = function (node) {
+    this.walk(node.discriminant);
+    this.walkEach(node.cases);
+};
+
+Walker.prototype.SwitchCase = function (node) {
+    this.walk(node.test);
+    this.walkEach(node.consequent);
+};
+
+Walker.prototype.ThisExpression = function (node) {
+
+};
+
+Walker.prototype.ThrowStatement = function (node) {
+    this.walk(node.argument);
+};
+
+Walker.prototype.TryStatement = function (node) {
+    this.walk(node.block);
+    this.walk(node.handler);
+    this.walkEach(node.guardedHandlers);
+    this.walk(node.finalizer);
+};
+
+Walker.prototype.UnaryExpression = function (node) {
+    this.walk(node.argument);
+};
+
+Walker.prototype.UpdateExpression = function (node) {
+    this.walk(node.argument);
+};
+
+Walker.prototype.VariableDeclaration = function (node) {
+    this.walkEach(node.declarations);
+};
+
+Walker.prototype.VariableDeclarator = function (node) {
+    this.walk(node.id);
+    this.walk(node.init);
+};
+
+Walker.prototype.WhileStatement = function (node) {
+    this.walk(node.test);
+    this.walk(node.body);
+};
+
+Walker.prototype.WithStatement = function (node) {
+    this.walk(node.object);
+    this.walk(node.body);
+};
+
+// TODO: bring browserify into the workflow
+//    module.exports = {
+//        walk: walk,
+//        setCallback: setCallback
+//    };
+
+/* build Parser API style AST nodes and trees */
+
+var builder = {
+    createExpressionStatement: function (expression) {
+        return {
+            type: "ExpressionStatement",
+            expression: expression
+        };
+    },
+
+    createYieldExpression: function (argument) {
+        return {
+            type: "YieldExpression",
+            argument: argument
+        };
+    },
+
+    createObjectExpression: function (obj) {
+        var properties = Object.keys(obj).map(function (key) {
+            var value = obj[key];
+            return this.createProperty(key, value);
+        }, this);
+
+        return {
+            type: "ObjectExpression",
+            properties: properties
+        };
+    },
+
+    createProperty: function (key, value) {
+        if (value instanceof Object) {
+            throw "we don't handle object properties yet";
+        }
+
+        return {
+            type: "Property",
+            key: this.createIdentifier(key),
+            value: this.createLiteral(value),
+            kind: "init"
+        }
+    },
+
+    createIdentifier: function (name) {
+        return {
+            type: "Identifier",
+            name: name
+        };
+    },
+
+    createLiteral: function (value) {
+        return {
+            type: "Literal",
+            value: value
+        }
+    }
+};
+
+/* injects yield statements into the AST */
+
+function Injector () {
+    this.walker = new Walker();
+    this.walker.exit = this.onExit.bind(this);
+}
+
+/**
+ * Main entry point.  Injects yield expressions into ast
+ * @param ast
+ */
+Injector.prototype.process = function (ast) {
+    this.walker.walk(ast);
+};
+
+/**
+ * Called as the walker has walked the node's children.  Inserting
+ * yield nodes on exit avoids traversing new nodes which would cause
+ * an infinite loop.
+ * @param node
+ */
+Injector.prototype.onExit = function(node) {
+    var len, i;
+
+    if (node.type === "Program" || node.type === "BlockStatement") {
+        len = node.body.length;
+
+        this.insertYield(node, 0);
+        for (i = 0; i < len - 1; i++) {
+            this.insertYield(node, 2 * i + 2);
+        }
+    }
+};
+
+Injector.prototype.insertYield = function (program, index) {
+    var loc = program.body[index].loc;
+    var node = builder.createExpressionStatement(
+        builder.createYieldExpression(
+            builder.createObjectExpression({ lineno: loc.start.line })
+        )
+    );
+
+    program.body.splice(index, 0, node);
+};
+
+var injector = new Injector();
+
+/*global recast, esprima, escodegen, Injector */
+
+function Stepper(context) {
+    this.context = context;
+    this.lines = {};
+    this.breakpoints = {};
+}
+
+Stepper.prototype.load = function (code) {
+    this.debugCode = this.generateDebugCode(code);
+    this.reset();
+};
+
+Stepper.prototype.reset = function () {
+    this.stepIterator = ((new Function(this.debugCode))())(this.context);
+    this.done = false;
+    this.loc = null;
+};
+
+Stepper.prototype.run = function () {
+    while (!this.halted()) {
+        var result = this.stepOver();
+
+        // result returns the lineno of the next line
+        if (result.value && result.value.lineno) {
+            if (this.breakpoints[result.value.lineno]) {
+                console.log("breakpoint hit");
+                return result;
+            }
+        }
+    }
+    console.log("run finished");
+};
+
+Stepper.prototype.stepOver = function () {
+    var result = this.stepIterator.next();
+    this.done = result.done;
+    this.loc = result.value;
+    return result;
+};
+
+Stepper.prototype.stepIn = function () {
+    throw "'stepIn' isn't implemented yet";
+};
+
+Stepper.prototype.stepOut = function () {
+    throw "'stepOut' isn't implemented yet";
+};
+
+Stepper.prototype.halted = function () {
+    return this.done;
+};
+
+Stepper.prototype.paused = function () {
+
+};
+
+Stepper.prototype.setBreakpoint = function (lineno) {
+    this.breakpoints[lineno] = true;
+};
+
+Stepper.prototype.clearBreakpoint = function (lineno) {
+    delete this.breakpoints[lineno];
+};
+
+
+Stepper.prototype.generateDebugCode = function (code) {
+    this.ast = esprima.parse(code, { loc: true });
+
+    this.ast.body.forEach(function (statement) {
+        var loc = statement.loc;
+        if (loc !== null) {
+            this.lines[loc.start.line] = statement;
+        }
+    }, this);
+
+    injector.process(this.ast);
+
+    return "return function*(){\nwith(arguments[0]){\n"
+        + escodegen.generate(this.ast) + "\n}\n}";
+};
+

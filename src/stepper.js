@@ -1,28 +1,4 @@
-/*global recast, esprima, escodegen */
-
-function buildYieldLineno(lineno) {
-    return {
-        type: "ExpressionStatement",
-        expression: {
-            type: "YieldExpression",
-            argument: {
-                type: "ObjectExpression",
-                properties: [{
-                    type: "Property",
-                    key: {
-                        type: "Identifier",
-                        name: "lineno"
-                    },
-                    value: {
-                        type: "Literal",
-                        value: lineno
-                    },
-                    kind: "init"
-                }]
-            }
-        }
-    }
-}
+/*global recast, esprima, escodegen, Injector */
 
 function Stepper(context) {
     this.context = context;
@@ -32,7 +8,6 @@ function Stepper(context) {
 
 Stepper.prototype.load = function (code) {
     this.debugCode = this.generateDebugCode(code);
-    console.log(this.debugCode);
     this.reset();
 };
 
@@ -99,47 +74,9 @@ Stepper.prototype.generateDebugCode = function (code) {
         }
     }, this);
 
-    this.handleProgram(this.ast);
+    injector.process(this.ast);
 
     return "return function*(){\nwith(arguments[0]){\n"
         + escodegen.generate(this.ast) + "\n}\n}";
 };
 
-// TODO: create an Injector object
-// TODO: refactor to use ast-walker
-Stepper.prototype.handleProgram = function (program) {
-    // depth first
-    var i;
-    var len = program.body.length;
-
-    for (i = 0; i < len; i++) {
-        var statement = program.body[i];
-        if (statement.type === "ForStatement") {
-            this.handleForStatement(statement);
-        }
-    }
-
-    this.insertYield(program, 0);
-    for (i = 0; i < len - 1; i++) {
-        this.insertYield(program, 2 * i + 2);
-    }
-};
-
-Stepper.prototype.handleForStatement = function (forStatement) {
-    this.handleBlockStatement(forStatement.body);
-};
-
-Stepper.prototype.handleBlockStatement = function (blockStatement) {
-    var len = blockStatement.body.length;
-    this.insertYield(blockStatement, 0);    // is this necessary?
-    for (var i = 0; i < len - 1; i++) {
-        this.insertYield(blockStatement, 2 * i + 2);
-    }
-};
-
-Stepper.prototype.insertYield = function (program, index) {
-    var loc = program.body[index].loc;
-    var node = buildYieldLineno(loc.start.line);
-
-    program.body.splice(index, 0, node);
-};
