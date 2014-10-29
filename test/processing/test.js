@@ -15,7 +15,18 @@ var code = "size(400, 400);\n" +
     "fill(0,0,255);\n" +
     "for (var i = 0; i < 5; i++) {\n" +
     "  ellipse(100 + i * 60,200,50,50);\n" +
-    "}";
+    "}\n" +
+    "function foo() {\n" +
+    "  console.log('foo');\n" +
+    "}\n" +
+    "var bar = function() {\n" +
+    "  console.log('bar');\n" +
+    "}\n" +
+    "foo();\n" +
+    "bar();";
+
+code = "size(400, 400);\n" +
+    "background(128);\n";
 
 stepper.load(code);
 stepper.setBreakpoint(3);

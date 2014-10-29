@@ -1,8 +1,9 @@
 /* injects yield statements into the AST */
 
-function Injector () {
+function Injector (context) {
     this.walker = new Walker();
     this.walker.exit = this.onExit.bind(this);
+    this.context = context;
 }
 
 /**
@@ -29,6 +30,17 @@ Injector.prototype.onExit = function(node) {
         for (i = 0; i < len - 1; i++) {
             this.insertYield(node, 2 * i + 2);
         }
+    } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
+        node.generator = true;
+    } else if (node.type === "ExpressionStatement") {
+        if (node.expression.type === "CallExpression") {
+            var name = node.expression.callee.name;
+            if (!this.context[name]) {  // yield only if it's a user defined function
+                node.expression = builder.createYieldExpression(
+                    builder.createObjectExpression({ generator: node.expression })
+                );
+            }
+        }
     }
 };
 
@@ -42,5 +54,3 @@ Injector.prototype.insertYield = function (program, index) {
 
     program.body.splice(index, 0, node);
 };
-
-var injector = new Injector();

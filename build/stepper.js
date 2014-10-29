@@ -256,14 +256,22 @@ var builder = {
     },
 
     createProperty: function (key, value) {
+        var expression;
         if (value instanceof Object) {
-            throw "we don't handle object properties yet";
+            if (value.type === "CallExpression") {
+                expression = value;
+            } else {
+                debugger;
+                throw "we don't handle object properties yet";
+            }
+        } else {
+            expression = this.createLiteral(value);
         }
 
         return {
             type: "Property",
             key: this.createIdentifier(key),
-            value: this.createLiteral(value),
+            value: expression,
             kind: "init"
         }
     },
@@ -285,9 +293,10 @@ var builder = {
 
 /* injects yield statements into the AST */
 
-function Injector () {
+function Injector (context) {
     this.walker = new Walker();
     this.walker.exit = this.onExit.bind(this);
+    this.context = context;
 }
 
 /**
@@ -314,6 +323,17 @@ Injector.prototype.onExit = function(node) {
         for (i = 0; i < len - 1; i++) {
             this.insertYield(node, 2 * i + 2);
         }
+    } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
+        node.generator = true;
+    } else if (node.type === "ExpressionStatement") {
+        if (node.expression.type === "CallExpression") {
+            var name = node.expression.callee.name;
+            if (!this.context[name]) {  // yield only if it's a user defined function
+                node.expression = builder.createYieldExpression(
+                    builder.createObjectExpression({ generator: node.expression })
+                );
+            }
+        }
     }
 };
 
@@ -328,12 +348,11 @@ Injector.prototype.insertYield = function (program, index) {
     program.body.splice(index, 0, node);
 };
 
-var injector = new Injector();
-
 /*global recast, esprima, escodegen, Injector */
 
 function Stepper(context) {
     this.context = context;
+    this.injector = new Injector(this.context);
     this.lines = {};
     this.breakpoints = {};
 }
@@ -344,9 +363,13 @@ Stepper.prototype.load = function (code) {
 };
 
 Stepper.prototype.reset = function () {
-    this.stepIterator = ((new Function(this.debugCode))())(this.context);
+    this.scopes = new Stack();
+
+    this.scopes.push(
+        ((new Function(this.debugCode))())(this.context)
+    );
+
     this.done = false;
-    this.loc = null;
 };
 
 Stepper.prototype.run = function () {
@@ -365,10 +388,26 @@ Stepper.prototype.run = function () {
 };
 
 Stepper.prototype.stepOver = function () {
-    var result = this.stepIterator.next();
-    this.done = result.done;
-    this.loc = result.value;
-    return result;
+    var value;
+
+    if (!this.scopes.isEmpty()) {
+        var result = this.scopes.peek().next();
+
+        if (result.done) {
+            this.scopes.pop();
+        } else if (result.value.generator) {
+            this.scopes.push(result.value.generator);
+        } 
+
+        value = result.value;
+        this.done = false;
+    } else {
+        this.done = true;
+    }
+    return {
+        done: this.done,
+        value: value
+    }
 };
 
 Stepper.prototype.stepIn = function () {
@@ -406,9 +445,28 @@ Stepper.prototype.generateDebugCode = function (code) {
         }
     }, this);
 
-    injector.process(this.ast);
+    this.injector.process(this.ast);
 
     return "return function*(){\nwith(arguments[0]){\n"
         + escodegen.generate(this.ast) + "\n}\n}";
 };
 
+function Stack () {
+    this.values = [];
+}
+
+Stack.prototype.isEmpty = function () {
+    return this.values.length === 0;
+};
+
+Stack.prototype.push = function (value) {
+    this.values.push(value);
+};
+
+Stack.prototype.pop = function () {
+    return this.values.pop();
+};
+
+Stack.prototype.peek = function () {
+    return this.values[this.values.length - 1];
+};

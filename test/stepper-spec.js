@@ -57,12 +57,6 @@ describe('Stepper', function () {
             stepper.reset();
             expect(stepper.halted()).to.be(false);
         });
-
-        it("should reset the location", function () {
-            stepper.run();
-            stepper.reset();
-            expect(stepper.loc).to.be(null);
-        })
     });
 
     describe("run", function () {
@@ -157,6 +151,8 @@ describe('Stepper', function () {
             expect(context.numbers[0]).to.be(1);
             expect(context.numbers[1]).to.be(2);
             expect(context.numbers[2]).to.be(3);
+
+            stepper.stepOver();
 
             expect(stepper.halted()).to.be(true);
         });

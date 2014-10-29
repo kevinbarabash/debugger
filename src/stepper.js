@@ -2,6 +2,7 @@
 
 function Stepper(context) {
     this.context = context;
+    this.injector = new Injector(this.context);
     this.lines = {};
     this.breakpoints = {};
 }
@@ -12,9 +13,13 @@ Stepper.prototype.load = function (code) {
 };
 
 Stepper.prototype.reset = function () {
-    this.stepIterator = ((new Function(this.debugCode))())(this.context);
+    this.scopes = new Stack();
+
+    this.scopes.push(
+        ((new Function(this.debugCode))())(this.context)
+    );
+
     this.done = false;
-    this.loc = null;
 };
 
 Stepper.prototype.run = function () {
@@ -33,10 +38,26 @@ Stepper.prototype.run = function () {
 };
 
 Stepper.prototype.stepOver = function () {
-    var result = this.stepIterator.next();
-    this.done = result.done;
-    this.loc = result.value;
-    return result;
+    var value;
+
+    if (!this.scopes.isEmpty()) {
+        var result = this.scopes.peek().next();
+
+        if (result.done) {
+            this.scopes.pop();
+        } else if (result.value.generator) {
+            this.scopes.push(result.value.generator);
+        } 
+
+        value = result.value;
+        this.done = false;
+    } else {
+        this.done = true;
+    }
+    return {
+        done: this.done,
+        value: value
+    }
 };
 
 Stepper.prototype.stepIn = function () {
@@ -74,9 +95,28 @@ Stepper.prototype.generateDebugCode = function (code) {
         }
     }, this);
 
-    injector.process(this.ast);
+    this.injector.process(this.ast);
 
     return "return function*(){\nwith(arguments[0]){\n"
         + escodegen.generate(this.ast) + "\n}\n}";
 };
 
+function Stack () {
+    this.values = [];
+}
+
+Stack.prototype.isEmpty = function () {
+    return this.values.length === 0;
+};
+
+Stack.prototype.push = function (value) {
+    this.values.push(value);
+};
+
+Stack.prototype.pop = function () {
+    return this.values.pop();
+};
+
+Stack.prototype.peek = function () {
+    return this.values[this.values.length - 1];
+};

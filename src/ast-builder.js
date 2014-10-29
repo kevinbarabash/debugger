@@ -28,14 +28,22 @@ var builder = {
     },
 
     createProperty: function (key, value) {
+        var expression;
         if (value instanceof Object) {
-            throw "we don't handle object properties yet";
+            if (value.type === "CallExpression") {
+                expression = value;
+            } else {
+                debugger;
+                throw "we don't handle object properties yet";
+            }
+        } else {
+            expression = this.createLiteral(value);
         }
 
         return {
             type: "Property",
             key: this.createIdentifier(key),
-            value: this.createLiteral(value),
+            value: expression,
             kind: "init"
         }
     },
