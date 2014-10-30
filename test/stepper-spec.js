@@ -57,7 +57,7 @@ describe('Stepper', function () {
 
     describe("run", function () {
         beforeEach(function () {
-            stepper.load("fill(255,0,0);x=5;console.log('hello');_test_global='apple'");
+            stepper.load("fill(255,0,0);x=5;console.log('hello');_test_global='apple';var z=23;");
             sinon.stub(console, "log");
             window._test_global = "";
         });
@@ -96,6 +96,11 @@ describe('Stepper', function () {
         it("should set global variables", function () {
             stepper.run();
             expect(window._test_global).to.be("apple");
+        });
+
+        it("shouldn't set local variabls on the context", function () {
+            stepper.run();
+            expect(context.z).to.be(undefined);
         });
     });
 
