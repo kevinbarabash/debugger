@@ -326,11 +326,6 @@ Injector.prototype.onExit = function(node) {
         for (i = 0; i < len - 1; i++) {
             this.insertYield(node, 2 * i + 2);
         }
-//    } else if (node.type === "BlockStatement") {
-//        len = node.body.length;
-//        for (i = 0; i < len - 1; i++) {
-//            this.insertYield(node, 2 * i + 1);
-//        }
     } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
         node.generator = true;
     } else if (node.type === "ExpressionStatement") {
@@ -383,7 +378,7 @@ Stack.prototype.peek = function () {
 /*global recast, esprima, escodegen, Injector */
 
 function Stepper(context) {
-    if (!this.willYield()) {
+    if (!Stepper.willYield()) {
         throw "this browser is not supported";
     }
     this.context = context;
@@ -392,7 +387,7 @@ function Stepper(context) {
     this.breakpoints = {};
 }
 
-Stepper.prototype.willYield = function () {
+Stepper.willYield = function () {
     try{
         return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
     }catch(e){

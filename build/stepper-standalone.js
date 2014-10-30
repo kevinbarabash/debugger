@@ -4176,7 +4176,7 @@ Stepper.prototype.reset = function () {
 
 Stepper.prototype.run = function () {
     while (!this.halted()) {
-        var result = this.stepOver();
+        var result = this.stepIn();
 
         // result returns the lineno of the next line
         if (result.value && result.value.lineno) {

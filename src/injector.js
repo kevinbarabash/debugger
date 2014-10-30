@@ -30,11 +30,6 @@ Injector.prototype.onExit = function(node) {
         for (i = 0; i < len - 1; i++) {
             this.insertYield(node, 2 * i + 2);
         }
-//    } else if (node.type === "BlockStatement") {
-//        len = node.body.length;
-//        for (i = 0; i < len - 1; i++) {
-//            this.insertYield(node, 2 * i + 1);
-//        }
     } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
         node.generator = true;
     } else if (node.type === "ExpressionStatement") {
