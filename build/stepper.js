@@ -378,7 +378,7 @@ Stack.prototype.peek = function () {
 /*global recast, esprima, escodegen, Injector */
 
 function Stepper(context) {
-    if (!Stepper.willYield()) {
+    if (!Stepper.isBrowserSupported()) {
         throw "this browser is not supported";
     }
     this.context = context;
@@ -387,7 +387,7 @@ function Stepper(context) {
     this.breakpoints = {};
 }
 
-Stepper.willYield = function () {
+Stepper.isBrowserSupported = function () {
     try{
         return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
     }catch(e){
