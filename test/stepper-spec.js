@@ -212,6 +212,20 @@ describe('Stepper', function () {
                 expect(context.fill.calledWith(255,0,0)).to.be(true);
                 expect(context.rect.calledWith(50,50,100,100)).to.be(true);
             });
+
+            it("should handle functions with return values", function () {
+                code = "var foo = function() {\n" +
+                    "  return 5;\n" +
+                    "}\n" +
+                    "x = foo();";
+
+                stepper.load(code);
+
+                stepper.stepOver(); // prime the stepper
+                stepper.stepOver();
+                stepper.stepOver();
+                expect(context.x).to.be(5);
+            });
         });
     });
 

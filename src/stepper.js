@@ -1,11 +1,10 @@
-/*global recast, esprima, escodegen, Injector */
+/*global recast, esprima, escodegen, injector */
 
 function Stepper(context) {
     if (!Stepper.isBrowserSupported()) {
         throw "this browser is not supported";
     }
     this.context = context;
-    this.injector = new Injector(this.context);
     this.lines = {};
     this.breakpoints = {};
 }
@@ -182,7 +181,7 @@ Stepper.prototype.generateDebugCode = function (code) {
         }
     }, this);
 
-    this.injector.process(this.ast);
+    injector.process(this.ast, this.context);
 
     return "return function*(){\nwith(arguments[0]){\n"
         + escodegen.generate(this.ast) + "\n}\n}";

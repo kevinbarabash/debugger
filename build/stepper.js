@@ -1,6 +1,9 @@
 /* simple tree walker for Parser API style AST trees */
 
 function Walker() {
+    this.shouldWalk = function (node) {
+        return true;
+    };
     this.enter = function (node) { };
     this.exit = function (node) { };
 }
@@ -10,9 +13,11 @@ Walker.prototype.walk = function (node) {
         return; // TODO: proper validation
         // for now we assume that the AST is properly formed
     }
-    this.enter(node);
-    this[node.type](node);
-    this.exit(node);
+    if (this.shouldWalk(node)) {
+        this.enter(node);
+        this[node.type](node);
+        this.exit(node);
+    }
 };
 
 Walker.prototype.walkEach = function (nodes) {
@@ -296,64 +301,145 @@ var builder = {
 
 /* injects yield statements into the AST */
 
-function Injector (context) {
-    this.walker = new Walker();
-    this.walker.exit = this.onExit.bind(this);
-    this.context = context;
-}
+(function (exports) {
 
-/**
- * Main entry point.  Injects yield expressions into ast
- * @param ast
- */
-Injector.prototype.process = function (ast) {
-    this.walker.walk(ast);
-};
+    /**
+     * Injects yield expressions into AST and converts functions (that don't
+     * return values) into generators.
+     *
+     * @param ast
+     * @param context
+     */
+    var process = function (ast, context) {
+        var retValFuncs = {};
+        var retValWalker = new Walker();
 
-/**
- * Called as the walker has walked the node's children.  Inserting
- * yield nodes on exit avoids traversing new nodes which would cause
- * an infinite loop.
- * @param node
- */
-Injector.prototype.onExit = function(node) {
-    var len, i;
+        // create a list of functions return values
+        // NOTE: this code doesn't handle reassigning functions to different variables
+        // TODO: implement stepping into functions with return values
+        retValWalker.exit = function (node) {
+            if (node.type === "VariableDeclarator") {
+                var name = node.id.name;
+                if (node.init.type === "FunctionExpression" || node.init.type === "FunctionDeclaration") {
+                    var funcNode = node.init;
 
-    if (node.type === "Program" || node.type === "BlockStatement") {
-        len = node.body.length;
-
-        this.insertYield(node, 0);
-        for (i = 0; i < len - 1; i++) {
-            this.insertYield(node, 2 * i + 2);
-        }
-    } else if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
-        node.generator = true;
-    } else if (node.type === "ExpressionStatement") {
-        if (node.expression.type === "CallExpression") {
-            var name = node.expression.callee.name;
-            if (name !== undefined && !this.context[name]) {  // yield only if it's a user defined function
-                node.expression = builder.createYieldExpression(
-                    builder.createObjectExpression({
-                        generator: node.expression,
-                        lineno: node.loc.start.line,
-                        name: name  // so that we can display a callstack later
-                    })
-                );
+                    if (checkForReturnValue(funcNode)) {
+                        retValFuncs[name] = true;
+                    } else {
+                        funcNode.generator = true;
+                    }
+                }
             }
-        }
-    }
-};
+        };
 
-Injector.prototype.insertYield = function (program, index) {
-    var loc = program.body[index].loc;
-    var node = builder.createExpressionStatement(
-        builder.createYieldExpression(
-            builder.createObjectExpression({ lineno: loc.start.line })
-        )
-    );
+        retValWalker.walk(ast);
 
-    program.body.splice(index, 0, node);
-};
+        var yieldInjectionWalker = new Walker();
+        /**
+         * Called as the walker has walked the node's children.  Inserting
+         * yield nodes on exit avoids traversing new nodes which would cause
+         * an infinite loop.
+         */
+        yieldInjectionWalker.exit = function(node) {
+            var len, i, name;
+
+            if (node.type === "Program" || node.type === "BlockStatement") {
+                len = node.body.length;
+
+                insertYield(node, 0);
+                for (i = 0; i < len - 1; i++) {
+                    insertYield(node, 2 * i + 2);
+                }
+            } else if (node.type === "ExpressionStatement") {
+                if (node.expression.type === "CallExpression") {
+                    name = node.expression.callee.name;
+
+                    if (name !== undefined && !context[name] && !retValFuncs[name]) {
+                        // yield only if it's a user defined function and
+                        // if it isn't a function that returns a value
+                        node.expression = builder.createYieldExpression(
+                            builder.createObjectExpression({
+                                generator: node.expression,
+                                lineno: node.loc.start.line,
+                                name: name  // so that we can display a callstack later
+                            })
+                        );
+                    }
+                }
+            }
+        };
+        /**
+         * Stop recursion early if we hit a function that hasn't been marked as a
+         * generator because non-generators can't contain yield statements.
+         */
+        yieldInjectionWalker.shouldWalk = function(node) {
+            if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
+                return node.generator;
+            }
+            return true;
+        };
+
+        yieldInjectionWalker.walk(ast);
+    };
+
+    /**
+     * Checks if the given FunctionExpression (or FunctionDeclaration) returns a value.
+     * @param funcNode
+     * @returns {boolean}
+     */
+    var checkForReturnValue = function (funcNode) {
+        var funcWalker = new Walker();
+        var root = false;
+        var retval = false;
+
+        funcWalker.shouldWalk = function (node) {
+            // stop recursing if we've already encountered a return
+            if (retval) {
+                return false;
+            }
+            // stop recursing if we hit a function
+            if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
+                if (root) {
+                    debugger;
+                    return false;
+                } else {
+                    root = true;
+                    return true;
+                }
+            }
+
+            return true;
+        };
+
+        funcWalker.enter = function (node) {
+            if (node.type === "ReturnStatement") {
+                if (node.argument !== null) {
+                    retval = true;
+                }
+            }
+        };
+
+        funcWalker.walk(funcNode);
+
+        return retval;
+    };
+
+    var insertYield = function (program, index) {
+        var loc = program.body[index].loc;
+        var node = builder.createExpressionStatement(
+            builder.createYieldExpression(
+                builder.createObjectExpression({ lineno: loc.start.line })
+            )
+        );
+
+        program.body.splice(index, 0, node);
+    };
+
+    // TODO: fix this so it's a proper export
+    exports.injector = {
+        process: process
+    };
+})(window);
 
 function Stack () {
     this.values = [];
@@ -375,14 +461,13 @@ Stack.prototype.peek = function () {
     return this.values[this.values.length - 1];
 };
 
-/*global recast, esprima, escodegen, Injector */
+/*global recast, esprima, escodegen, injector */
 
 function Stepper(context) {
     if (!Stepper.isBrowserSupported()) {
         throw "this browser is not supported";
     }
     this.context = context;
-    this.injector = new Injector(this.context);
     this.lines = {};
     this.breakpoints = {};
 }
@@ -559,7 +644,7 @@ Stepper.prototype.generateDebugCode = function (code) {
         }
     }, this);
 
-    this.injector.process(this.ast);
+    injector.process(this.ast, this.context);
 
     return "return function*(){\nwith(arguments[0]){\n"
         + escodegen.generate(this.ast) + "\n}\n}";
