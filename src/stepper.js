@@ -1,20 +1,18 @@
 /*global recast, esprima, escodegen, injector */
 
-function Stepper(context) {
-    if (!Stepper.isBrowserSupported()) {
-        throw "this browser is not supported";
-    }
+function Stepper (context) {
     this.context = context;
-    this.lines = {};
-    this.breakpoints = {};
+
+    this.yieldVal = undefined;
 }
 
-Stepper.isBrowserSupported = function () {
-    try{
-        return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
-    }catch(e){
-        return false;
-    }
+Stepper.prototype.generateDebugCode = function (code) {
+    this.ast = esprima.parse(code, { loc: true });
+
+    injector.process(this.ast, this.context);
+
+    return "return function*(){\nwith(arguments[0]){\n"
+        + escodegen.generate(this.ast) + "\n}\n}";
 };
 
 Stepper.prototype.load = function (code) {
@@ -23,166 +21,117 @@ Stepper.prototype.load = function (code) {
 };
 
 Stepper.prototype.reset = function () {
-    this.scopes = new Stack();
-
-    this.scopes.push(
-        ((new Function(this.debugCode))())(this.context)
-    );
-
+    this.stack = new Stack();
     this.done = false;
-};
-
-Stepper.prototype.run = function () {
-    while (!this.halted()) {
-        var result = this.stepIn();
-
-        // result returns the lineno of the next line
-        if (result.value && result.value.lineno) {
-            if (this.breakpoints[result.value.lineno]) {
-                console.log("breakpoint hit");
-                return result;
-            }
-        }
-    }
-    console.log("run finished");
-};
-
-Stepper.prototype.runScope = function () {
-    if (!this.scopes.isEmpty()) {
-        while (true) {
-            var result = this.scopes.peek().next();
-
-            if (result.value && result.value.lineno) {
-                if (this.breakpoints[result.value.lineno]) {
-                    console.log("breakpoint hit");
-                    return result;
-                }
-            }
-
-            if (result.done) {
-                break;
-            } else if (result.value.generator) {
-                this.scopes.push(result.value.generator);
-                this.runScope();
-                this.scopes.pop();
-            }
-        }
-    }
-};
-
-Stepper.prototype.stepOver = function () {
-    var value;
-
-    if (!this.scopes.isEmpty()) {
-        var result = this.scopes.peek().next();
-
-        if (result.done) {
-            this.scopes.pop();
-            if (this.scopes.isEmpty()) {
-                console.log("halted");
-                return { done: true };
-            }
-            result = this.scopes.peek().next();
-        } else if (result.value.generator) {
-            this.scopes.push(result.value.generator);
-            this.runScope();
-            this.scopes.pop();
-            result = this.scopes.peek().next();
-        }
-
-        value = result.value;   // contains lineno
-        this.done = false;
-    } else {
-        this.done = true;
-    }
-    return {
-        done: this.done,
-        value: value
-    }
-};
-
-Stepper.prototype.stepIn = function () {
-    var value;
-
-    if (!this.scopes.isEmpty()) {
-        var result = this.scopes.peek().next();
-
-        if (result.done) {
-            this.scopes.pop();
-            if (this.scopes.isEmpty()) {
-                console.log("halted");
-                return { done: true };
-            }
-            result = this.scopes.peek().next();
-        } else if (result.value.generator) {
-            this.scopes.push(result.value.generator);
-            result = this.scopes.peek().next();
-        }
-
-        value = result.value;
-        this.done = false;
-    } else {
-        this.done = true;
-    }
-    return {
-        done: this.done,
-        value: value
-    }
-};
-
-Stepper.prototype.stepOut = function () {
-    var value;
-
-    if (!this.scopes.isEmpty()) {
-        this.runScope();
-        this.scopes.pop();
-
-        if (this.scopes.isEmpty()) {
-            console.log("halted");
-            return { done: true };
-        }
-
-        var result = this.scopes.peek().next();
-        value = result.value;
-        this.done = false;
-    } else {
-        this.done = true;
-    }
-    return {
-        done: this.done,
-        value: value
-    }
+    
+    this.stack.push({
+        gen: ((new Function(this.debugCode))())(this.context),
+        lineno: 0
+    });
 };
 
 Stepper.prototype.halted = function () {
     return this.done;
 };
 
-Stepper.prototype.paused = function () {
-
+Stepper.prototype.step = function () {
+    if (this.stack.isEmpty()) {
+        this.done = true;
+        return;
+    }
+    var frame = this.stack.peek();
+    var result = frame.gen.next(this.yieldVal);
+    this.yieldVal = undefined;
+    return result;
 };
 
-Stepper.prototype.setBreakpoint = function (lineno) {
-    this.breakpoints[lineno] = true;
+Stepper.prototype.stepIn = function () {
+    var result = this.step();
+    if (this.done) {
+        return;
+    }
+    if (result.done) {
+        var frame = this.stack.pop();
+        this.yieldVal = result.value;
+        return frame.lineno;
+    } else if (result.value.gen) {
+        this.stack.push(result.value);
+        result = this.step();   // step in
+    }
+    return result.value && result.value.lineno;
 };
 
-Stepper.prototype.clearBreakpoint = function (lineno) {
-    delete this.breakpoints[lineno];
-};
-
-
-Stepper.prototype.generateDebugCode = function (code) {
-    this.ast = esprima.parse(code, { loc: true });
-
-    this.ast.body.forEach(function (statement) {
-        var loc = statement.loc;
-        if (loc !== null) {
-            this.lines[loc.start.line] = statement;
+Stepper.prototype.stepOver = function () {
+    var result = this.step();
+    if (this.done) {
+        return;
+    }
+    if (result.done) {
+        var frame = this.stack.pop();
+        
+        if (this.stack.isEmpty()) {
+            this.done = true;
         }
-    }, this);
+        
+        this.yieldVal = result.value;
+        return frame.lineno;
+    } else if (result.value.gen) {
+        this.stack.push(result.value);
+        this.yieldVal = this.runScope();
+        this.stack.pop();
 
-    injector.process(this.ast, this.context);
+        if (this.stack.isEmpty()) {
+            this.done = true;
+        }
+        
+        return this.stepOver();
+    }
+    return result.value && result.value.lineno;
+};
 
-    return "return function*(){\nwith(arguments[0]){\n"
-        + escodegen.generate(this.ast) + "\n}\n}";
+Stepper.prototype.stepOut = function () {
+    var result = this.step();
+    if (this.done) {
+        return;
+    }
+    while (!result.done) {
+        if (result.value.gen) {
+            this.stack.push(result.value);
+            this.yieldVal = this.runScope();
+            this.stack.pop();
+        }
+        result = this.step();
+    }
+    var frame = this.stack.pop();
+    this.yieldVal = result.value;
+
+    if (this.stack.isEmpty()) {
+        this.done = true;
+    }
+    return frame.lineno;
+};
+
+Stepper.prototype.run = function () {
+    while (!this.stack.isEmpty()) {
+        var lineno = this.stepIn();
+        if (lineno) {
+            console.log("lineno: " + lineno);
+        } else {
+            console.log("no lineno");
+        }
+    }
+    this.done = true;
+};
+
+Stepper.prototype.runScope = function () {
+    var result = this.step();
+    while (!result.done) {
+        if (result.value.gen) {
+            this.stack.push(result.value);
+            this.yieldVal = this.runScope();
+            this.stack.pop();
+        }
+        result = this.step();
+    }
+    return result.value;
 };

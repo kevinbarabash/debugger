@@ -8,70 +8,70 @@ function Walker() {
     this.exit = function (node) { };
 }
 
-Walker.prototype.walk = function (node) {
+Walker.prototype.walk = function (node, name, parent) {
     if (!node) {
         return; // TODO: proper validation
         // for now we assume that the AST is properly formed
     }
-    if (this.shouldWalk(node)) {
-        this.enter(node);
+    if (this.shouldWalk(node, name, parent)) {
+        this.enter(node, name, parent);
         this[node.type](node);
-        this.exit(node);
+        this.exit(node, name, parent);
     }
 };
 
-Walker.prototype.walkEach = function (nodes) {
+Walker.prototype.walkEach = function (nodes, name, parent) {
     for (var i = 0; i < nodes.length; i++) {
-        this.walk(nodes[i]);
+        this.walk(nodes[i], name + "[" + i + "]", parent);
     }
 };
 
 Walker.prototype.AssignmentExpression = function (node) {
-    this.walk(node.left);
-    this.walk(node.right);
+    this.walk(node.left, "left", node);
+    this.walk(node.right, "right", node);
 };
 
 Walker.prototype.ArrayExpression = function (node) {
-    this.walkEach(node.elements);
+    this.walkEach(node.elements, "elements", node);
 };
 
 Walker.prototype.BlockStatement = function (node) {
-    this.walkEach(node.body);
+    this.walkEach(node.body, "body", node);
 };
 
 Walker.prototype.BinaryExpression = function (node) {
-    this.walk(node.left);
-    this.walk(node.right);
+    this.walk(node.left, "left", node);
+    this.walk(node.right, "left", node);
 };
 
 Walker.prototype.BreakStatement = function (node) {
-    this.walk(node.label);
+    this.walk(node.label, "label", node);
 };
 
 Walker.prototype.CallExpression = function (node) {
-    this.walk(node.callee);
-    this.walkEach(node.arguments);
+    this.walk(node.callee, "callee", node);
+    this.walkEach(node.arguments, "arguments", node);
 };
 
 Walker.prototype.CatchClause = function (node) {
-    this.walk(node.param);
-    this.walk(node.guard);
-    this.walk(node.body);
+    this.walk(node.param, "param", node);
+    this.walk(node.guard, "guard", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.ConditionalExpression = function (node) {
-    this.walk(node.test);
-    this.walk(node.alternate);
-    this.walk(node.consequent);
+    this.walk(node.test, "test", node);
+    this.walk(node.alternate, "alternate", node);
+    this.walk(node.consequent, "consequent", node);
 };
 
 Walker.prototype.ContinueStatement = function (node) {
-    this.walk(node.label);
+    this.walk(node.label, "label", node);
 };
 
 Walker.prototype.DoWhileStatement = function (node) {
-    this.walk(node.body);
-    this.walk(node.test);
+    this.walk(node.body, "body", node);
+    this.walk(node.test, "test", node);
 };
 
 Walker.prototype.DebuggerStatement = function (node) {
@@ -83,40 +83,40 @@ Walker.prototype.EmptyStatement = function (node) {
 };
 
 Walker.prototype.ExpressionStatement = function (node) {
-    this.walk(node.expression);
+    this.walk(node.expression, "expression", node);
 };
 
 Walker.prototype.ForStatement = function (node) {
-    this.walk(node.init);
-    this.walk(node.test);
-    this.walk(node.update);
-    this.walk(node.body);
+    this.walk(node.init, "init", node);
+    this.walk(node.test, "init", node);
+    this.walk(node.update, "update", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.ForInStatement = function (node) {
-    this.walk(node.left);
-    this.walk(node.right);
-    this.walk(node.body);
+    this.walk(node.left, "left", node);
+    this.walk(node.right, "right", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.ForOfStatement = function (node) {
-    this.walk(node.left);
-    this.walk(node.right);
-    this.walk(node.body);
+    this.walk(node.left, "left", node);
+    this.walk(node.right, "right", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.FunctionDeclaration = function (node) {
-    this.walk(node.id);
-    this.walkEach(node.params);
-    this.walk(node.rest);
-    this.walk(node.body);
+    this.walk(node.id, "id", node);
+    this.walkEach(node.params, "params", node);
+    this.walk(node.rest, "rest", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.FunctionExpression = function (node) {
-    this.walk(node.id);
-    this.walkEach(node.params);
-    this.walk(node.rest);
-    this.walk(node.body);
+    this.walk(node.id, "id", node);
+    this.walkEach(node.params, "params", node);
+    this.walk(node.rest, "rest", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.Identifier = function (node) {
@@ -124,9 +124,9 @@ Walker.prototype.Identifier = function (node) {
 };
 
 Walker.prototype.IfStatement = function (node) {
-    this.walk(node.text);
-    this.walk(node.consequent);
-    this.walk(node.alternate);
+    this.walk(node.text, "test", node);
+    this.walk(node.consequent, "consequent", node);
+    this.walk(node.alternate, "alternate", node);
 };
 
 Walker.prototype.Literal = function (node) {
@@ -134,53 +134,53 @@ Walker.prototype.Literal = function (node) {
 };
 
 Walker.prototype.LabeledStatement = function (node) {
-    this.walk(node.body);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.LogicalExpression = function (node) {
-    this.walk(node.left);
-    this.walk(node.right);
+    this.walk(node.left, "left", node);
+    this.walk(node.right, "right", node);
 };
 
 Walker.prototype.MemberExpression = function (node) {
-    this.walk(node.object);
-    this.walk(node.property);
+    this.walk(node.object, "object", node);
+    this.walk(node.property, "property", node);
 };
 
 Walker.prototype.NewExpression = function (node) {
-    this.walk(node.callee);
-    this.walk(node.arguments);
+    this.walk(node.callee, "callee", node);
+    this.walk(node.arguments, "arguments", node);
 };
 
 Walker.prototype.ObjectExpression = function (node) {
-    this.walkEach(node.properties);
+    this.walkEach(node.properties, "properties", node);
 };
 
 Walker.prototype.Program = function (node) {
-    this.walkEach(node.body);
+    this.walkEach(node.body, "body", node);
 };
 
 Walker.prototype.Property = function (node) {
-    this.walk(node.key);
-    this.walk(node.value);
+    this.walk(node.key, "key", node);
+    this.walk(node.value, "value", node);
 };
 
 Walker.prototype.ReturnStatement = function (node) {
-    this.walk(node.argument);
+    this.walk(node.argument, "argument", node);
 };
 
 Walker.prototype.SequenceExpression = function (node) {
-    this.walkEach(node.expressions);
+    this.walkEach(node.expressions, "expressions", node);
 };
 
 Walker.prototype.SwitchStatement = function (node) {
-    this.walk(node.discriminant);
-    this.walkEach(node.cases);
+    this.walk(node.discriminant, "discriminant", node);
+    this.walkEach(node.cases, "cases", node);
 };
 
 Walker.prototype.SwitchCase = function (node) {
-    this.walk(node.test);
-    this.walkEach(node.consequent);
+    this.walk(node.test, "test", node);
+    this.walkEach(node.consequent, "consequent", node);
 };
 
 Walker.prototype.ThisExpression = function (node) {
@@ -188,41 +188,41 @@ Walker.prototype.ThisExpression = function (node) {
 };
 
 Walker.prototype.ThrowStatement = function (node) {
-    this.walk(node.argument);
+    this.walk(node.argument, "argument", node);
 };
 
 Walker.prototype.TryStatement = function (node) {
-    this.walk(node.block);
-    this.walk(node.handler);
-    this.walkEach(node.guardedHandlers);
-    this.walk(node.finalizer);
+    this.walk(node.block, "block", node);
+    this.walk(node.handler, "handler", node);
+    this.walkEach(node.guardedHandlers, "guardedHandlers", node);
+    this.walk(node.finalizer, "finalizer", node);
 };
 
 Walker.prototype.UnaryExpression = function (node) {
-    this.walk(node.argument);
+    this.walk(node.argument, "argument", node);
 };
 
 Walker.prototype.UpdateExpression = function (node) {
-    this.walk(node.argument);
+    this.walk(node.argument, "argument", node);
 };
 
 Walker.prototype.VariableDeclaration = function (node) {
-    this.walkEach(node.declarations);
+    this.walkEach(node.declarations, "declarations", node);
 };
 
 Walker.prototype.VariableDeclarator = function (node) {
-    this.walk(node.id);
-    this.walk(node.init);
+    this.walk(node.id, "id", node);
+    this.walk(node.init, "init", node);
 };
 
 Walker.prototype.WhileStatement = function (node) {
-    this.walk(node.test);
-    this.walk(node.body);
+    this.walk(node.test, "test", node);
+    this.walk(node.body, "body", node);
 };
 
 Walker.prototype.WithStatement = function (node) {
-    this.walk(node.object);
-    this.walk(node.body);
+    this.walk(node.object, "object", node);
+    this.walk(node.body, "body", node);
 };
 
 // TODO: bring browserify into the workflow
@@ -311,118 +311,50 @@ var builder = {
      * @param context
      */
     var process = function (ast, context) {
-        var retValFuncs = {};
-        var retValWalker = new Walker();
-
-        // create a list of functions return values
-        // NOTE: this code doesn't handle reassigning functions to different variables
-        // TODO: implement stepping into functions with return values
-        retValWalker.exit = function (node) {
-            if (node.type === "VariableDeclarator") {
-                var name = node.id.name;
-                if (node.init.type === "FunctionExpression" || node.init.type === "FunctionDeclaration") {
-                    var funcNode = node.init;
-
-                    if (checkForReturnValue(funcNode)) {
-                        retValFuncs[name] = true;
-                    } else {
-                        funcNode.generator = true;
-                    }
-                }
-            }
-        };
-
-        retValWalker.walk(ast);
-
         var yieldInjectionWalker = new Walker();
+        
         /**
          * Called as the walker has walked the node's children.  Inserting
          * yield nodes on exit avoids traversing new nodes which would cause
          * an infinite loop.
          */
-        yieldInjectionWalker.exit = function(node) {
-            var len, i, name;
+        yieldInjectionWalker.exit = function(node, name, parent) {
+            var len, i;
 
             if (node.type === "Program" || node.type === "BlockStatement") {
                 len = node.body.length;
 
                 insertYield(node, 0);
+                var j = 2;
                 for (i = 0; i < len - 1; i++) {
-                    insertYield(node, 2 * i + 2);
+                    insertYield(node, j);
+                    j += 2;
                 }
-            } else if (node.type === "ExpressionStatement") {
-                if (node.expression.type === "CallExpression") {
-                    name = node.expression.callee.name;
+            } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
+                node.generator = true;
+            } else if (node.type === "CallExpression") {
+                if (!context[node.callee.name]) {
 
-                    if (name !== undefined && !context[name] && !retValFuncs[name]) {
-                        // yield only if it's a user defined function and
-                        // if it isn't a function that returns a value
-                        node.expression = builder.createYieldExpression(
-                            builder.createObjectExpression({
-                                generator: node.expression,
-                                lineno: node.loc.start.line,
-                                name: name  // so that we can display a callstack later
-                            })
-                        );
+                    var yieldExpression = builder.createYieldExpression(
+                        builder.createObjectExpression({
+                            gen: node,
+                            lineno: node.loc.start.line
+                        })
+                    );
+                    
+                    if (name.indexOf("arguments") === 0) {
+                        var index = name.match(/\[([0-1]+)\]/)[1];
+                        parent.arguments[index] = yieldExpression;
+                    } else {
+                        parent[name] = yieldExpression;
                     }
                 }
             }
-        };
-        /**
-         * Stop recursion early if we hit a function that hasn't been marked as a
-         * generator because non-generators can't contain yield statements.
-         */
-        yieldInjectionWalker.shouldWalk = function(node) {
-            if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
-                return node.generator;
-            }
-            return true;
         };
 
         yieldInjectionWalker.walk(ast);
     };
 
-    /**
-     * Checks if the given FunctionExpression (or FunctionDeclaration) returns a value.
-     * @param funcNode
-     * @returns {boolean}
-     */
-    var checkForReturnValue = function (funcNode) {
-        var funcWalker = new Walker();
-        var root = false;
-        var retval = false;
-
-        funcWalker.shouldWalk = function (node) {
-            // stop recursing if we've already encountered a return
-            if (retval) {
-                return false;
-            }
-            // stop recursing if we hit a function
-            if (node.type === "FunctionDeclaration" || node.type === "FunctionExpression") {
-                if (root) {
-                    debugger;
-                    return false;
-                } else {
-                    root = true;
-                    return true;
-                }
-            }
-
-            return true;
-        };
-
-        funcWalker.enter = function (node) {
-            if (node.type === "ReturnStatement") {
-                if (node.argument !== null) {
-                    retval = true;
-                }
-            }
-        };
-
-        funcWalker.walk(funcNode);
-
-        return retval;
-    };
 
     var insertYield = function (program, index) {
         var loc = program.body[index].loc;
@@ -463,21 +395,19 @@ Stack.prototype.peek = function () {
 
 /*global recast, esprima, escodegen, injector */
 
-function Stepper(context) {
-    if (!Stepper.isBrowserSupported()) {
-        throw "this browser is not supported";
-    }
+function Stepper (context) {
     this.context = context;
-    this.lines = {};
-    this.breakpoints = {};
+
+    this.yieldVal = undefined;
 }
 
-Stepper.isBrowserSupported = function () {
-    try{
-        return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
-    }catch(e){
-        return false;
-    }
+Stepper.prototype.generateDebugCode = function (code) {
+    this.ast = esprima.parse(code, { loc: true });
+
+    injector.process(this.ast, this.context);
+
+    return "return function*(){\nwith(arguments[0]){\n"
+        + escodegen.generate(this.ast) + "\n}\n}";
 };
 
 Stepper.prototype.load = function (code) {
@@ -486,166 +416,117 @@ Stepper.prototype.load = function (code) {
 };
 
 Stepper.prototype.reset = function () {
-    this.scopes = new Stack();
-
-    this.scopes.push(
-        ((new Function(this.debugCode))())(this.context)
-    );
-
+    this.stack = new Stack();
     this.done = false;
-};
-
-Stepper.prototype.run = function () {
-    while (!this.halted()) {
-        var result = this.stepIn();
-
-        // result returns the lineno of the next line
-        if (result.value && result.value.lineno) {
-            if (this.breakpoints[result.value.lineno]) {
-                console.log("breakpoint hit");
-                return result;
-            }
-        }
-    }
-    console.log("run finished");
-};
-
-Stepper.prototype.runScope = function () {
-    if (!this.scopes.isEmpty()) {
-        while (true) {
-            var result = this.scopes.peek().next();
-
-            if (result.value && result.value.lineno) {
-                if (this.breakpoints[result.value.lineno]) {
-                    console.log("breakpoint hit");
-                    return result;
-                }
-            }
-
-            if (result.done) {
-                break;
-            } else if (result.value.generator) {
-                this.scopes.push(result.value.generator);
-                this.runScope();
-                this.scopes.pop();
-            }
-        }
-    }
-};
-
-Stepper.prototype.stepOver = function () {
-    var value;
-
-    if (!this.scopes.isEmpty()) {
-        var result = this.scopes.peek().next();
-
-        if (result.done) {
-            this.scopes.pop();
-            if (this.scopes.isEmpty()) {
-                console.log("halted");
-                return { done: true };
-            }
-            result = this.scopes.peek().next();
-        } else if (result.value.generator) {
-            this.scopes.push(result.value.generator);
-            this.runScope();
-            this.scopes.pop();
-            result = this.scopes.peek().next();
-        }
-
-        value = result.value;   // contains lineno
-        this.done = false;
-    } else {
-        this.done = true;
-    }
-    return {
-        done: this.done,
-        value: value
-    }
-};
-
-Stepper.prototype.stepIn = function () {
-    var value;
-
-    if (!this.scopes.isEmpty()) {
-        var result = this.scopes.peek().next();
-
-        if (result.done) {
-            this.scopes.pop();
-            if (this.scopes.isEmpty()) {
-                console.log("halted");
-                return { done: true };
-            }
-            result = this.scopes.peek().next();
-        } else if (result.value.generator) {
-            this.scopes.push(result.value.generator);
-            result = this.scopes.peek().next();
-        }
-
-        value = result.value;
-        this.done = false;
-    } else {
-        this.done = true;
-    }
-    return {
-        done: this.done,
-        value: value
-    }
-};
-
-Stepper.prototype.stepOut = function () {
-    var value;
-
-    if (!this.scopes.isEmpty()) {
-        this.runScope();
-        this.scopes.pop();
-
-        if (this.scopes.isEmpty()) {
-            console.log("halted");
-            return { done: true };
-        }
-
-        var result = this.scopes.peek().next();
-        value = result.value;
-        this.done = false;
-    } else {
-        this.done = true;
-    }
-    return {
-        done: this.done,
-        value: value
-    }
+    
+    this.stack.push({
+        gen: ((new Function(this.debugCode))())(this.context),
+        lineno: 0
+    });
 };
 
 Stepper.prototype.halted = function () {
     return this.done;
 };
 
-Stepper.prototype.paused = function () {
-
+Stepper.prototype.step = function () {
+    if (this.stack.isEmpty()) {
+        this.done = true;
+        return;
+    }
+    var frame = this.stack.peek();
+    var result = frame.gen.next(this.yieldVal);
+    this.yieldVal = undefined;
+    return result;
 };
 
-Stepper.prototype.setBreakpoint = function (lineno) {
-    this.breakpoints[lineno] = true;
+Stepper.prototype.stepIn = function () {
+    var result = this.step();
+    if (this.done) {
+        return;
+    }
+    if (result.done) {
+        var frame = this.stack.pop();
+        this.yieldVal = result.value;
+        return frame.lineno;
+    } else if (result.value.gen) {
+        this.stack.push(result.value);
+        result = this.step();   // step in
+    }
+    return result.value && result.value.lineno;
 };
 
-Stepper.prototype.clearBreakpoint = function (lineno) {
-    delete this.breakpoints[lineno];
-};
-
-
-Stepper.prototype.generateDebugCode = function (code) {
-    this.ast = esprima.parse(code, { loc: true });
-
-    this.ast.body.forEach(function (statement) {
-        var loc = statement.loc;
-        if (loc !== null) {
-            this.lines[loc.start.line] = statement;
+Stepper.prototype.stepOver = function () {
+    var result = this.step();
+    if (this.done) {
+        return;
+    }
+    if (result.done) {
+        var frame = this.stack.pop();
+        
+        if (this.stack.isEmpty()) {
+            this.done = true;
         }
-    }, this);
+        
+        this.yieldVal = result.value;
+        return frame.lineno;
+    } else if (result.value.gen) {
+        this.stack.push(result.value);
+        this.yieldVal = this.runScope();
+        this.stack.pop();
 
-    injector.process(this.ast, this.context);
+        if (this.stack.isEmpty()) {
+            this.done = true;
+        }
+        
+        return this.stepOver();
+    }
+    return result.value && result.value.lineno;
+};
 
-    return "return function*(){\nwith(arguments[0]){\n"
-        + escodegen.generate(this.ast) + "\n}\n}";
+Stepper.prototype.stepOut = function () {
+    var result = this.step();
+    if (this.done) {
+        return;
+    }
+    while (!result.done) {
+        if (result.value.gen) {
+            this.stack.push(result.value);
+            this.yieldVal = this.runScope();
+            this.stack.pop();
+        }
+        result = this.step();
+    }
+    var frame = this.stack.pop();
+    this.yieldVal = result.value;
+
+    if (this.stack.isEmpty()) {
+        this.done = true;
+    }
+    return frame.lineno;
+};
+
+Stepper.prototype.run = function () {
+    while (!this.stack.isEmpty()) {
+        var lineno = this.stepIn();
+        if (lineno) {
+            console.log("lineno: " + lineno);
+        } else {
+            console.log("no lineno");
+        }
+    }
+    this.done = true;
+};
+
+Stepper.prototype.runScope = function () {
+    var result = this.step();
+    while (!result.done) {
+        if (result.value.gen) {
+            this.stack.push(result.value);
+            this.yieldVal = this.runScope();
+            this.stack.pop();
+        }
+        result = this.step();
+    }
+    return result.value;
 };
