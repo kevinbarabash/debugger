@@ -2,6 +2,13 @@
 
 function Stepper (context) {
     this.context = context;
+    this.context.instantiate = function (Class) {
+        var obj = Object.create(Class.prototype);
+        var args = Array.prototype.slice.call(arguments, 1);
+        var gen = Class.apply(obj, args);
+        gen.obj = obj;
+        return gen;
+    };
 
     this.yieldVal = undefined;
     this.breakpoints = {};
@@ -31,6 +38,11 @@ Stepper.prototype.load = function (code) {
 
 Stepper.prototype.reset = function () {
     this.stack = new Stack();
+    
+    var self = this;
+    this.stack.poppedLastItem = function () {
+        self.done = true;
+    };
     this.done = false;
     
     this.stack.push({
@@ -43,7 +55,12 @@ Stepper.prototype.halted = function () {
     return this.done;
 };
 
-Stepper.prototype.step = function () {
+/**
+ * Primitive step function
+ * @returns {*} generator result or undefined
+ * @private
+ */
+Stepper.prototype._step = function () {
     if (this.stack.isEmpty()) {
         this.done = true;
         return;
@@ -54,76 +71,66 @@ Stepper.prototype.step = function () {
     return result;
 };
 
+/**
+ * 
+ * @param value value to store in this.yieldVal
+ * @returns {*}
+ * @private
+ */
+Stepper.prototype._popAndStoreYieldValue = function (value) {
+    var frame = this.stack.pop();
+    if (frame.gen.obj) {
+        this.yieldVal = frame.gen.obj;
+    } else {
+        this.yieldVal = value;
+    }
+    return frame.lineno;
+};
+
 Stepper.prototype.stepIn = function () {
-    var result = this.step();
+    var result = this._step();
     if (this.done) {
         return;
     }
     if (result.done) {
-        var frame = this.stack.pop();
-
-        if (this.stack.isEmpty()) {
-            this.done = true;
-        }
-        
-        this.yieldVal = result.value;
-        return frame.lineno;
+        return this._popAndStoreYieldValue(result.value);
     } else if (result.value.gen) {
         this.stack.push(result.value);
-        result = this.step();   // step in
+        result = this._step();   // step in
     }
     return result.value && result.value.lineno;
 };
 
 Stepper.prototype.stepOver = function () {
-    var result = this.step();
+    var result = this._step();
     if (this.done) {
         return;
     }
     if (result.done) {
-        var frame = this.stack.pop();
-        // TODO: create a delegate for the stack
-        // so when you pop the last frame it can call a callback
-        if (this.stack.isEmpty()) {
-            this.done = true;
-        }
-        
-        this.yieldVal = result.value;
-        return frame.lineno;
+        return this._popAndStoreYieldValue(result.value);
     } else if (result.value.gen) {
         this.stack.push(result.value);
-        this.yieldVal = this.runScope();
+        this.runScope();
         this.stack.pop();
-
-        if (this.stack.isEmpty()) {
-            this.done = true;
-        }
-        
         return this.stepOver();
     }
     return result.value && result.value.lineno;
 };
 
 Stepper.prototype.stepOut = function () {
-    var result = this.step();
+    var result = this._step();
     if (this.done) {
         return;
     }
     while (!result.done) {
         if (result.value.gen) {
             this.stack.push(result.value);
-            this.yieldVal = this.runScope();
+            this.runScope();
             this.stack.pop();
         }
-        result = this.step();
+        result = this._step();
     }
-    var frame = this.stack.pop();
-    this.yieldVal = result.value;
-
-    if (this.stack.isEmpty()) {
-        this.done = true;
-    }
-    return frame.lineno;
+    return this._popAndStoreYieldValue(result.value);
 };
 
 Stepper.prototype.run = function () {
@@ -138,16 +145,16 @@ Stepper.prototype.run = function () {
 };
 
 Stepper.prototype.runScope = function () {
-    var result = this.step();
+    var result = this._step();
     while (!result.done) {
         if (result.value.gen) {
             this.stack.push(result.value);
-            this.yieldVal = this.runScope();
+            this.runScope();
             this.stack.pop();
         }
-        result = this.step();
+        result = this._step();
     }
-    return result.value;
+    this.yieldVal = result.value;
 };
 
 Stepper.prototype.setBreakpoint = function (lineno) {

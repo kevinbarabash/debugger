@@ -1,3 +1,148 @@
+(function (exports) {
+
+    function Stack () {
+        this.values = [];
+
+        // delegate methods
+        this.poppedLastItem = function () {};
+    }
+
+    Stack.prototype.isEmpty = function () {
+        return this.values.length === 0;
+    };
+
+    Stack.prototype.push = function (value) {
+        this.values.push(value);
+    };
+
+    Stack.prototype.pop = function () {
+        var item = this.values.pop();
+        if (this.isEmpty()) {
+            this.poppedLastItem(item);
+        }
+        return item;
+    };
+
+    Stack.prototype.peek = function () {
+        return this.values[this.values.length - 1];
+    };
+
+    exports.Stack = Stack;
+
+})(this);
+
+(function (exports) {
+
+    function Node (value) {
+        this.value = value;
+        this.next = null;
+        this.prev = null;
+    }
+
+    function LinkedList () {
+        this.first = null;
+        this.last = null;
+    }
+    
+    LinkedList.prototype.push_back = function (value) {
+        var node = new Node(value);
+        if (this.first === null && this.last === null) {
+            this.first = node;
+            this.last = node;
+        } else {
+            node.prev = this.last;
+            this.last.next = node;
+            this.last = node;
+        }
+    };
+    
+    LinkedList.prototype.push_front = function (value) {
+        var node = new Node(value);
+        if (this.first === null && this.last === null) {
+            this.first = node;
+            this.last = node;
+        } else {
+            node.next = this.first;
+            this.first.prev = node;
+            this.first = node;
+        }
+    };
+    
+    LinkedList.prototype.insertBeforeNode = function (refNode, value) {
+        if (refNode === this.first) {
+            this.push_front(value);
+        } else {
+            var node = new Node(value);
+            node.prev = refNode.prev;
+            node.next = refNode;
+            refNode.prev.next = node;
+            refNode.prev = node;
+        }
+    };
+    
+    LinkedList.prototype.inserAfterNode = function (refNode, value) {
+        if (refNode === this.last) {
+            this.push_back(value);
+        } else {
+            var node = new Node(value);
+            
+        }
+    };
+
+    LinkedList.prototype.forEachNode = function (callback, _this) {
+        var node = this.first;
+        while (node !== null) {
+            callback.call(_this, node);
+            node = node.next;
+        }
+    };
+    
+    // TODO: provide the index to the callback as well
+    LinkedList.prototype.forEach = function (callback, _this) {
+        this.forEachNode(function (node) {
+            callback.call(_this, node.value);  
+        });
+    };
+    
+    LinkedList.prototype.nodeAtIndex = function (index) {
+        var i = 0;
+        var node = this.first;
+        while (node !== null) {
+            if (index === i) {
+                return node;
+            }
+            i++;
+        }
+        return null;
+    };
+    
+    LinkedList.prototype.valueAtIndex = function (index) {
+        var node = this.nodeAtIndex(index);
+        return node ? node.value : undefined;
+    };
+    
+    LinkedList.prototype.toArray = function () {
+        var array = [];
+        var node = this.first;
+        while (node !== null) {
+            array.push(node.value);
+            node = node.next;
+        }
+        return array;
+    };
+    
+    LinkedList.fromArray = function (array) {
+        var list = new LinkedList();
+        array.forEach(function (value) {
+            list.push_back(value); 
+        });
+        return list;
+    };
+    
+    exports.LinkedList = LinkedList;
+
+})(this);
+
 /* simple tree walker for Parser API style AST trees */
 
 function Walker() {
@@ -149,7 +294,7 @@ Walker.prototype.MemberExpression = function (node) {
 
 Walker.prototype.NewExpression = function (node) {
     this.walk(node.callee, "callee", node);
-    this.walk(node.arguments, "arguments", node);
+    this.walkEach(node.arguments, "arguments", node);
 };
 
 Walker.prototype.ObjectExpression = function (node) {
@@ -234,6 +379,14 @@ var builder = {
             expression: expression
         };
     },
+    
+    createCallExpression: function (name, arguments) {
+        return {
+            type: "CallExpression",
+            callee: this.createIdentifier(name),
+            arguments: arguments
+        };      
+    },
 
     createYieldExpression: function (argument) {
         return {
@@ -257,7 +410,7 @@ var builder = {
     createProperty: function (key, value) {
         var expression;
         if (value instanceof Object) {
-            if (value.type === "CallExpression") {
+            if (value.type === "CallExpression" || value.type === "NewExpression") {
                 expression = value;
             } else {
                 debugger;
@@ -313,25 +466,34 @@ var builder = {
          * an infinite loop.
          */
         yieldInjectionWalker.exit = function(node, name, parent) {
-            var len, i;
-
             if (node.type === "Program" || node.type === "BlockStatement") {
-                len = node.body.length;
-
-                insertYield(node, 0);
-                var j = 2;
-                for (i = 0; i < len - 1; i++) {
-                    insertYield(node, j);
-                    j += 2;
-                }
+                var bodyList = LinkedList.fromArray(node.body);
+                
+                bodyList.forEachNode(function (node) {
+                    var loc = node.value.loc;
+                    var yieldExpression = builder.createExpressionStatement(
+                        builder.createYieldExpression(
+                            builder.createObjectExpression({ lineno: loc.start.line })
+                        )
+                    );
+                    
+                    bodyList.insertBeforeNode(node, yieldExpression);
+                });
+                node.body = bodyList.toArray();
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
-            } else if (node.type === "CallExpression") {
+            } else if (node.type === "CallExpression" || node.type === "NewExpression") {
                 if (!context[node.callee.name]) {
+                    
+                    var gen = node;
+                    if (node.type === "NewExpression") {
+                        node.arguments.unshift(node.callee);
+                        gen = builder.createCallExpression("instantiate", node.arguments);
+                    }
 
                     var yieldExpression = builder.createYieldExpression(
                         builder.createObjectExpression({
-                            gen: node,
+                            gen: gen,
                             lineno: node.loc.start.line
                         })
                     );
@@ -349,48 +511,23 @@ var builder = {
         yieldInjectionWalker.walk(ast);
     };
 
-
-    var insertYield = function (program, index) {
-        var loc = program.body[index].loc;
-        var node = builder.createExpressionStatement(
-            builder.createYieldExpression(
-                builder.createObjectExpression({ lineno: loc.start.line })
-            )
-        );
-
-        program.body.splice(index, 0, node);
-    };
-
     // TODO: fix this so it's a proper export
     exports.injector = {
         process: process
     };
-})(window);
-
-function Stack () {
-    this.values = [];
-}
-
-Stack.prototype.isEmpty = function () {
-    return this.values.length === 0;
-};
-
-Stack.prototype.push = function (value) {
-    this.values.push(value);
-};
-
-Stack.prototype.pop = function () {
-    return this.values.pop();
-};
-
-Stack.prototype.peek = function () {
-    return this.values[this.values.length - 1];
-};
+})(self);
 
 /*global recast, esprima, escodegen, injector */
 
 function Stepper (context) {
     this.context = context;
+    this.context.instantiate = function (Class) {
+        var obj = Object.create(Class.prototype);
+        var args = Array.prototype.slice.call(arguments, 1);
+        var gen = Class.apply(obj, args);
+        gen.obj = obj;
+        return gen;
+    };
 
     this.yieldVal = undefined;
     this.breakpoints = {};
@@ -420,6 +557,11 @@ Stepper.prototype.load = function (code) {
 
 Stepper.prototype.reset = function () {
     this.stack = new Stack();
+    
+    var self = this;
+    this.stack.poppedLastItem = function () {
+        self.done = true;
+    };
     this.done = false;
     
     this.stack.push({
@@ -432,7 +574,12 @@ Stepper.prototype.halted = function () {
     return this.done;
 };
 
-Stepper.prototype.step = function () {
+/**
+ * Primitive step function
+ * @returns {*} generator result or undefined
+ * @private
+ */
+Stepper.prototype._step = function () {
     if (this.stack.isEmpty()) {
         this.done = true;
         return;
@@ -443,76 +590,66 @@ Stepper.prototype.step = function () {
     return result;
 };
 
+/**
+ * 
+ * @param value value to store in this.yieldVal
+ * @returns {*}
+ * @private
+ */
+Stepper.prototype._popAndStoreYieldValue = function (value) {
+    var frame = this.stack.pop();
+    if (frame.gen.obj) {
+        this.yieldVal = frame.gen.obj;
+    } else {
+        this.yieldVal = value;
+    }
+    return frame.lineno;
+};
+
 Stepper.prototype.stepIn = function () {
-    var result = this.step();
+    var result = this._step();
     if (this.done) {
         return;
     }
     if (result.done) {
-        var frame = this.stack.pop();
-
-        if (this.stack.isEmpty()) {
-            this.done = true;
-        }
-        
-        this.yieldVal = result.value;
-        return frame.lineno;
+        return this._popAndStoreYieldValue(result.value);
     } else if (result.value.gen) {
         this.stack.push(result.value);
-        result = this.step();   // step in
+        result = this._step();   // step in
     }
     return result.value && result.value.lineno;
 };
 
 Stepper.prototype.stepOver = function () {
-    var result = this.step();
+    var result = this._step();
     if (this.done) {
         return;
     }
     if (result.done) {
-        var frame = this.stack.pop();
-        // TODO: create a delegate for the stack
-        // so when you pop the last frame it can call a callback
-        if (this.stack.isEmpty()) {
-            this.done = true;
-        }
-        
-        this.yieldVal = result.value;
-        return frame.lineno;
+        return this._popAndStoreYieldValue(result.value);
     } else if (result.value.gen) {
         this.stack.push(result.value);
-        this.yieldVal = this.runScope();
+        this.runScope();
         this.stack.pop();
-
-        if (this.stack.isEmpty()) {
-            this.done = true;
-        }
-        
         return this.stepOver();
     }
     return result.value && result.value.lineno;
 };
 
 Stepper.prototype.stepOut = function () {
-    var result = this.step();
+    var result = this._step();
     if (this.done) {
         return;
     }
     while (!result.done) {
         if (result.value.gen) {
             this.stack.push(result.value);
-            this.yieldVal = this.runScope();
+            this.runScope();
             this.stack.pop();
         }
-        result = this.step();
+        result = this._step();
     }
-    var frame = this.stack.pop();
-    this.yieldVal = result.value;
-
-    if (this.stack.isEmpty()) {
-        this.done = true;
-    }
-    return frame.lineno;
+    return this._popAndStoreYieldValue(result.value);
 };
 
 Stepper.prototype.run = function () {
@@ -527,16 +664,16 @@ Stepper.prototype.run = function () {
 };
 
 Stepper.prototype.runScope = function () {
-    var result = this.step();
+    var result = this._step();
     while (!result.done) {
         if (result.value.gen) {
             this.stack.push(result.value);
-            this.yieldVal = this.runScope();
+            this.runScope();
             this.stack.pop();
         }
-        result = this.step();
+        result = this._step();
     }
-    return result.value;
+    this.yieldVal = result.value;
 };
 
 Stepper.prototype.setBreakpoint = function (lineno) {

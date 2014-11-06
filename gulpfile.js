@@ -9,10 +9,11 @@ var deps = [
 ];
 
 var src = [
+    "./src/stack.js",
+    "./src/linked-list.js",
     "./external/ast-walker/walker.js",
     "./src/ast-builder.js",
     "./src/injector.js",
-    "./src/stack.js",
     "./src/stepper.js"
 ];
 

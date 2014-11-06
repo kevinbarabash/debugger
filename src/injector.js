@@ -18,25 +18,34 @@
          * an infinite loop.
          */
         yieldInjectionWalker.exit = function(node, name, parent) {
-            var len, i;
-
             if (node.type === "Program" || node.type === "BlockStatement") {
-                len = node.body.length;
-
-                insertYield(node, 0);
-                var j = 2;
-                for (i = 0; i < len - 1; i++) {
-                    insertYield(node, j);
-                    j += 2;
-                }
+                var bodyList = LinkedList.fromArray(node.body);
+                
+                bodyList.forEachNode(function (node) {
+                    var loc = node.value.loc;
+                    var yieldExpression = builder.createExpressionStatement(
+                        builder.createYieldExpression(
+                            builder.createObjectExpression({ lineno: loc.start.line })
+                        )
+                    );
+                    
+                    bodyList.insertBeforeNode(node, yieldExpression);
+                });
+                node.body = bodyList.toArray();
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
-            } else if (node.type === "CallExpression") {
+            } else if (node.type === "CallExpression" || node.type === "NewExpression") {
                 if (!context[node.callee.name]) {
+                    
+                    var gen = node;
+                    if (node.type === "NewExpression") {
+                        node.arguments.unshift(node.callee);
+                        gen = builder.createCallExpression("instantiate", node.arguments);
+                    }
 
                     var yieldExpression = builder.createYieldExpression(
                         builder.createObjectExpression({
-                            gen: node,
+                            gen: gen,
                             lineno: node.loc.start.line
                         })
                     );
@@ -54,20 +63,8 @@
         yieldInjectionWalker.walk(ast);
     };
 
-
-    var insertYield = function (program, index) {
-        var loc = program.body[index].loc;
-        var node = builder.createExpressionStatement(
-            builder.createYieldExpression(
-                builder.createObjectExpression({ lineno: loc.start.line })
-            )
-        );
-
-        program.body.splice(index, 0, node);
-    };
-
     // TODO: fix this so it's a proper export
     exports.injector = {
         process: process
     };
-})(window);
+})(self);

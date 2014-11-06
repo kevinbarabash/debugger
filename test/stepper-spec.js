@@ -142,9 +142,7 @@ describe('Stepper', function () {
         it("should step through loops", function () {
             stepper.load("for(var i=0;i<3;i++){numbers[i]=i+1;}");
 
-            console.log(stepper.debugCode);
             stepper.stepOver();
-
             stepper.stepOver(); // for(...)
             stepper.stepOver(); // numbers[0] = 0 + 1;
             expect(context.numbers[0]).to.be(1);
@@ -554,19 +552,16 @@ describe('Stepper', function () {
             stepper.stepOver();
             stepper.stepIn();   // foo();
             stepper.stepOver();
-            console.log(stepper.stepIn());   // foo();
+            stepper.stepIn();   // foo();
 
-            lineno = stepper.stepOut();
-            expect(lineno).to.be(7);            
-            lineno = stepper.stepOut();
-            expect(lineno).to.be(10);
-            lineno = stepper.stepOut();
-            expect(lineno).to.be(0);
+            expect(stepper.stepOut()).to.be(7);            
+            expect(stepper.stepOut()).to.be(10);
+            expect(stepper.stepOut()).to.be(0);
             expect(stepper.halted()).to.be(true);
         });
     });
     
-    describe.skip("Objects", function () {
+    describe("Objects", function () {
         var code;
         
         it("should work with constructors", function () {
@@ -574,6 +569,8 @@ describe('Stepper', function () {
                 function Point(x,y) {
                     this.x = x;
                     this.y = y;
+
+                    console.log("end of new Point");
                 }
                 var p = new Point(5,10);
             });
@@ -584,6 +581,74 @@ describe('Stepper', function () {
             
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
+        });
+
+        it("should work with functional expression constructors", function () {
+            var code = getFunctionBody(function () {
+                var Point = function (x,y) {
+                    this.x = x;
+                    this.y = y;
+                };
+                var p = new Point(5,10);
+            });
+
+            stepper.load(code);
+
+            stepper.run();
+
+            expect(context.p.x).to.be(5);
+            expect(context.p.y).to.be(10);
+        });
+
+        it("should step into constructors", function () {
+            var code = getFunctionBody(function () {
+                var Point = function (x,y) {
+                    this.x = x;
+                    this.y = y;
+                };
+                var p = new Point(5,10);
+            });
+
+            stepper.load(code);
+            console.log(stepper.debugCode);
+
+            expect(stepper.stepIn()).to.be(1);
+            expect(stepper.stepIn()).to.be(5);
+            expect(stepper.stepIn()).to.be(2);
+            expect(stepper.stepIn()).to.be(3);
+            expect(stepper.stepIn()).to.be(5);
+            expect(stepper.stepIn()).to.be(0);  // end of program
+
+            expect(context.p.x).to.be(5);
+            expect(context.p.y).to.be(10);
+        });
+
+
+        it("should work with calling methods on object literals", function () {
+            var code = getFunctionBody(function () {
+                var obj = {
+                    foo: function () {
+                        fill(255,0,0);
+                        rect(50,50,100,100);
+                    },
+                    bar: function () {
+                        fill(0,255,255);
+                        this.foo();
+                        rect(200,200,100,100);
+                    }
+                };
+                obj.bar();
+            });
+            
+            stepper.load(code);
+            console.log(stepper.debugCode);
+            
+            stepper.run();
+
+            expect(context.fill.calledWith(0,255,255)).to.be(true);
+            expect(context.fill.calledWith(255,0,0)).to.be(true);
+            expect(context.rect.calledWith(50,50,100,100)).to.be(true);
+            expect(context.rect.calledWith(200,200,100,100)).to.be(true);
         });
     });
 

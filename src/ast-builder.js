@@ -7,6 +7,14 @@ var builder = {
             expression: expression
         };
     },
+    
+    createCallExpression: function (name, arguments) {
+        return {
+            type: "CallExpression",
+            callee: this.createIdentifier(name),
+            arguments: arguments
+        };      
+    },
 
     createYieldExpression: function (argument) {
         return {
@@ -30,7 +38,7 @@ var builder = {
     createProperty: function (key, value) {
         var expression;
         if (value instanceof Object) {
-            if (value.type === "CallExpression") {
+            if (value.type === "CallExpression" || value.type === "NewExpression") {
                 expression = value;
             } else {
                 debugger;
