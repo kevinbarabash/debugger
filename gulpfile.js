@@ -9,7 +9,7 @@ var deps = [
 ];
 
 var src = [
-    "./external/ast-walker/src/walker.js",
+    "./external/ast-walker/walker.js",
     "./src/ast-builder.js",
     "./src/injector.js",
     "./src/stack.js",

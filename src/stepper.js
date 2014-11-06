@@ -4,7 +4,16 @@ function Stepper (context) {
     this.context = context;
 
     this.yieldVal = undefined;
+    this.breakpoints = {};
 }
+
+Stepper.isBrowserSupported = function () {
+    try {
+        return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
+    } catch(e) {
+        return false;
+    }
+};
 
 Stepper.prototype.generateDebugCode = function (code) {
     this.ast = esprima.parse(code, { loc: true });
@@ -52,6 +61,11 @@ Stepper.prototype.stepIn = function () {
     }
     if (result.done) {
         var frame = this.stack.pop();
+
+        if (this.stack.isEmpty()) {
+            this.done = true;
+        }
+        
         this.yieldVal = result.value;
         return frame.lineno;
     } else if (result.value.gen) {
@@ -68,7 +82,8 @@ Stepper.prototype.stepOver = function () {
     }
     if (result.done) {
         var frame = this.stack.pop();
-        
+        // TODO: create a delegate for the stack
+        // so when you pop the last frame it can call a callback
         if (this.stack.isEmpty()) {
             this.done = true;
         }
@@ -114,13 +129,12 @@ Stepper.prototype.stepOut = function () {
 Stepper.prototype.run = function () {
     while (!this.stack.isEmpty()) {
         var lineno = this.stepIn();
-        if (lineno) {
-            console.log("lineno: " + lineno);
-        } else {
-            console.log("no lineno");
+        if (this.breakpoints[lineno]) {
+            return lineno;
         }
     }
     this.done = true;
+    return lineno;
 };
 
 Stepper.prototype.runScope = function () {
@@ -134,4 +148,12 @@ Stepper.prototype.runScope = function () {
         result = this.step();
     }
     return result.value;
+};
+
+Stepper.prototype.setBreakpoint = function (lineno) {
+    this.breakpoints[lineno] = true;
+};
+
+Stepper.prototype.clearBreakpoint = function (lineno) {
+    delete this.breakpoints[lineno];
 };
