@@ -37,12 +37,10 @@
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
                 
                 if (node.callee.type === "Identifier") {
-                    if (!context[node.callee.name]) {
+                    if (!context[node.callee.name] && !window[node.callee.name]) {
                         wrapCallWithYield(node, name, parent);
                     }
                 } else if (node.callee.type === "MemberExpression") {
-                    // TODO: make this more general
-
                     if (node.callee.object.type === "Identifier" &&
                         node.callee.property.type === "Identifier") {
 

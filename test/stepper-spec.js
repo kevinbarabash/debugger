@@ -868,4 +868,54 @@ describe('Stepper', function () {
             });
         });
     });
+    
+    describe("Ambiguous method calls", function () {
+        // Sometimes it's not possible to tell if a method call is to a built-in
+        // function that we can't step into or if it's been properly converted
+        // to a generate because it is a user-defined function.  These tests
+        // make sure that we can handle these cases.  Original test code taken
+        // from live-editor/output/pjs/output_test.js
+        
+        it("Verify that toString() Works", function () {
+            var code = getFunctionBody(function () {
+                var num = 50;
+                num = parseInt(num.toString(), 10);
+            });
+            
+            stepper.load(code);
+            console.log(stepper.debugCode);
+            
+            stepper.run();
+        });
+
+        it("Verify that toString() Works with stepOver", function () {
+            var code = getFunctionBody(function () {
+                var num = 50;
+                num = parseInt(num.toString(), 10);
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();            
+        });
+        
+        it("Verify that toString() works with stepOut", function () {
+            var code = getFunctionBody(function () {
+                var foo = function () {
+                    var num = 50;
+                    num = parseInt(num.toString(), 10);
+                };
+                foo();
+            });
+
+            stepper.load(code);
+
+            expect(stepper.stepOver().line).to.be(1);
+            expect(stepper.stepOver().line).to.be(5);
+            expect(stepper.stepIn().line).to.be(2);
+            stepper.stepOut();
+        });
+    });
 });

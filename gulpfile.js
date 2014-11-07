@@ -33,4 +33,4 @@ gulp.task("watch", function() {
     gulp.watch(src, ["build"]);
 });
 
-gulp.task("default", ["build"]);
+gulp.task("default", ["build", "watch"]);
