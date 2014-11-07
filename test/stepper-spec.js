@@ -117,8 +117,7 @@ describe('Stepper', function () {
                 "x=5;" +
                 "y=10;";
             stepper.load(code);
-            var lineno = stepper.stepOver();
-            expect(lineno).to.be(1);   // line numbers start at 1
+            expect(stepper.stepOver().line).to.be(1);   // line numbers start at 1
         });
 
         it("should call run each step one at a time", function () {
@@ -197,9 +196,9 @@ describe('Stepper', function () {
 
                 stepper.load(code);
 
-                expect(stepper.stepOver()).to.be(1);
-                expect(stepper.stepOver()).to.be(5);
-                expect(stepper.stepOver()).to.be(0);
+                expect(stepper.stepOver().line).to.be(1);
+                expect(stepper.stepOver().line).to.be(5);
+                expect(stepper.stepOver().line).to.be(0);
                 expect(stepper.halted()).to.be(true);
             });
 
@@ -212,11 +211,11 @@ describe('Stepper', function () {
 
                 stepper.load(code);
 
-                expect(stepper.stepOver()).to.be(1);
-                expect(stepper.stepOver()).to.be(2);
-                expect(stepper.stepOver()).to.be(2);
-                expect(stepper.stepOver()).to.be(2);
-                expect(stepper.stepOver()).to.be(0);
+                expect(stepper.stepOver().line).to.be(1);
+                expect(stepper.stepOver().line).to.be(2);
+                expect(stepper.stepOver().line).to.be(2);
+                expect(stepper.stepOver().line).to.be(2);
+                expect(stepper.stepOver().line).to.be(0);
                 expect(stepper.halted()).to.be(true);
             });
 
@@ -293,7 +292,7 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            expect(stepper.stepIn()).to.be(1);   // line numbers start at 1
+            expect(stepper.stepIn().line).to.be(1);   // line numbers start at 1
         });
 
         it("should call run each step one at a time", function () {
@@ -375,8 +374,8 @@ describe('Stepper', function () {
                 stepper.load(code);
 
                 var lineNumbers = [1,5,2,3,5,0];
-                lineNumbers.forEach(function (lineno) {
-                    expect(stepper.stepIn()).to.be(lineno);
+                lineNumbers.forEach(function (line) {
+                    expect(stepper.stepIn().line).to.be(line);
                 });
                 stepper.stepIn();   // TODO: try to get rid of this extra call
 
@@ -432,8 +431,8 @@ describe('Stepper', function () {
                 stepper.load(code);
 
                 var lineNumbers = [1,5,10,6,7,2,3,7,8,10,0];
-                lineNumbers.forEach(function (lineno) {
-                    expect(stepper.stepIn()).to.be(lineno);
+                lineNumbers.forEach(function (line) {
+                    expect(stepper.stepIn().line).to.be(line);
                 });
                 stepper.stepIn();   // TODO: get rid of this extra call
                 expect(stepper.halted()).to.be(true);
@@ -449,15 +448,15 @@ describe('Stepper', function () {
 
                 stepper.load(code);
 
-                expect(stepper.stepIn()).to.be(1);
-                expect(stepper.stepIn()).to.be(4);
-                expect(stepper.stepIn()).to.be(2);  // add(1,2)
-                expect(stepper.stepIn()).to.be(4);
-                expect(stepper.stepIn()).to.be(2);  // add(3,4)
-                expect(stepper.stepIn()).to.be(4);
-                expect(stepper.stepIn()).to.be(2);  // add(3,7)
-                expect(stepper.stepIn()).to.be(4);  // print(10)
-                expect(stepper.stepIn()).to.be(0);
+                expect(stepper.stepIn().line).to.be(1);
+                expect(stepper.stepIn().line).to.be(4);
+                expect(stepper.stepIn().line).to.be(2);  // add(1,2)
+                expect(stepper.stepIn().line).to.be(4);
+                expect(stepper.stepIn().line).to.be(2);  // add(3,4)
+                expect(stepper.stepIn().line).to.be(4);
+                expect(stepper.stepIn().line).to.be(2);  // add(3,7)
+                expect(stepper.stepIn().line).to.be(4);  // print(10)
+                expect(stepper.stepIn().line).to.be(0);
 
                 expect(context.print.calledWith(10)).to.be(true);
             });
@@ -465,18 +464,20 @@ describe('Stepper', function () {
     });
 
     describe("stepOut", function () {
-        var code, lineno;
+        var code;
 
         beforeEach(function () {
-            code = "var foo = function() {\n" +
-                "  fill(255,0,0);\n" +
-                "  rect(50,50,100,100);\n" +
-                "}\n" +
-                "var bar = function() {\n" +
-                "  fill(0,255,255);\n" +
-                "  foo();\n" +
-                "  rect(200,200,100,100);\n" +
-                "}\n";
+            code = getFunctionBody(function () {
+                var foo = function() {
+                  fill(255,0,0);
+                  rect(50,50,100,100);
+                };
+                var bar = function() {
+                  fill(0,255,255);
+                  foo();
+                  rect(200,200,100,100);
+                };
+            });
         });
 
         it("should run to the end of the scope after stepping in", function () {
@@ -495,22 +496,17 @@ describe('Stepper', function () {
         });
 
         it("should return the correct line numbers", function () {
-            code += "foo();\n" +
-                "rect(0,0,10,10);";
+            code += "foo();\nrect(0,0,10,10);";
             stepper.load(code);
 
             stepper.stepOver(); // prime the stepper
             stepper.stepOver();
             stepper.stepOver();
 
-            lineno = stepper.stepIn();   // foo();
-            expect(lineno).to.be(2);
-            lineno = stepper.stepOut();
-            expect(lineno).to.be(10);
-            lineno = stepper.stepOver();
-            expect(lineno).to.be(11);
-            lineno = stepper.stepOut();
-            expect(lineno).to.be(0);  // halted
+            expect(stepper.stepIn().line).to.be(2); // for();
+            expect(stepper.stepOut().line).to.be(10);
+            expect(stepper.stepOver().line).to.be(11);
+            expect(stepper.stepOut().line).to.be(0);  // halted
         });
 
         it("should handle nested function calls", function () {
@@ -543,8 +539,7 @@ describe('Stepper', function () {
         });
 
         it("should return the correct line numbers with nested functions", function () {
-            code += "bar();\n" +
-                "rect(0,0,10,10);";
+            code += "bar();\nrect(0,0,10,10);";
             stepper.load(code);
 
             stepper.stepOver(); // prime the stepper
@@ -554,9 +549,9 @@ describe('Stepper', function () {
             stepper.stepOver();
             stepper.stepIn();   // foo();
 
-            expect(stepper.stepOut()).to.be(7);            
-            expect(stepper.stepOut()).to.be(10);
-            expect(stepper.stepOut()).to.be(0);
+            expect(stepper.stepOut().line).to.be(7);            
+            expect(stepper.stepOut().line).to.be(10);
+            expect(stepper.stepOut().line).to.be(0);
             expect(stepper.halted()).to.be(true);
         });
     });
@@ -609,12 +604,12 @@ describe('Stepper', function () {
 
             stepper.load(code);
 
-            expect(stepper.stepIn()).to.be(1);
-            expect(stepper.stepIn()).to.be(5);
-            expect(stepper.stepIn()).to.be(2);
-            expect(stepper.stepIn()).to.be(3);
-            expect(stepper.stepIn()).to.be(5);
-            expect(stepper.stepIn()).to.be(0);  // end of program
+            expect(stepper.stepIn().line).to.be(1);
+            expect(stepper.stepIn().line).to.be(5);
+            expect(stepper.stepIn().line).to.be(2);
+            expect(stepper.stepIn().line).to.be(3);
+            expect(stepper.stepIn().line).to.be(5);
+            expect(stepper.stepIn().line).to.be(0);  // end of program
 
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
@@ -691,11 +686,11 @@ describe('Stepper', function () {
             stepper.load(code);
             console.log(stepper.debugCode);
 
-            expect(stepper.stepOver()).to.be(1);
-            expect(stepper.stepOver()).to.be(5);
-            expect(stepper.stepIn()).to.be(2);
-            expect(stepper.stepOut()).to.be(5);
-            expect(stepper.stepOver()).to.be(0);
+            expect(stepper.stepOver().line).to.be(1);
+            expect(stepper.stepOver().line).to.be(5);
+            expect(stepper.stepIn().line).to.be(2);
+            expect(stepper.stepOut().line).to.be(5);
+            expect(stepper.stepOver().line).to.be(0);
 
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
@@ -704,12 +699,14 @@ describe('Stepper', function () {
 
     describe("Breakpoints", function () {
         beforeEach(function () {
-            var code = "fill(255,0,0);\n" +
-                "rect(100,100,300,200);\n" +
-                "x = 5;\n" +
-                "y = 10;\n" +
-                "fill(0,255,255);\n" +
-                "rect(x,y,100,100);";
+            var code = getFunctionBody(function () {
+                fill(255,0,0);
+                rect(100,100,300,200);
+                x = 5;
+                y = 10;
+                fill(0,255,255);
+                rect(x,y,100,100);
+            });
 
             stepper.load(code);
         });
@@ -760,11 +757,13 @@ describe('Stepper', function () {
 
         describe("Functions", function () {
             beforeEach(function () {
-                var code = "var foo = function () {\n" +
-                    "  fill(255,0,0);\n" +
-                    "  rect(100,100,300,200);\n" +
-                    "};\n" +
-                    "foo();";
+                var code = getFunctionBody(function () {
+                    var foo = function () {
+                      fill(255,0,0);
+                      rect(100,100,300,200);
+                    };
+                    foo();
+                });
 
                 stepper.load(code);
             });
@@ -776,6 +775,34 @@ describe('Stepper', function () {
                 expect(context.rect.callCount).to.be(0);
                 stepper.run();
                 expect(context.rect.calledWith(100,100,300,200)).to.be(true);
+            });
+            
+            it("shouldn't hit a breakpoint one a function call when calling 'run' from inside", function () {
+                var code = getFunctionBody(function () {
+                    var foo = function () {
+                        fill(255,0,0);
+                        rect(100,100,300,200);
+                    };
+                    foo();
+                    fill(0,255,255);
+                    rect(200,200,50,50);
+                });
+                
+                stepper.load(code);
+                
+                stepper.setBreakpoint(5);
+                
+                stepper.run();
+                expect(context.fill.callCount).to.be(0);
+                
+                stepper.stepIn();
+                stepper.stepOver();
+                expect(context.fill.callCount).to.be(1);
+
+                stepper.run();
+                expect(stepper.halted()).to.be(true);
+                expect(context.fill.callCount).to.be(2);
+                expect(context.rect.callCount).to.be(2);
             });
         });
     });

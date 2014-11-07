@@ -25,7 +25,7 @@
                     var loc = node.value.loc;
                     var yieldExpression = builder.createExpressionStatement(
                         builder.createYieldExpression(
-                            builder.createObjectExpression({ lineno: loc.start.line })
+                            builder.createObjectExpression({ line: loc.start.line })
                         )
                     );
                     
@@ -86,7 +86,7 @@
         var yieldExpression = builder.createYieldExpression(
             builder.createObjectExpression({
                 gen: gen,
-                lineno: node.loc.start.line
+                line: node.loc.start.line
             })
         );
 
