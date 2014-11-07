@@ -658,6 +658,48 @@ describe('Stepper', function () {
             
             expect(context.x).to.be(2);
         });
+        
+        it("should be able to step over new expresssions", function () {
+            var code = getFunctionBody(function () {
+                function Point(x,y) {
+                    this.x = x;
+                    this.y = y;
+                }
+                var p = new Point(5,10); 
+            });
+            
+            stepper.load(code);
+            console.log(stepper.debugCode);
+            
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            
+            expect(context.p.x).to.be(5);
+            expect(context.p.y).to.be(10);
+        });
+        
+        it("should be able to step out of a new expression", function () {
+            var code = getFunctionBody(function () {
+                function Point(x,y) {
+                    this.x = x;
+                    this.y = y;
+                }
+                var p = new Point(5,10);
+            });
+
+            stepper.load(code);
+            console.log(stepper.debugCode);
+
+            expect(stepper.stepOver()).to.be(1);
+            expect(stepper.stepOver()).to.be(5);
+            expect(stepper.stepIn()).to.be(2);
+            expect(stepper.stepOut()).to.be(5);
+            expect(stepper.stepOver()).to.be(0);
+
+            expect(context.p.x).to.be(5);
+            expect(context.p.y).to.be(10);
+        })
     });
 
     describe("Breakpoints", function () {

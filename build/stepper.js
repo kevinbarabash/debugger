@@ -654,7 +654,7 @@ Stepper.prototype.stepIn = function () {
         return this._popAndStoreYieldValue(result.value);
     } else if (result.value.gen) {
         this.stack.push(result.value);
-        result = this._step();   // step in
+        return this.stepIn();
     }
     return result.value && result.value.lineno;
 };
@@ -670,6 +670,9 @@ Stepper.prototype.stepOver = function () {
         this.stack.push(result.value);
         this.runScope();
         this.stack.pop();
+        if (result.value.gen.obj) {
+            this.yieldVal = result.value.gen.obj;
+        }
         return this.stepOver();
     }
     return result.value && result.value.lineno;
