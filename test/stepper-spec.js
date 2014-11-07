@@ -647,7 +647,6 @@ describe('Stepper', function () {
             });
            
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             stepper.run();
             
@@ -664,7 +663,6 @@ describe('Stepper', function () {
             });
             
             stepper.load(code);
-            console.log(stepper.debugCode);
             
             stepper.stepOver();
             stepper.stepOver();
@@ -684,7 +682,6 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             expect(stepper.stepOver().line).to.be(1);
             expect(stepper.stepOver().line).to.be(5);
@@ -694,7 +691,72 @@ describe('Stepper', function () {
 
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
-        })
+        });
+        
+        it("should handle defining methods this", function () {
+            var code = getFunctionBody(function () {
+                var Point = function(x,y) {
+                    this.x = x;
+                    this.y = y;
+                    this.dist = function () {
+                        return Math.sqrt(this.x * this.x + this.y * this.y);
+                    };
+                };
+                var p = new Point(3,4);
+                x = p.dist();
+            });
+
+            stepper.load(code);
+            
+            stepper.run();
+            
+            expect(context.x).to.be(5);
+        });
+        
+        it("should handle defining methods on the prototype", function () {
+            var code = getFunctionBody(function () {
+                var Point = function(x,y) {
+                    this.x = x;
+                    this.y = y;
+                };
+                Point.prototype.dist = function () {
+                    return Math.sqrt(this.x * this.x + this.y * this.y);
+                };
+                var p = new Point(3,4);
+                x = p.dist();
+            });
+
+            stepper.load(code);
+            console.log(stepper.debugCode);
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+        
+        it("should handle calling methods on chained member expressions", function () {
+            var code = getFunctionBody(function () {
+                var Point = function(x,y) {
+                    this.x = x;
+                    this.y = y;
+                };
+                Point.prototype.dist = function () {
+                    return Math.sqrt(this.x * this.x + this.y * this.y);
+                };
+                var circle = {
+                    center: new Point(3,4),
+                    radius: 1
+                };
+                x = circle.center.dist();
+            });
+
+            stepper.load(code);
+            console.log(stepper.debugCode);
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
     });
 
     describe("Breakpoints", function () {
