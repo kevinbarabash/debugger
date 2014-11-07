@@ -658,12 +658,12 @@ var builder = {
             var action = this.stepIn();
             if (this.breakpoints[action.line] && action.type !== "stepOut") {
                 if (!ignoreBreakpoints) {
-                    return action.line;
+                    return action;
                 }
             }
         }
         this.done = true;
-        return action && action.line;
+        return action;
     };
 
     Stepper.prototype.setBreakpoint = function (line) {
