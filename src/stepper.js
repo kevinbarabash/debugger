@@ -88,52 +88,42 @@ Stepper.prototype._popAndStoreYieldValue = function (value) {
 };
 
 Stepper.prototype.stepIn = function () {
-    var result = this._step();
-    if (this.done) {
-        return;
+    var result;
+    if (result = this._step()) {
+        if (result.done) {
+            return this._popAndStoreYieldValue(result.value);
+        } else if (result.value.gen) {
+            this.stack.push(result.value);
+            return this.stepIn();
+        }
+        return result.value && result.value.lineno;
     }
-    if (result.done) {
-        return this._popAndStoreYieldValue(result.value);
-    } else if (result.value.gen) {
-        this.stack.push(result.value);
-        return this.stepIn();
-    }
-    return result.value && result.value.lineno;
 };
 
 Stepper.prototype.stepOver = function () {
-    var result = this._step();
-    if (this.done) {
-        return;
-    }
-    if (result.done) {
-        return this._popAndStoreYieldValue(result.value);
-    } else if (result.value.gen) {
-        this.stack.push(result.value);
-        this.runScope();
-        this.stack.pop();
-        if (result.value.gen.obj) {
-            this.yieldVal = result.value.gen.obj;
+    var result;
+    if (result = this._step()) {
+        if (result.done) {
+            return this._popAndStoreYieldValue(result.value);
+        } else if (result.value.gen) {
+            this._runScope(result.value);
+            return this.stepOver();
         }
-        return this.stepOver();
+        return result.value && result.value.lineno;
     }
-    return result.value && result.value.lineno;
 };
 
 Stepper.prototype.stepOut = function () {
-    var result = this._step();
-    if (this.done) {
-        return;
-    }
-    while (!result.done) {
-        if (result.value.gen) {
-            this.stack.push(result.value);
-            this.runScope();
-            this.stack.pop();
+    var result;
+    if (result = this._step()) {
+        while (!result.done) {
+            if (result.value.gen) {
+                this._runScope(result.value);
+            }
+            result = this._step();
         }
-        result = this._step();
+        return this._popAndStoreYieldValue(result.value);
     }
-    return this._popAndStoreYieldValue(result.value);
 };
 
 Stepper.prototype.run = function () {
@@ -147,17 +137,23 @@ Stepper.prototype.run = function () {
     return lineno;
 };
 
-Stepper.prototype.runScope = function () {
+Stepper.prototype._runScope = function (frame) {
+    if (!frame.gen) {
+        throw "not a valid frame";
+    }
+
+    this.stack.push(frame);
+
     var result = this._step();
     while (!result.done) {
         if (result.value.gen) {
-            this.stack.push(result.value);
-            this.runScope();
-            this.stack.pop();
+            this._runScope(result.value);
         }
         result = this._step();
     }
-    this.yieldVal = result.value;
+
+    this.yieldVal = frame.gen.obj ? frame.gen.obj : result.value;
+    this.stack.pop();
 };
 
 Stepper.prototype.setBreakpoint = function (lineno) {

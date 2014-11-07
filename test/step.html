@@ -76,7 +76,7 @@
             return frame.lineno;
         } else if (result.value.gen) {
             this.stack.push(result.value);
-            this.yieldVal = this.runScope();
+            this.yieldVal = this._runScope();
             this.stack.pop();
         }
         return result.value && result.value.lineno;
@@ -87,7 +87,7 @@
         while (!result.done) {
             if (result.value.gen) {
                 this.stack.push(result.value);
-                this.yieldVal = this.runScope();
+                this.yieldVal = this._runScope();
                 this.stack.pop();
             }
             result = this.step();
@@ -108,12 +108,12 @@
         }
     };
     
-    Stepper2.prototype.runScope = function () {
+    Stepper2.prototype._runScope = function () {
         var result = this.step();
         while (!result.done) {
             if (result.value.gen) {
                 this.stack.push(result.value);
-                this.yieldVal = this.runScope();
+                this.yieldVal = this._runScope();
                 this.stack.pop();
             }
             result = this.step();
@@ -141,7 +141,7 @@
 
     console.log("----- runScope -----");
     stepper.reset();
-    stepper.runScope();
+    stepper._runScope();
 
     console.log("----- stepOver -----");
     stepper.reset();
