@@ -561,9 +561,7 @@ describe('Stepper', function () {
         });
     });
     
-    describe("Objects", function () {
-        var code;
-        
+    describe("Objects", function () {        
         it("should work with constructors", function () {
             var code = getFunctionBody(function () {
                 function Point(x,y) {
@@ -610,7 +608,6 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             expect(stepper.stepIn()).to.be(1);
             expect(stepper.stepIn()).to.be(5);
@@ -622,7 +619,6 @@ describe('Stepper', function () {
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
         });
-
 
         it("should work with calling methods on object literals", function () {
             var code = getFunctionBody(function () {
@@ -641,7 +637,6 @@ describe('Stepper', function () {
             });
             
             stepper.load(code);
-            console.log(stepper.debugCode);
             
             stepper.run();
 
@@ -649,6 +644,19 @@ describe('Stepper', function () {
             expect(context.fill.calledWith(255,0,0)).to.be(true);
             expect(context.rect.calledWith(50,50,100,100)).to.be(true);
             expect(context.rect.calledWith(200,200,100,100)).to.be(true);
+        });
+        
+        it("shouldn't wrap globals", function () {
+            var code = getFunctionBody(function () {
+                x = Math.sqrt(4);
+            });
+           
+            stepper.load(code);
+            console.log(stepper.debugCode);
+
+            stepper.run();
+            
+            expect(context.x).to.be(2);
         });
     });
 

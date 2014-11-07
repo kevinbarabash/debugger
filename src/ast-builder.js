@@ -71,5 +71,14 @@ var builder = {
             type: "Literal",
             value: value
         }
+    },
+    
+    replaceNode: function(parent, name, replacementNode) {
+        if (name.indexOf("arguments") === 0) {
+            var index = name.match(/\[([0-1]+)\]/)[1];
+            parent.arguments[index] = replacementNode;
+        } else {
+            parent[name] = replacementNode;
+        }
     }
 };

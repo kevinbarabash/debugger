@@ -443,6 +443,15 @@ var builder = {
             type: "Literal",
             value: value
         }
+    },
+    
+    replaceNode: function(parent, name, replacementNode) {
+        if (name.indexOf("arguments") === 0) {
+            var index = name.match(/\[([0-1]+)\]/)[1];
+            parent.arguments[index] = replacementNode;
+        } else {
+            parent[name] = replacementNode;
+        }
     }
 };
 
@@ -483,39 +492,69 @@ var builder = {
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                if (!context[node.callee.name]) {
-                    
-                    var gen = node;
-                    if (node.type === "NewExpression") {
-                        node.arguments.unshift(node.callee);
-                        gen = builder.createCallExpression("instantiate", node.arguments);
+                
+                if (node.callee.type === "Identifier") {
+                    if (!context[node.callee.name]) {
+                        wrapCallWithYield(node, name, parent);
                     }
+                } else if (node.callee.type === "MemberExpression") {
+                    // TODO: make this more general
 
-                    var yieldExpression = builder.createYieldExpression(
-                        builder.createObjectExpression({
-                            gen: gen,
-                            lineno: node.loc.start.line
-                        })
-                    );
-                    
-                    if (name.indexOf("arguments") === 0) {
-                        var index = name.match(/\[([0-1]+)\]/)[1];
-                        parent.arguments[index] = yieldExpression;
+                    if (node.callee.object.type === "Identifier" &&
+                        node.callee.property.type === "Identifier") {
+
+                        var objName = node.callee.object.name;
+                        var propName = node.callee.property.name;
+
+                        if (window[objName] && window[objName][propName]) {
+                            console.log("%s.%s defined on window, don't wrap", objName, propName);
+                        } else if (context[objName] && context[objName][propName]) {
+                            console.log("%s.%s defined on context, don't wrap", objName, propName);
+                        } else {
+                            wrapCallWithYield(node, name, parent);
+                        }
                     } else {
-                        parent[name] = yieldExpression;
+                        wrapCallWithYield(node, name, parent);
                     }
+                } else if (node.callee.type === "CallExpression") {
+                    console.log("chained call expression, ignore for now");
+                } else {
+                    throw "we don't handle '" + node.callee.type + "' callees";
                 }
+                
+                
             }
         };
 
         yieldInjectionWalker.walk(ast);
     };
 
-    // TODO: fix this so it's a proper export
+    var wrapCallWithYield = function (node, name, parent) {
+        var gen = node;
+
+        // if "new" then build a call to "instantiate"
+        if (node.type === "NewExpression") {
+            node.arguments.unshift(node.callee);
+            gen = builder.createCallExpression("instantiate", node.arguments);
+            // NOTE: "instantiate" is defined in stepper.js
+        }
+
+        // create a yieldExpress to wrap the call
+        var yieldExpression = builder.createYieldExpression(
+            builder.createObjectExpression({
+                gen: gen,
+                lineno: node.loc.start.line
+            })
+        );
+
+        // replace node with yieldExpression
+        builder.replaceNode(parent, name, yieldExpression);
+    };
+
     exports.injector = {
         process: process
     };
-})(self);
+})(this);
 
 /*global recast, esprima, escodegen, injector */
 
