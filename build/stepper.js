@@ -464,11 +464,10 @@ var builder = {
      * return values) into generators.
      *
      * @param ast
-     * @param context
      */
-    var process = function (ast, context) {
+    var process = function (ast) {
         var yieldInjectionWalker = new Walker();
-        
+
         /**
          * Called as the walker has walked the node's children.  Inserting
          * yield nodes on exit avoids traversing new nodes which would cause
@@ -477,7 +476,7 @@ var builder = {
         yieldInjectionWalker.exit = function(node, name, parent) {
             if (node.type === "Program" || node.type === "BlockStatement") {
                 var bodyList = LinkedList.fromArray(node.body);
-                
+
                 bodyList.forEachNode(function (node) {
                     var loc = node.value.loc;
                     var yieldExpression = builder.createExpressionStatement(
@@ -485,42 +484,22 @@ var builder = {
                             builder.createObjectExpression({ line: loc.start.line })
                         )
                     );
-                    
+
                     bodyList.insertBeforeNode(node, yieldExpression);
                 });
                 node.body = bodyList.toArray();
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                
                 if (node.callee.type === "Identifier") {
-                    if (!context[node.callee.name] && !window[node.callee.name]) {
-                        wrapCallWithYield(node, name, parent);
-                    }
+                    wrapCallWithYield(node, name, parent);
                 } else if (node.callee.type === "MemberExpression") {
-                    if (node.callee.object.type === "Identifier" &&
-                        node.callee.property.type === "Identifier") {
-
-                        var objName = node.callee.object.name;
-                        var propName = node.callee.property.name;
-
-                        if (window[objName] && window[objName][propName]) {
-                            console.log("%s.%s defined on window, don't wrap", objName, propName);
-                        } else if (context[objName] && context[objName][propName]) {
-                            console.log("%s.%s defined on context, don't wrap", objName, propName);
-                        } else {
-                            wrapCallWithYield(node, name, parent);
-                        }
-                    } else {
-                        wrapCallWithYield(node, name, parent);
-                    }
+                    wrapCallWithYield(node, name, parent);
                 } else if (node.callee.type === "CallExpression") {
                     console.log("chained call expression, ignore for now");
                 } else {
                     throw "we don't handle '" + node.callee.type + "' callees";
                 }
-                
-                
             }
         };
 
@@ -559,6 +538,9 @@ var builder = {
 (function (exports) {
 
     function Action (type, line) {
+        if (line === undefined) {
+            debugger;
+        }
         this.type = type;
         this.line = line;
     }
@@ -611,17 +593,23 @@ var builder = {
     };
 
     Stepper.prototype.stepIn = function () {
-        var result;
+        var result, frame;
         if (result = this._step()) {
             if (result.done) {
-                var frame = this._popAndStoreYieldValue(result.value);
+                frame = this._popAndStoreYieldValue(result.value);
                 return new Action("stepOut", frame.line);
-            } else if (result.value.gen) {
-                if (result.value.gen.toString() === "[object Generator]") {
+            } else if (result.value.hasOwnProperty('gen')) {
+                if (result.value.gen && result.value.gen.toString() === "[object Generator]") {
                     this.stack.push(result.value);
                     return new Action("stepIn", this.stepIn().line);
                 } else {
                     this.yieldVal = result.value.gen;
+                    result = this._step();
+                    this.yieldVal = result.value;
+                    if (result.done) {
+                        frame = this._popAndStoreYieldValue(this.yieldVal);
+                        return new Action("stepOut", frame.line);
+                    }
                 }
             }
             return new Action("stepOver", result.value.line);
@@ -629,17 +617,23 @@ var builder = {
     };
 
     Stepper.prototype.stepOver = function () {
-        var result;
+        var result, frame;
         if (result = this._step()) {
             if (result.done) {
-                var frame = this._popAndStoreYieldValue(result.value);
+                frame = this._popAndStoreYieldValue(result.value);
                 return new Action("stepOut", frame.line);
-            } else if (result.value.gen) {
-                if (result.value.gen.toString() === "[object Generator]") {
+            } else if (result.value.hasOwnProperty('gen')) {
+                if (result.value.gen && result.value.gen.toString() === "[object Generator]") {
                     this._runScope(result.value);
                     return new Action("stepOver", this.stepOver().line);
                 } else {
                     this.yieldVal = result.value.gen;
+                    result = this._step();
+                    this.yieldVal = result.value;
+                    if (result.done) {
+                        frame = this._popAndStoreYieldValue(this.yieldVal);
+                        return new Action("stepOut", frame.line);
+                    }
                 }
             }
             return new Action("stepOver", result.value.line);
@@ -650,8 +644,8 @@ var builder = {
         var result;
         if (result = this._step()) {
             while (!result.done) {
-                if (result.value.gen) {
-                    if (result.value.gen.toString() === "[object Generator]") {
+                if (result.value.hasOwnProperty('gen')) {
+                    if (result.value.gen && result.value.gen.toString() === "[object Generator]") {
                         this._runScope(result.value);
                     } else {
                         this.yieldVal = result.value.gen;
@@ -690,7 +684,7 @@ var builder = {
     Stepper.prototype._generateDebugCode = function (code) {
         this.ast = esprima.parse(code, { loc: true });
 
-        injector.process(this.ast, this.context);
+        injector.process(this.ast);
 
         return "return function*(){\nwith(arguments[0]){\n"
             + escodegen.generate(this.ast) + "\n}\n}";

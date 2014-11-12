@@ -3,6 +3,9 @@
 (function (exports) {
 
     function Action (type, line) {
+        if (line === undefined) {
+            debugger;
+        }
         this.type = type;
         this.line = line;
     }
@@ -55,17 +58,23 @@
     };
 
     Stepper.prototype.stepIn = function () {
-        var result;
+        var result, frame;
         if (result = this._step()) {
             if (result.done) {
-                var frame = this._popAndStoreYieldValue(result.value);
+                frame = this._popAndStoreYieldValue(result.value);
                 return new Action("stepOut", frame.line);
-            } else if (result.value.gen) {
-                if (result.value.gen.toString() === "[object Generator]") {
+            } else if (result.value.hasOwnProperty('gen')) {
+                if (result.value.gen && result.value.gen.toString() === "[object Generator]") {
                     this.stack.push(result.value);
                     return new Action("stepIn", this.stepIn().line);
                 } else {
                     this.yieldVal = result.value.gen;
+                    result = this._step();
+                    this.yieldVal = result.value;
+                    if (result.done) {
+                        frame = this._popAndStoreYieldValue(this.yieldVal);
+                        return new Action("stepOut", frame.line);
+                    }
                 }
             }
             return new Action("stepOver", result.value.line);
@@ -73,17 +82,23 @@
     };
 
     Stepper.prototype.stepOver = function () {
-        var result;
+        var result, frame;
         if (result = this._step()) {
             if (result.done) {
-                var frame = this._popAndStoreYieldValue(result.value);
+                frame = this._popAndStoreYieldValue(result.value);
                 return new Action("stepOut", frame.line);
-            } else if (result.value.gen) {
-                if (result.value.gen.toString() === "[object Generator]") {
+            } else if (result.value.hasOwnProperty('gen')) {
+                if (result.value.gen && result.value.gen.toString() === "[object Generator]") {
                     this._runScope(result.value);
                     return new Action("stepOver", this.stepOver().line);
                 } else {
                     this.yieldVal = result.value.gen;
+                    result = this._step();
+                    this.yieldVal = result.value;
+                    if (result.done) {
+                        frame = this._popAndStoreYieldValue(this.yieldVal);
+                        return new Action("stepOut", frame.line);
+                    }
                 }
             }
             return new Action("stepOver", result.value.line);
@@ -94,8 +109,8 @@
         var result;
         if (result = this._step()) {
             while (!result.done) {
-                if (result.value.gen) {
-                    if (result.value.gen.toString() === "[object Generator]") {
+                if (result.value.hasOwnProperty('gen')) {
+                    if (result.value.gen && result.value.gen.toString() === "[object Generator]") {
                         this._runScope(result.value);
                     } else {
                         this.yieldVal = result.value.gen;
@@ -134,7 +149,7 @@
     Stepper.prototype._generateDebugCode = function (code) {
         this.ast = esprima.parse(code, { loc: true });
 
-        injector.process(this.ast, this.context);
+        injector.process(this.ast);
 
         return "return function*(){\nwith(arguments[0]){\n"
             + escodegen.generate(this.ast) + "\n}\n}";

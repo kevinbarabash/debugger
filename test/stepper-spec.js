@@ -9,7 +9,7 @@ describe('Stepper', function () {
         fill = sinon.stub();
         rect = sinon.stub();
         print = sinon.stub();
-        
+
         context = {
             fill: fill,
             rect: rect,
@@ -174,7 +174,7 @@ describe('Stepper', function () {
                     };
                     foo();
                 });
-                
+
                 stepper.load(code);
 
                 stepper.stepOver();
@@ -228,7 +228,7 @@ describe('Stepper', function () {
                     var bar = function () {
                         fill(0,255,255);
                         foo();
-                        rect(200,200,100,100); 
+                        rect(200,200,100,100);
                     };
                     bar();
                 });
@@ -263,7 +263,7 @@ describe('Stepper', function () {
 
                 expect(context.x).to.be(5);
             });
-            
+
             it("should handle nested function calls in the same expression", function () {
                 code = getFunctionBody(function () {
                     var add = function (x,y) {
@@ -273,7 +273,7 @@ describe('Stepper', function () {
                 });
 
                 stepper.load(code);
-                
+
                 stepper.stepOver();
                 stepper.stepOver();
                 stepper.stepOver();
@@ -297,6 +297,7 @@ describe('Stepper', function () {
 
         it("should call run each step one at a time", function () {
             stepper.load("fill(255,0,0);x=5;y=10;");
+            console.log(stepper.debugCode);
 
             stepper.stepIn(); // prime the stepper
 
@@ -395,11 +396,12 @@ describe('Stepper', function () {
                     };
                     bar();
                 });
-                
-                stepper.load(code);
 
-                stepper.stepOver(); 
-                stepper.stepOver(); 
+                stepper.load(code);
+                console.log(stepper.debugCode);
+
+                stepper.stepOver();
+                stepper.stepOver();
                 stepper.stepOver();
                 stepper.stepIn();
                 stepper.stepOver();
@@ -549,14 +551,14 @@ describe('Stepper', function () {
             stepper.stepOver();
             stepper.stepIn();   // foo();
 
-            expect(stepper.stepOut().line).to.be(7);            
+            expect(stepper.stepOut().line).to.be(7);
             expect(stepper.stepOut().line).to.be(10);
             expect(stepper.stepOut().line).to.be(0);
             expect(stepper.halted()).to.be(true);
         });
     });
-    
-    describe("Objects", function () {        
+
+    describe("Objects", function () {
         it("should work with constructors", function () {
             var code = getFunctionBody(function () {
                 function Point(x,y) {
@@ -567,11 +569,11 @@ describe('Stepper', function () {
                 }
                 var p = new Point(5,10);
             });
-            
+
             stepper.load(code);
-            
+
             stepper.run();
-            
+
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
         });
@@ -630,9 +632,9 @@ describe('Stepper', function () {
                 };
                 obj.bar();
             });
-            
+
             stepper.load(code);
-            
+
             stepper.run();
 
             expect(context.fill.calledWith(0,255,255)).to.be(true);
@@ -640,38 +642,38 @@ describe('Stepper', function () {
             expect(context.rect.calledWith(50,50,100,100)).to.be(true);
             expect(context.rect.calledWith(200,200,100,100)).to.be(true);
         });
-        
+
         it("shouldn't wrap globals", function () {
             var code = getFunctionBody(function () {
                 x = Math.sqrt(4);
             });
-           
+
             stepper.load(code);
 
             stepper.run();
-            
+
             expect(context.x).to.be(2);
         });
-        
+
         it("should be able to step over new expresssions", function () {
             var code = getFunctionBody(function () {
                 function Point(x,y) {
                     this.x = x;
                     this.y = y;
                 }
-                var p = new Point(5,10); 
+                var p = new Point(5,10);
             });
-            
+
             stepper.load(code);
-            
+
             stepper.stepOver();
             stepper.stepOver();
             stepper.stepOver();
-            
+
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
         });
-        
+
         it("should be able to step out of a new expression", function () {
             var code = getFunctionBody(function () {
                 function Point(x,y) {
@@ -692,7 +694,7 @@ describe('Stepper', function () {
             expect(context.p.x).to.be(5);
             expect(context.p.y).to.be(10);
         });
-        
+
         it("should handle defining methods this", function () {
             var code = getFunctionBody(function () {
                 var Point = function(x,y) {
@@ -707,12 +709,13 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            
+            console.log(stepper.debugCode);
+
             stepper.run();
-            
+
             expect(context.x).to.be(5);
         });
-        
+
         it("should handle defining methods on the prototype", function () {
             var code = getFunctionBody(function () {
                 var Point = function(x,y) {
@@ -733,7 +736,7 @@ describe('Stepper', function () {
 
             expect(context.x).to.be(5);
         });
-        
+
         it("should handle calling methods on chained member expressions", function () {
             var code = getFunctionBody(function () {
                 var Point = function(x,y) {
@@ -838,7 +841,7 @@ describe('Stepper', function () {
                 stepper.run();
                 expect(context.rect.calledWith(100,100,300,200)).to.be(true);
             });
-            
+
             it("shouldn't hit a breakpoint one a function call when calling 'run' from inside", function () {
                 var code = getFunctionBody(function () {
                     var foo = function () {
@@ -849,14 +852,14 @@ describe('Stepper', function () {
                     fill(0,255,255);
                     rect(200,200,50,50);
                 });
-                
+
                 stepper.load(code);
-                
+
                 stepper.setBreakpoint(5);
-                
+
                 stepper.run();
                 expect(context.fill.callCount).to.be(0);
-                
+
                 stepper.stepIn();
                 stepper.stepOver();
                 expect(context.fill.callCount).to.be(1);
@@ -868,23 +871,23 @@ describe('Stepper', function () {
             });
         });
     });
-    
+
     describe("Ambiguous method calls", function () {
         // Sometimes it's not possible to tell if a method call is to a built-in
         // function that we can't step into or if it's been properly converted
         // to a generate because it is a user-defined function.  These tests
         // make sure that we can handle these cases.  Original test code taken
         // from live-editor/output/pjs/output_test.js
-        
+
         it("Verify that toString() Works", function () {
             var code = getFunctionBody(function () {
                 var num = 50;
                 num = parseInt(num.toString(), 10);
             });
-            
+
             stepper.load(code);
             console.log(stepper.debugCode);
-            
+
             stepper.run();
         });
 
@@ -898,9 +901,9 @@ describe('Stepper', function () {
 
             stepper.stepOver();
             stepper.stepOver();
-            stepper.stepOver();            
+            stepper.stepOver();
         });
-        
+
         it("Verify that toString() works with stepOut", function () {
             var code = getFunctionBody(function () {
                 var foo = function () {
