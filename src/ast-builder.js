@@ -1,69 +1,78 @@
 /* build Parser API style AST nodes and trees */
 
-var builder = {
-    createExpressionStatement: function (expression) {
+(function (exports) {
+
+    var createExpressionStatement = function (expression) {
         return {
             type: "ExpressionStatement",
             expression: expression
         };
-    },
-    
-    createCallExpression: function (name, arguments) {
+    };
+
+    var createBlockStatement = function (body) {
+        return {
+            type: "BlockStatement",
+            body: body
+        }
+    };
+
+    var createCallExpression = function (name, arguments) {
         return {
             type: "CallExpression",
-            callee: this.createIdentifier(name),
+            callee: createIdentifier(name),
             arguments: arguments
-        };      
-    },
+        };
+    };
 
-    createYieldExpression: function (argument) {
+    var createYieldExpression = function (argument) {
         return {
             type: "YieldExpression",
             argument: argument
         };
-    },
+    };
 
-    createObjectExpression: function (obj) {
+    var createObjectExpression = function (obj) {
         var properties = Object.keys(obj).map(function (key) {
             var value = obj[key];
-            return this.createProperty(key, value);
-        }, this);
+            return createProperty(key, value);
+        });
 
         return {
             type: "ObjectExpression",
             properties: properties
         };
-    },
+    };
 
-    createProperty: function (key, value) {
+    var createProperty = function (key, value) {
         var expression;
         if (value instanceof Object) {
             if (value.type === "CallExpression" || value.type === "NewExpression") {
                 expression = value;
             } else {
-                debugger;
-                throw "we don't handle object properties yet";
+                expression = createObjectExpression(value);
             }
+        } else if (value === undefined) {
+            expression = createIdentifier("undefined");
         } else {
-            expression = this.createLiteral(value);
+            expression = createLiteral(value);
         }
 
         return {
             type: "Property",
-            key: this.createIdentifier(key),
+            key: createIdentifier(key),
             value: expression,
             kind: "init"
         }
-    },
+    };
 
-    createIdentifier: function (name) {
+    var createIdentifier = function (name) {
         return {
             type: "Identifier",
             name: name
         };
-    },
+    };
 
-    createLiteral: function (value) {
+    var createLiteral = function (value) {
         if (value === undefined) {
             throw "literal value undefined";
         }
@@ -71,14 +80,46 @@ var builder = {
             type: "Literal",
             value: value
         }
-    },
-    
-    replaceNode: function(parent, name, replacementNode) {
+    };
+
+    var createWithStatement = function (obj, body) {
+        return {
+            type: "WithStatement",
+            object: obj,
+            body: body
+        };
+    };
+
+    var createAssignmentExpression = function (name, value) {
+        return {
+            type: "AssignmentExpression",
+            operator: "=",
+            left: createIdentifier(name),
+            right: value
+        }
+    };
+
+    var replaceNode = function (parent, name, replacementNode) {
         if (name.indexOf("arguments") === 0) {
             var index = name.match(/\[([0-1]+)\]/)[1];
             parent.arguments[index] = replacementNode;
         } else {
             parent[name] = replacementNode;
         }
+    };
+
+    exports.builder = {
+        createExpressionStatement: createExpressionStatement,
+        createBlockStatement: createBlockStatement,
+        createCallExpression: createCallExpression,
+        createYieldExpression: createYieldExpression,
+        createObjectExpression: createObjectExpression,
+        createProperty: createProperty,
+        createIdentifier: createIdentifier,
+        createLiteral: createLiteral,
+        createWithStatement: createWithStatement,
+        createAssignmentExpression: createAssignmentExpression,
+        replaceNode: replaceNode
     }
-};
+
+})(this);

@@ -145,70 +145,79 @@
 
 /* build Parser API style AST nodes and trees */
 
-var builder = {
-    createExpressionStatement: function (expression) {
+(function (exports) {
+
+    var createExpressionStatement = function (expression) {
         return {
             type: "ExpressionStatement",
             expression: expression
         };
-    },
-    
-    createCallExpression: function (name, arguments) {
+    };
+
+    var createBlockStatement = function (body) {
+        return {
+            type: "BlockStatement",
+            body: body
+        }
+    };
+
+    var createCallExpression = function (name, arguments) {
         return {
             type: "CallExpression",
-            callee: this.createIdentifier(name),
+            callee: createIdentifier(name),
             arguments: arguments
-        };      
-    },
+        };
+    };
 
-    createYieldExpression: function (argument) {
+    var createYieldExpression = function (argument) {
         return {
             type: "YieldExpression",
             argument: argument
         };
-    },
+    };
 
-    createObjectExpression: function (obj) {
+    var createObjectExpression = function (obj) {
         var properties = Object.keys(obj).map(function (key) {
             var value = obj[key];
-            return this.createProperty(key, value);
-        }, this);
+            return createProperty(key, value);
+        });
 
         return {
             type: "ObjectExpression",
             properties: properties
         };
-    },
+    };
 
-    createProperty: function (key, value) {
+    var createProperty = function (key, value) {
         var expression;
         if (value instanceof Object) {
             if (value.type === "CallExpression" || value.type === "NewExpression") {
                 expression = value;
             } else {
-                debugger;
-                throw "we don't handle object properties yet";
+                expression = createObjectExpression(value);
             }
+        } else if (value === undefined) {
+            expression = createIdentifier("undefined");
         } else {
-            expression = this.createLiteral(value);
+            expression = createLiteral(value);
         }
 
         return {
             type: "Property",
-            key: this.createIdentifier(key),
+            key: createIdentifier(key),
             value: expression,
             kind: "init"
         }
-    },
+    };
 
-    createIdentifier: function (name) {
+    var createIdentifier = function (name) {
         return {
             type: "Identifier",
             name: name
         };
-    },
+    };
 
-    createLiteral: function (value) {
+    var createLiteral = function (value) {
         if (value === undefined) {
             throw "literal value undefined";
         }
@@ -216,17 +225,49 @@ var builder = {
             type: "Literal",
             value: value
         }
-    },
-    
-    replaceNode: function(parent, name, replacementNode) {
+    };
+
+    var createWithStatement = function (obj, body) {
+        return {
+            type: "WithStatement",
+            object: obj,
+            body: body
+        };
+    };
+
+    var createAssignmentExpression = function (name, value) {
+        return {
+            type: "AssignmentExpression",
+            operator: "=",
+            left: createIdentifier(name),
+            right: value
+        }
+    };
+
+    var replaceNode = function (parent, name, replacementNode) {
         if (name.indexOf("arguments") === 0) {
             var index = name.match(/\[([0-1]+)\]/)[1];
             parent.arguments[index] = replacementNode;
         } else {
             parent[name] = replacementNode;
         }
+    };
+
+    exports.builder = {
+        createExpressionStatement: createExpressionStatement,
+        createBlockStatement: createBlockStatement,
+        createCallExpression: createCallExpression,
+        createYieldExpression: createYieldExpression,
+        createObjectExpression: createObjectExpression,
+        createProperty: createProperty,
+        createIdentifier: createIdentifier,
+        createLiteral: createLiteral,
+        createWithStatement: createWithStatement,
+        createAssignmentExpression: createAssignmentExpression,
+        replaceNode: replaceNode
     }
-};
+
+})(this);
 
 /*global recast, esprima, escodegen, injector */
 
@@ -378,11 +419,41 @@ var builder = {
     Stepper.prototype._createDebugGenerator = function (code) {
         var ast = esprima.parse(code, { loc: true });
 
+        var scopeManager = escope.analyze(ast);
+        scopeManager.attach();
+
+        var context = this.context;
         estraverse.replace(ast, {
             leave: function(node, parent) {
                 if (node.type === "Program" || node.type === "BlockStatement") {
-                    var bodyList = LinkedList.fromArray(node.body);
+                    if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
+                        var variables = parent.__$escope$__.variables;
+                        var scope = variables.filter(function (variable) {
+                            // don't include context variables in the scopes
+                            if (node.type === "Program" && context.hasOwnProperty(variable.name)) {
+                                return false;
+                            }
+                            // function declarations like "function Point() {}"
+                            // don't work properly when defining methods on the
+                            // prototoype so filter those out as well
+                            var isFunctionDeclaration = variable.defs.some(function (def) {
+                                return def.type      === "FunctionName" &&
+                                       def.node.type === "FunctionDeclaration";
+                            });
+                            if (isFunctionDeclaration) {
+                                return false;
+                            }
+                            // filter out "arguments"
+                            // TODO: make this optional, advanced users may want to inspect this
+                            if (variable.name === "arguments") {
+                                return false;
+                            }
+                            return true;
+                        });
+                    }
 
+                    // insert yield { line: <line_number> } in between each line
+                    var bodyList = LinkedList.fromArray(node.body);
                     bodyList.forEachNode(function (node) {
                         var loc = node.value.loc;
                         var yieldExpression = builder.createExpressionStatement(
@@ -390,10 +461,60 @@ var builder = {
                                 builder.createObjectExpression({ line: loc.start.line })
                             )
                         );
-
                         bodyList.insertBeforeNode(node, yieldExpression);
                     });
-                    node.body = bodyList.toArray();
+
+                    // if there are any variables defined in this scope
+                    // create a __scope__ dictionary containing their values
+                    // and include in the first yield
+                    if (scope && scope.length > 0) {
+                        var properties = scope.map(function (variable) {
+                            var isParam = variable.defs.some(function (def) {
+                                return def.type === "Parameter";
+                            });
+                            var name = variable.name;
+
+                            // if the variable is a parameter initialize its
+                            // value with the value of the parameter
+                            var value = isParam ? builder.createIdentifier(name) : builder.createIdentifier("undefined");
+                            return {
+                                type: "Property",
+                                key: builder.createIdentifier(name),
+                                value: value,
+                                kind: "init"
+                            }
+                        });
+
+                        // modify the first yield statement to include the scope
+                        // as part of the value
+                        var firstStatement = bodyList.first.value;
+                        firstStatement.expression.argument.properties.push({
+                            type: "Property",
+                            key: builder.createIdentifier("scope"),
+                            value: builder.createIdentifier("__scope__"),
+                            kind: "init"
+                        });
+
+                        // wrap the body with a yield statement
+                        var withStatement = builder.createWithStatement(
+                            builder.createIdentifier("__scope__"),
+                            builder.createBlockStatement(bodyList.toArray())
+                        );
+                        var objectExpression = {
+                            type: "ObjectExpression",
+                            properties: properties
+                        };
+
+                        // replace the body with __scope__ = { ... }; with(__scope___) { body }
+                        node.body = [
+                            builder.createExpressionStatement(
+                                builder.createAssignmentExpression("__scope__", objectExpression)
+                            ),
+                            withStatement
+                        ];
+                    } else {
+                        node.body = bodyList.toArray();
+                    }
                 } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                     node.generator = true;
                 } else if (node.type === "CallExpression" || node.type === "NewExpression") {
@@ -416,6 +537,7 @@ var builder = {
                         );
 
                     } else if (node.callee.type === "CallExpression") {
+                        // TODO: figure out how to trigger this
                         console.log("chained call expression, ignore for now");
                     } else {
                         throw "we don't handle '" + node.callee.type + "' callees";
@@ -426,6 +548,8 @@ var builder = {
 
         var debugCode = "return function*(){\nwith(arguments[0]){\n" +
             escodegen.generate(ast) + "\n}\n}";
+
+        console.log(debugCode);
 
         var debugFunction = new Function(debugCode);
         return debugFunction(); // returns a generator
@@ -439,6 +563,12 @@ var builder = {
         var frame = this.stack.peek();
         var result = frame.gen.next(this.yieldVal);
         this.yieldVal = undefined;
+
+        // if the result.value contains scope information add it to the
+        // current stack frame
+        if (result.value && result.value.scope) {
+            this.stack.peek().scope = result.value.scope;
+        }
         return result;
     };
 

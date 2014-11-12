@@ -251,7 +251,7 @@ describe('Stepper', function () {
                     var foo = function () {
                         return 5;
                     };
-                    var x = foo();
+                    x = foo();
                 });
 
                 stepper.load(code);
@@ -565,7 +565,7 @@ describe('Stepper', function () {
 
                     console.log("end of new Point");
                 }
-                var p = new Point(5,10);
+                p = new Point(5,10);
             });
 
             stepper.load(code);
@@ -582,7 +582,7 @@ describe('Stepper', function () {
                     this.x = x;
                     this.y = y;
                 };
-                var p = new Point(5,10);
+                p = new Point(5,10);
             });
 
             stepper.load(code);
@@ -599,7 +599,7 @@ describe('Stepper', function () {
                     this.x = x;
                     this.y = y;
                 };
-                var p = new Point(5,10);
+                p = new Point(5,10);
             });
 
             stepper.load(code);
@@ -659,7 +659,7 @@ describe('Stepper', function () {
                     this.x = x;
                     this.y = y;
                 }
-                var p = new Point(5,10);
+                p = new Point(5,10);
             });
 
             stepper.load(code);
@@ -678,7 +678,7 @@ describe('Stepper', function () {
                     this.x = x;
                     this.y = y;
                 }
-                var p = new Point(5,10);
+                p = new Point(5,10);
             });
 
             stepper.load(code);
@@ -867,6 +867,121 @@ describe('Stepper', function () {
         });
     });
 
+    describe("Scopes and Context", function () {
+        it("should update the values of in scope variables", function () {
+            var code = getFunctionBody(function () {
+                var dist = function (x1, y1, x2, y2) {
+                    var dx, dy, d_sq;
+                    dx = x2 - x1;
+                    dy = y2 - y1;
+                    d_sq = dx * dx + dy * dy;
+                    return Math.sqrt(d_sq);
+                };
+                print(dist(8, 5, 4, 2));
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+            stepper.stepOver();
+
+            var scope = stepper.stack.peek().scope;
+            expect(scope.x1).to.be(8);
+            expect(scope.y1).to.be(5);
+            expect(scope.x2).to.be(4);
+            expect(scope.y2).to.be(2);
+
+            expect(scope.dx).to.be(undefined);
+            expect(scope.dy).to.be(undefined);
+            expect(scope.d_sq).to.be(undefined);
+
+            stepper.stepOver();
+            expect(scope.dx).to.be(-4);
+
+            stepper.stepOver();
+            expect(scope.dy).to.be(-3);
+
+            stepper.stepOver();
+            expect(scope.d_sq).to.be(25);
+
+            stepper.stepOut();
+            stepper.stepOut();
+
+            expect(context.print.calledWith(5)).to.be(true);
+        });
+
+        it("should update variables in the root scope", function () {
+            var code = getFunctionBody(function () {
+                var a, b, c;
+                a = 5;
+                b = 10;
+                c = a + b;
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            var scope = stepper.stack.peek().scope;
+            expect(scope.a).to.be(undefined);
+            expect(scope.b).to.be(undefined);
+            expect(scope.c).to.be(undefined);
+
+            stepper.stepOver();
+            expect(scope.a).to.be(5);
+
+            stepper.stepOver();
+            expect(scope.b).to.be(10);
+
+            stepper.stepOver();
+            expect(scope.c).to.be(15);
+        });
+
+        it("should not include variables from the context in the root scope", function () {
+            var code = getFunctionBody(function () {
+                var x, y, a, b;
+                x = 5;
+                y = 10;
+                a = x;
+                b = y;
+            });
+
+            stepper.load(code);
+            stepper.stepOver();
+
+            var scope = stepper.stack.peek().scope;
+            expect(scope.a).to.be(undefined);
+            expect(scope.b).to.be(undefined);
+            expect(scope.hasOwnProperty("x")).to.be(false);
+            expect(scope.hasOwnProperty("y")).to.be(false);
+
+            stepper.run();
+            expect(context.x).to.be(5);
+            expect(context.y).to.be(10);
+
+            expect(scope.a).to.be(5);
+            expect(scope.b).to.be(10);
+        });
+
+        it("should allow you to redeclare variables in context and have them still be accessible", function () {
+            var code = getFunctionBody(function () {
+                var x = 5;
+                var y = 10;
+            });
+
+            stepper.load(code);
+            stepper.run();
+
+            expect(context.x).to.be(5);
+            expect(context.y).to.be(10);
+        });
+    });
+
+    // all function calls are treated as ambiguous by _createDebugGenerator
+    // the stepper resolves whether the function being called returns a
+    // generator or not
     describe("Ambiguous method calls", function () {
         // Sometimes it's not possible to tell if a method call is to a built-in
         // function that we can't step into or if it's been properly converted
