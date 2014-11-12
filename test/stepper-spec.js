@@ -32,12 +32,12 @@ describe('Stepper', function () {
             expect(stepper.halted()).to.be(false);
         });
 
-        it("should regenerate debug code", function () {
+        it("should recreate the debug generator", function () {
             stepper.load("fill(255,0,0);");
-            var debug1 = stepper.debugCode;
+            var debug1 = stepper.debugGenerator.toString();
             stepper.run();
             stepper.load("fill(255,0,0);x=5;");
-            var debug2 = stepper.debugCode;
+            var debug2 = stepper.debugGenerator.toString();
 
             expect(debug1).not.to.equal(debug2);
         });

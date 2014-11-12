@@ -52,10 +52,10 @@
     var wrapCallWithYield = function (node, name, parent) {
         var gen = node;
 
-        // if "new" then build a call to "instantiate"
+        // if "new" then build a call to "__instantiate__"
         if (node.type === "NewExpression") {
             node.arguments.unshift(node.callee);
-            gen = builder.createCallExpression("instantiate", node.arguments);
+            gen = builder.createCallExpression("__instantiate__", node.arguments);
             // NOTE: "instantiate" is defined in stepper.js
         }
 
