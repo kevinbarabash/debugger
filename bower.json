@@ -17,7 +17,8 @@
   "dependencies": {
     "processing": "~1.4.8",
     "esprima": "~1.2.2",
-    "escodegen": "~1.4.1"
+    "escodegen": "~1.4.1",
+    "estraverse": "~1.7.1"
   },
   "devDependencies": {
     "mocha": "~2.0.1",

@@ -13,7 +13,6 @@ var src = [
     "./src/linked-list.js",
     "./external/ast-walker/walker.js",
     "./src/ast-builder.js",
-    "./src/injector.js",
     "./src/stepper.js"
 ];
 

@@ -146,12 +146,56 @@
     };
 
     Stepper.prototype._createDebugGenerator = function (code) {
-        this.ast = esprima.parse(code, { loc: true });
+        var ast = esprima.parse(code, { loc: true });
 
-        injector.process(this.ast);
+        estraverse.replace(ast, {
+            leave: function(node, parent) {
+                if (node.type === "Program" || node.type === "BlockStatement") {
+                    var bodyList = LinkedList.fromArray(node.body);
+
+                    bodyList.forEachNode(function (node) {
+                        var loc = node.value.loc;
+                        var yieldExpression = builder.createExpressionStatement(
+                            builder.createYieldExpression(
+                                builder.createObjectExpression({ line: loc.start.line })
+                            )
+                        );
+
+                        bodyList.insertBeforeNode(node, yieldExpression);
+                    });
+                    node.body = bodyList.toArray();
+                } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
+                    node.generator = true;
+                } else if (node.type === "CallExpression" || node.type === "NewExpression") {
+                    if (node.callee.type === "Identifier" || node.callee.type === "MemberExpression") {
+
+                        var gen = node;
+
+                        // if "new" then build a call to "__instantiate__"
+                        if (node.type === "NewExpression") {
+                            node.arguments.unshift(node.callee);
+                            gen = builder.createCallExpression("__instantiate__", node.arguments);
+                        }
+
+                        // create a yieldExpress to wrap the call
+                        return builder.createYieldExpression(
+                            builder.createObjectExpression({
+                                gen: gen,
+                                line: node.loc.start.line
+                            })
+                        );
+
+                    } else if (node.callee.type === "CallExpression") {
+                        console.log("chained call expression, ignore for now");
+                    } else {
+                        throw "we don't handle '" + node.callee.type + "' callees";
+                    }
+                }
+            }
+        });
 
         var debugCode = "return function*(){\nwith(arguments[0]){\n" +
-            escodegen.generate(this.ast) + "\n}\n}";
+            escodegen.generate(ast) + "\n}\n}";
 
         var debugFunction = new Function(debugCode);
         return debugFunction(); // returns a generator

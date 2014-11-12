@@ -297,7 +297,6 @@ describe('Stepper', function () {
 
         it("should call run each step one at a time", function () {
             stepper.load("fill(255,0,0);x=5;y=10;");
-            console.log(stepper.debugCode);
 
             stepper.stepIn(); // prime the stepper
 
@@ -398,7 +397,6 @@ describe('Stepper', function () {
                 });
 
                 stepper.load(code);
-                console.log(stepper.debugCode);
 
                 stepper.stepOver();
                 stepper.stepOver();
@@ -709,7 +707,6 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             stepper.run();
 
@@ -730,7 +727,6 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             stepper.run();
 
@@ -754,7 +750,6 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             stepper.run();
 
@@ -886,7 +881,6 @@ describe('Stepper', function () {
             });
 
             stepper.load(code);
-            console.log(stepper.debugCode);
 
             stepper.run();
         });
