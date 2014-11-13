@@ -548,7 +548,7 @@
             }
         });
 
-        var debugCode = "return function*(context){\nwith(context){\n" +
+        var debugCode = "return function*(context){\ncontext = context || {};\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
 
         console.log(debugCode);
