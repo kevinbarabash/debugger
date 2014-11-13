@@ -983,17 +983,6 @@ describe('Stepper', function () {
             expect(context.x).to.be(5);
             expect(context.y).to.be(10);
         });
-
-        it.only("should work without a context", function () {
-            var code = getFunctionBody(function () {
-                console.log("hello");
-            });
-
-            stepper.context = undefined;
-            stepper.load(code);
-            stepper.run();
-            expect(stepper.halted());
-        });
     });
 
     // all function calls are treated as ambiguous by _createDebugGenerator
