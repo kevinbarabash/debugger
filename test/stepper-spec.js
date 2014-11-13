@@ -139,7 +139,13 @@ describe('Stepper', function () {
         });
 
         it("should step through loops", function () {
-            stepper.load("for(var i=0;i<3;i++){numbers[i]=i+1;}");
+            var code = getFunctionBody(function () {
+                for (var i = 0; i < 3; i++) {
+                    numbers[i] = i + 1;
+                }
+            });
+
+            stepper.load(code);
 
             stepper.stepOver();
             stepper.stepOver(); // for(...)
