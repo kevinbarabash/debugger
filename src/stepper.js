@@ -236,11 +236,11 @@
                             properties: properties
                         };
 
-                        // replace the body with __scope__ = { ... }; with(__scope___) { body }
+                        // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
                         node.body = [
-                            builder.createExpressionStatement(
-                                builder.createAssignmentExpression("__scope__", objectExpression)
-                            ),
+                            builder.createVariableDeclaration([
+                                builder.createVariableDeclarator("__scope__", objectExpression)
+                            ]),
                             withStatement
                         ];
                     } else {
@@ -279,8 +279,6 @@
 
         var debugCode = "return function*(context){\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
-
-        console.log(debugCode);
 
         var debugFunction = new Function(debugCode);
         return debugFunction(); // returns a generator

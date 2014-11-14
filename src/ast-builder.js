@@ -99,6 +99,23 @@
         }
     };
 
+    var createVariableDeclarator = function (name, value) {
+        return {
+            type: "VariableDeclarator",
+            id: createIdentifier(name),
+            init: value
+        };
+    };
+
+    // a declaration is a subclass of statement
+    var createVariableDeclaration = function (declarations) {
+        return {
+            type: "VariableDeclaration",
+            declarations: declarations,
+            kind: "var"
+        };
+    };
+
     var replaceNode = function (parent, name, replacementNode) {
         if (name.indexOf("arguments") === 0) {
             var index = name.match(/\[([0-1]+)\]/)[1];
@@ -119,6 +136,8 @@
         createLiteral: createLiteral,
         createWithStatement: createWithStatement,
         createAssignmentExpression: createAssignmentExpression,
+        createVariableDeclaration: createVariableDeclaration,
+        createVariableDeclarator: createVariableDeclarator,
         replaceNode: replaceNode
     }
 
