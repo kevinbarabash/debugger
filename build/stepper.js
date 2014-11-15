@@ -300,6 +300,11 @@
         this.line = line;
     }
 
+    function Frame (gen, line) {
+        this.gen = gen;
+        this.line = line;
+    }
+
     function Stepper (context) {
         // Only support a single context because using multiple "with" statements
         // hurts performance: http://jsperf.com/multiple-withs
@@ -339,34 +344,36 @@
         };
         this._halted = false;
         this._paused = false;
+        this._line = 0;
         // retVal should only be passed to .next() when returning from a
         // function call
         this.retVal = undefined;
 
-        this.stack.push({
-            gen: this.debugGenerator(this.context),
-            line: 0
-        });
+        var gen = this.debugGenerator(this.context);
+        this.stack.push(new Frame(gen, this._line));
     };
 
     Stepper.prototype.stepIn = function () {
         var result;
         if (result = this._step()) {
+            console.log(result);
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
-                    this.stack.push(result.value);
-                    return new Action("stepIn", this.stepIn().line);
+                    this.stack.push(new Frame(result.value.gen, this._line));
+                    this.stepIn();
+                    return new Action("stepIn", this._line);
                 } else {
                     this.retVal = result.value.gen;
-                    // step while result.value.gen is defined, but is not a generator
-                    result = this._step();
+                    if (result.value.statement) {
+                        result = this._step();
+                    }
                 }
             }
             if (result.done) {
-                var frame = this._popAndStoreReturnValue(result.value);
-                return new Action("stepOut", frame.line);
+                this._popAndStoreReturnValue(result.value);
+                return new Action("stepOut", this._line);
             }
-            return new Action("stepOver", result.value.line);
+            return new Action("stepOver", this._line);
         }
     };
 
@@ -376,18 +383,20 @@
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
                     this._runScope(result.value);
-                    return new Action("stepOver", this.stepOver().line);
+                    this.stepOver();
+                    return new Action("stepOver", this._line);
                 } else {
                     this.retVal = result.value.gen;
-                    // step while result.value.gen is defined, but is not a generator
-                    result = this._step();
+                    if (result.value.statement) {
+                        result = this._step();
+                    }
                 }
             }
             if (result.done) {
-                var frame = this._popAndStoreReturnValue(result.value);
-                return new Action("stepOut", frame.line);
+                this._popAndStoreReturnValue(result.value);
+                return new Action("stepOut", this._line);
             }
-            return new Action("stepOver", result.value.line);
+            return new Action("stepOver", this._line);
         }
     };
 
@@ -404,8 +413,8 @@
                 }
                 result = this._step();
             }
-            var frame = this._popAndStoreReturnValue(result.value);
-            return new Action("stepOut", frame.line);
+            this._popAndStoreReturnValue(result.value);
+            return new Action("stepOut", this._line);
         }
     };
 
@@ -500,6 +509,13 @@
                                 builder.createObjectExpression({ line: loc.start.line })
                             )
                         );
+                        if (node.value.type === "ExpressionStatement") {
+                            if (node.value.expression.type === "YieldExpression") {
+                                node.value.expression.argument.properties.push(
+                                    builder.createProperty("statement", true)
+                                );
+                            }
+                        }
                         bodyList.insertBeforeNode(node, yieldExpression);
                     });
 
@@ -569,10 +585,7 @@
 
                         // create a yieldExpress to wrap the call
                         return builder.createYieldExpression(
-                            builder.createObjectExpression({
-                                gen: gen,
-                                line: node.loc.start.line
-                            })
+                            builder.createObjectExpression({ gen: gen })
                         );
 
                     } else if (node.callee.type === "CallExpression") {
@@ -587,6 +600,8 @@
 
         var debugCode = "return function*(context){\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
+
+        console.log(debugCode);
 
         var debugFunction = new Function(debugCode);
         return debugFunction(); // returns a generator
@@ -603,8 +618,13 @@
 
         // if the result.value contains scope information add it to the
         // current stack frame
-        if (result.value && result.value.scope) {
-            this.stack.peek().scope = result.value.scope;
+        if (result.value) {
+            if (result.value.scope) {
+                this.stack.peek().scope = result.value.scope;
+            }
+            if (result.value.line) {
+                this._line = result.value.line;
+            }
         }
         return result;
     };
@@ -615,7 +635,7 @@
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
-                this._runScope(result.value);
+                this._runScope(new Frame(result.value.gen, this._line));
             }
             result = this._step();
         }
@@ -626,6 +646,7 @@
     Stepper.prototype._popAndStoreReturnValue = function (value) {
         var frame = this.stack.pop();
         this.retVal = frame.gen.obj || value;
+        this._line = frame.line;
         return frame;
     };
 

@@ -105,7 +105,7 @@ describe('Stepper', function () {
             expect(window._test_global).to.be("apple");
         });
 
-        it("shouldn't set local variabls on the context", function () {
+        it("shouldn't set local variables on the context", function () {
             stepper.run();
             expect(context.z).to.be(undefined);
         });
@@ -465,6 +465,17 @@ describe('Stepper', function () {
                 expect(stepper.stepIn().line).to.be(0);
 
                 expect(context.print.calledWith(10)).to.be(true);
+            });
+
+            it("should handle nested function calls to non-instrument functions", function () {
+                var code = getFunctionBody(function () {
+                    x = Math.sqrt(Math.sqrt(16));
+                });
+
+                stepper.load(code);
+                stepper.run();
+
+                expect(context.x).to.be(2);
             });
         });
     });
