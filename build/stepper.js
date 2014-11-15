@@ -636,7 +636,11 @@
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
-                this._runScope(new Frame(result.value.gen, this._line));
+                if (_isGenerator(result.value.gen)) {
+                    this._runScope(new Frame(result.value.gen, this._line));
+                } else {
+                    this.retVal = result.value.gen;
+                }
             }
             result = this._step();
         }

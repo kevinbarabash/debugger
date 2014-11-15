@@ -1,8 +1,8 @@
 // setup editor
 var editor = ace.edit("editor");
 editor.setTheme("ace/theme/chrome");
-editor.getSession().setMode("ace/mode/javascript");
-
+var session = editor.getSession();
+session.setMode("ace/mode/javascript");
 
 var canvas = document.querySelector("canvas");
 var processing = new Processing(canvas);
@@ -58,17 +58,35 @@ stepper.load(code);
 stepper.run();
 
 $("#runButton").click(function () {
-    code = editor.getSession().getValue();
+    code = session.getValue();
     stepper.load(code);
     stepper.run();
 });
 
 $("#resetButton").click(function () {
     stepper.reset();
+    editor.setHighlightActiveLine(false);
+    var action = stepper.stepOver();
+    editor.gotoLine(action.line);
+    editor.setHighlightActiveLine(true);
 });
 
 $("#stepInButton").click(function () {
-    stepper.stepIn();
+    var action = stepper.stepIn();
+    editor.gotoLine(action.line);
+    editor.setHighlightActiveLine(true);
+});
+
+$("#stepOverButton").click(function () {
+    var action = stepper.stepOver();
+    editor.gotoLine(action.line);
+    editor.setHighlightActiveLine(true);
+});
+
+$("#stepOutButton").click(function () {
+    var action = stepper.stepOver();
+    editor.gotoLine(action.line);
+    editor.setHighlightActiveLine(true);
 });
 
 ////stepper.setBreakpoint(3);

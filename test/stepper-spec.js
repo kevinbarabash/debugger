@@ -286,6 +286,23 @@ describe('Stepper', function () {
 
                 expect(context.print.calledWith(10)).to.be(true);
             });
+
+            it("should hanlde stepping over user defined functions containing non-instrumented function calls", function () {
+                var code = getFunctionBody(function () {
+                    var quadRoot = function (x) {
+                        return Math.sqrt(Math.sqrt(x));
+                    };
+                    x = quadRoot(16);
+                });
+
+                stepper.load(code);
+
+                stepper.stepOver();
+                stepper.stepOver();
+                stepper.stepOver();
+
+                expect(context.x).to.be(2);
+            });
         });
     });
 
