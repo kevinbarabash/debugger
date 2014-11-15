@@ -66,7 +66,6 @@
     Stepper.prototype.stepIn = function () {
         var result;
         if (result = this._step()) {
-            console.log(result);
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
                     this.stack.push(new Frame(result.value.gen, this._line));
@@ -74,7 +73,7 @@
                     return new Action("stepIn", this._line);
                 } else {
                     this.retVal = result.value.gen;
-                    if (result.value.statement) {
+                    if (result.value.stepAgain) {
                         result = this._step();
                     }
                 }
@@ -97,7 +96,7 @@
                     return new Action("stepOver", this._line);
                 } else {
                     this.retVal = result.value.gen;
-                    if (result.value.statement) {
+                    if (result.value.stepAgain) {
                         result = this._step();
                     }
                 }
@@ -219,10 +218,14 @@
                                 builder.createObjectExpression({ line: loc.start.line })
                             )
                         );
+                        // add an extra property to differentiate function calls
+                        // that are followed by a statment from those that aren't
+                        // the former requires taking an extra _step() to get the
+                        // next line
                         if (node.value.type === "ExpressionStatement") {
                             if (node.value.expression.type === "YieldExpression") {
                                 node.value.expression.argument.properties.push(
-                                    builder.createProperty("statement", true)
+                                    builder.createProperty("stepAgain", true)
                                 );
                             }
                         }
@@ -310,8 +313,6 @@
 
         var debugCode = "return function*(context){\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
-
-        console.log(debugCode);
 
         var debugFunction = new Function(debugCode);
         return debugFunction(); // returns a generator

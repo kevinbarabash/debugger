@@ -10,7 +10,10 @@ code that you want to step through and communicate with js-step using postMessag
 - js-step is a work in progress and doesn't have support for a lot of things.
 
 ## TODO ##
-- fix nested calls to non-instrumented methods, e.g. console.log(Math.sqrt(2));
+- fix nested calls to non-instrumented methods, e.g. console.log(Math.sqrt(2)); [done]
+- all more precision when stepping through for loops
+- handle callbacks
+- handle special functions in processing, e.g. draw
 
 ## running the demo ##
 - bower install
