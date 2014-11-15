@@ -23,9 +23,6 @@
             return gen;
         };
 
-        // retVal should only be passed to .next() when returning from a
-        // function call
-        this.retVal = undefined;
         this.breakpoints = {};
     }
 
@@ -48,18 +45,18 @@
 
         var self = this;
         this.stack.poppedLastItem = function () {
-            self.done = true;
+            self._halted = true;
         };
-        this.done = false;
+        this._halted = false;
+        this._paused = false;
+        // retVal should only be passed to .next() when returning from a
+        // function call
+        this.retVal = undefined;
 
         this.stack.push({
             gen: this.debugGenerator(this.context),
             line: 0
         });
-    };
-
-    Stepper.prototype.halted = function () {
-        return this.done;
     };
 
     Stepper.prototype.stepIn = function () {
@@ -71,6 +68,7 @@
                     return new Action("stepIn", this.stepIn().line);
                 } else {
                     this.retVal = result.value.gen;
+                    // step while result.value.gen is defined, but is not a generator
                     result = this._step();
                 }
             }
@@ -91,6 +89,7 @@
                     return new Action("stepOver", this.stepOver().line);
                 } else {
                     this.retVal = result.value.gen;
+                    // step while result.value.gen is defined, but is not a generator
                     result = this._step();
                 }
             }
@@ -120,6 +119,9 @@
         }
     };
 
+    // TODO: figure out how to respond to UI actions while running
+    // there should be a callback that's fired after each action that's
+    // run and then we can set call pause() to set this._paused to true
     Stepper.prototype.run = function (ignoreBreakpoints) {
         while (!this.stack.isEmpty()) {
             var action = this.stepIn();
@@ -128,9 +130,20 @@
                     return action;
                 }
             }
+            if (this.paused()) {
+                return action;
+            }
         }
-        this.done = true;
+        this._halted = true;
         return action;
+    };
+
+    Stepper.prototype.halted = function () {
+        return this._halted;
+    };
+
+    Stepper.prototype.paused = function () {
+        return this._paused;
     };
 
     Stepper.prototype.setBreakpoint = function (line) {
@@ -140,6 +153,11 @@
     Stepper.prototype.clearBreakpoint = function (line) {
         delete this.breakpoints[line];
     };
+
+    Stepper.prototype.disableBreakpoint = function (line) {};
+    Stepper.prototype.enableBreakpoint = function (line) {};
+    Stepper.prototype.disableAllBreakpoints = function () {};
+    Stepper.prototype.enableAllBreakpoints = function () {};
 
     /* PRIVATE */
 
@@ -286,7 +304,7 @@
 
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
-            this.done = true;
+            this._halted = true;
             return;
         }
         var frame = this.stack.peek();

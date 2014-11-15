@@ -1,4 +1,4 @@
-# js-step #
+# stepper.js #
 
 Step through JavaScript using JavaScript.  Based in part on Amjad Masad's
 debugjs project – https://github.com/amasad/debugjs.
@@ -10,8 +10,9 @@ code that you want to step through and communicate with js-step using postMessag
 - js-step is a work in progress and doesn't have support for a lot of things.
 
 ## TODO ##
-- interface to control execution
-- setting breakpoints
-- stepping inside user defined functions
-- getting a list of variables in the current scope
-- ...
+- fix nested calls to non-instrumented methods, e.g. console.log(Math.sqrt(2));
+
+## running the demo ##
+- bower install
+- compile ace editor (TODO: more detail)
+- open demo/index.html

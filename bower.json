@@ -19,7 +19,9 @@
     "esprima": "~1.2.2",
     "escodegen": "~1.4.1",
     "estraverse": "~1.7.1",
-    "escope": "~1.0.0"
+    "escope": "~1.0.0",
+    "ace": "~1.1.8",
+    "jquery": "~2.1.1"
   },
   "devDependencies": {
     "mocha": "~2.0.1",
