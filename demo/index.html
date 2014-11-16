@@ -36,6 +36,43 @@
     canvas {
       background-color: white;
     }
+
+    #localVariables {
+      background-color: white;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      padding: 0;
+    }
+
+    #variableList {
+      list-style-type: none;
+      padding-left:0;
+      /*font-family:'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;*/
+      /*font-size:12px;*/
+      /*font-weight:normal;*/
+    }
+
+    /* TODO: use stylus */
+    /* TODO: scope these */
+    .label {
+      color: purple;
+    }
+
+    .undefined {
+      color: gray;
+    }
+
+    .number {
+      color: blue;
+    }
+
+    .object {
+      color: black;
+    }
   </style>
 </head>
 <body>
@@ -45,12 +82,20 @@
   <div id="canvasContainer">
     <canvas width="400" height="400"></canvas>
     <div id="debugControls">
-    <button id="resetButton">Reset</button>
-    <button id="runButton">Run</button>
-    <button id="stepInButton">Step In</button>
-    <button id="stepOverButton">Step Over</button>
-    <button id="stepOutButton">Step Out</button>
-    <!--<span id="stepCode"></span><br>-->
+      <button id="resetButton">Reset</button>
+      <button id="runButton">Run</button>
+      <button id="stepInButton">Step In</button>
+      <button id="stepOverButton">Step Over</button>
+      <button id="stepOutButton">Step Out</button>
+      <!--<span id="stepCode"></span><br>-->
+    </div>
+    <div id="localVariables" class="ace_editor">
+      <h2>LocalVariables</h2>
+      <ul id="variableList">
+        <li><span class="label">x:</span> <span class="undefined">undefined</span></li>
+        <li><span class="label">y:</span> <span class="number">5</span></li>
+        <li><span class="label">z:</span> [Object object]</li>
+      </ul>
     </div>
   </div>
 </div>

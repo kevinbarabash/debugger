@@ -27,6 +27,10 @@
         return this.values[this.values.length - 1];
     };
 
+    Stack.prototype.size = function () {
+        return this.values.length;
+    };
+
     exports.Stack = Stack;
 
 })(this);

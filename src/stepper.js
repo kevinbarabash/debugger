@@ -55,9 +55,7 @@
         this._halted = false;
         this._paused = false;
         this._line = 0;
-        // retVal should only be passed to .next() when returning from a
-        // function call
-        this.retVal = undefined;
+        this._retVal = undefined;
 
         var gen = this.debugGenerator(this.context);
         this.stack.push(new Frame(gen, this._line));
@@ -72,7 +70,7 @@
                     this.stepIn();
                     return new Action("stepIn", this._line);
                 } else {
-                    this.retVal = result.value.gen;
+                    this._retVal = result.value.gen;
                     if (result.value.stepAgain) {
                         result = this._step();
                     }
@@ -95,7 +93,7 @@
                     this.stepOver();
                     return new Action("stepOver", this._line);
                 } else {
-                    this.retVal = result.value.gen;
+                    this._retVal = result.value.gen;
                     if (result.value.stepAgain) {
                         result = this._step();
                     }
@@ -117,7 +115,7 @@
                     if (_isGenerator(result.value.gen)) {
                         this._runScope(result.value);
                     } else {
-                        this.retVal = result.value.gen;
+                        this._retVal = result.value.gen;
                     }
                 }
                 result = this._step();
@@ -228,6 +226,25 @@
                                     builder.createProperty("stepAgain", true)
                                 );
                             }
+                            // TODO: add test case for "x = foo()" stepAgain
+                            if (node.value.expression.type === "AssignmentExpression") {
+                                var expr = node.value.expression.right;
+                                if (expr.type === "YieldExpression") {
+                                    expr.argument.properties.push(
+                                        builder.createProperty("stepAgain", true)
+                                    );
+                                }
+                            }
+                        }
+                        // TODO: add test case for "var x = foo()" stepAgain
+                        // TODO: add test case for "var x = foo(), y = foo()" stepAgain on last decl
+                        if (node.value.type === "VariableDeclaration") {
+                            var lastDecl = node.value.declarations[node.value.declarations.length - 1];
+                            if (lastDecl.init && lastDecl.init.type === "YieldExpression") {
+                                lastDecl.init.argument.properties.push(
+                                    builder.createProperty("stepAgain", true)
+                                );
+                            }
                         }
                         bodyList.insertBeforeNode(node, yieldExpression);
                     });
@@ -324,8 +341,8 @@
             return;
         }
         var frame = this.stack.peek();
-        var result = frame.gen.next(this.retVal);
-        this.retVal = undefined;
+        var result = frame.gen.next(this._retVal);
+        this._retVal = undefined;
 
         // if the result.value contains scope information add it to the
         // current stack frame
@@ -349,7 +366,7 @@
                 if (_isGenerator(result.value.gen)) {
                     this._runScope(new Frame(result.value.gen, this._line));
                 } else {
-                    this.retVal = result.value.gen;
+                    this._retVal = result.value.gen;
                 }
             }
             result = this._step();
@@ -360,7 +377,7 @@
 
     Stepper.prototype._popAndStoreReturnValue = function (value) {
         var frame = this.stack.pop();
-        this.retVal = frame.gen.obj || value;
+        this._retVal = frame.gen.obj || value;
         this._line = frame.line;
         return frame;
     };

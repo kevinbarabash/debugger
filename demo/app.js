@@ -1,3 +1,6 @@
+// TODO: support for breakpoints
+// TODO: show call stack
+
 // setup editor
 var editor = ace.edit("editor");
 editor.setTheme("ace/theme/chrome");
@@ -5,7 +8,12 @@ var session = editor.getSession();
 session.setMode("ace/mode/javascript");
 
 var canvas = document.querySelector("canvas");
+var ctx = canvas.getContext('2d');
 var processing = new Processing(canvas);
+
+// init canvas
+processing.size(400,400);
+processing.resetMatrix();
 
 //with (processing) {
 //    // preamble
@@ -36,13 +44,19 @@ var getFunctionBody = function(func) {
 };
 
 var code = getFunctionBody(function () {
-size(400, 400);
+//size(w, h);
 background(255);
 noStroke();
 
+var x = 5;
+var y = 10;
+
 var randomColor = function () {
-    // TODO: handle nested method calls to non-user code
-    fill(random(255),random(255),random(255));
+    var r;
+    r = random(255);
+    var g = random(255);
+    var b = random(255);
+    fill(r,g,b);
 };
 
 for (var i = 0; i < 10; i++) {
@@ -56,93 +70,88 @@ editor.getSession().setValue(code);
 var stepper = new Stepper(processing);
 stepper.load(code);
 stepper.run();
+stepper.reset();
+editor.setHighlightActiveLine(false);
+updateLocals(stepper.stack.peek().scope);
+
+processing.size(400,400);
+processing.resetMatrix();
 
 $("#runButton").click(function () {
     code = session.getValue();
     stepper.load(code);
     stepper.run();
+    editor.setHighlightActiveLine(false);
 });
 
+function updateLocals(scope) {
+    $("#variableList").empty();
+    if (!scope) {
+        return;
+    }
+    Object.keys(scope).forEach(function (key) {
+        var value = scope[key];
+        var cls = typeof(value);
+        if (value === undefined) {
+            value = "undefined";
+        }
+        $("#variableList").append(
+            $("<li>: </li>")
+                .prepend($("<span>").addClass("label").text(key))
+                .append($("<span>").addClass(cls).text(value))
+        );
+    });
+}
+
 $("#resetButton").click(function () {
+    processing.size(400,400);
+    processing.resetMatrix();
     stepper.reset();
     editor.setHighlightActiveLine(false);
     var action = stepper.stepOver();
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
+
+    updateLocals(stepper.stack.peek().scope);
 });
 
 $("#stepInButton").click(function () {
     var action = stepper.stepIn();
+    if (action.type === "stepIn") {
+        console.log("stepIn: stack size = " + stepper.stack.size());
+    } else if (action.type === "stepOver") {
+
+    } else if (action.type === "stepOut") {
+        console.log("stepOut: stack size = " + stepper.stack.size());
+    }
+
+    updateLocals(stepper.stack.peek().scope);
+
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
 });
 
 $("#stepOverButton").click(function () {
     var action = stepper.stepOver();
+    if (action.type === "stepOut") {
+        console.log("stepOut: stack size = " + stepper.stack.size());
+    }
+
+    updateLocals(stepper.stack.peek().scope);
+
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
 });
 
 $("#stepOutButton").click(function () {
-    var action = stepper.stepOver();
+    var action = stepper.stepOut();
+    if (action.type === "stepOut") {
+        console.log("stepOut: stack size = " + stepper.stack.size());
+    }
+
+    updateLocals(stepper.stack.peek().scope);
+
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
 });
 
-////stepper.setBreakpoint(3);
-////stepper.setBreakpoint(5);
-//console.log(stepper.debugCode);
-//
-//var lines = code.split("\n");
-//
-//var stepCodeSpan = document.getElementById("stepCode");
-//
-//var stepOverButton = document.getElementById("stepOverButton");
-//var stepInButton = document.getElementById("stepInButton");
-//var stepOutButton = document.getElementById("stepOutButton");
-//
-//stepOverButton.addEventListener("click", function (e) {
-//    var result = stepper.stepOver();
-//    if (result.value) {
-//        stepCodeSpan.innerText = lines[result.value.lineno - 1];
-//    }
-//});
-//
-//stepInButton.addEventListener("click", function (e) {
-//    var result = stepper.stepIn();
-//    if (result.value) {
-//        stepCodeSpan.innerText = lines[result.value.lineno - 1];
-//    }
-//});
-//
-//stepOutButton.addEventListener("click", function (e) {
-//    var result = stepper.stepOut();
-//    if (result.value) {
-//        stepCodeSpan.innerText = lines[result.value.lineno - 1];
-//    }
-//});
-//
-//var runButton = document.getElementById("runButton");
-//runButton.addEventListener("click", function (e) {
-//    stepper.run();
-//    if (stepper.done) {
-//        runButton.setAttribute("disabled","");
-//        stepOverButton.setAttribute("disabled", "");
-//        stepInButton.setAttribute("disabled", "");
-//        stepOutButton.setAttribute("disabled", "");
-//    }
-//});
-//
-//document.getElementById("resetButton").addEventListener("click", function (e) {
-//    with (processing) {
-//        background(228);
-//        fill(255, 255, 255);
-//        rect(-10, -10, width + 20, height + 20);
-//    }
-//    stepper.reset();
-//
-//    runButton.removeAttribute("disabled");
-//    stepOverButton.removeAttribute("disabled");
-//    stepInButton.removeAttribute("disabled");
-//    stepOutButton.removeAttribute("disabled");
-//});
