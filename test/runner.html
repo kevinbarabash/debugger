@@ -22,11 +22,8 @@
 <script src="stepper-spec.js"></script>
 <script>
 
-//    mocha.checkLeaks();
-    if (window.mochaPhantomJS) {
-        mochaPhantomJS.run();
-    } else {
-        mocha.run();
-    }
+  window.onload = function () {
+    mocha.run();
+  };
 
 </script>
