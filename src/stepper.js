@@ -303,7 +303,7 @@
                 } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                     node.generator = true;
                 } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                    if (node.callee.type === "Identifier" || node.callee.type === "MemberExpression") {
+                    if (node.callee.type === "Identifier" || node.callee.type === "MemberExpression" || node.callee.type === "YieldExpression") {
 
                         var gen = node;
 
@@ -317,10 +317,6 @@
                         return builder.createYieldExpression(
                             builder.createObjectExpression({ gen: gen })
                         );
-
-                    } else if (node.callee.type === "CallExpression") {
-                        // TODO: figure out how to trigger this
-                        console.log("chained call expression, ignore for now");
                     } else {
                         throw "we don't handle '" + node.callee.type + "' callees";
                     }

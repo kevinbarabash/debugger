@@ -1064,4 +1064,100 @@ describe('Stepper', function () {
             stepper.stepOut();
         });
     });
+
+    describe("Functions returning functions", function () {
+        it("should run a function returned by another function", function () {
+            var code = getFunctionBody(function () {
+                var foo = function () {
+                    return function () {
+                        x = 5;
+                    };
+                };
+                var bar = foo();
+                bar();
+            });
+
+            stepper.load(code);
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should step into a function returned by another function", function () {
+            var code = getFunctionBody(function () {
+                var foo = function () {
+                    return function () {
+                        x = 5;
+                    };
+                };
+                var bar = foo();
+                bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            expect(stepper.stepIn().line).to.be(3);
+            stepper.stepOut();
+        });
+
+        it("should be able to call a returned function immediately", function () {
+            var code = getFunctionBody(function () {
+                var foo = function () {
+                    return function () {
+                        x = 5;
+                    };
+                };
+                foo()();
+            });
+
+            stepper.load(code);
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should be able to step into a returned function immediately", function () {
+            var code = getFunctionBody(function () {
+                var foo = function () {
+                    return function () {
+                        x = 5;
+                    };
+                };
+                foo()();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            expect(stepper.stepIn().line).to.be(2);
+            expect(stepper.stepOut().line).to.be(6);
+            expect(stepper.stepIn().line).to.be(3);
+            stepper.stepOut();
+        });
+
+        it("should be able to call a method that returns a function", function () {
+            var code = getFunctionBody(function () {
+                var obj = {
+                    foo: function () {
+                        return function () {
+                            x = 5;
+                        };
+                    }
+                };
+                obj.foo()();
+            });
+
+            stepper.load(code);
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+    });
 });
