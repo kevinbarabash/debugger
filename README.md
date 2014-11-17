@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/kevinb7/stepper.svg?branch=master)](https://travis-ci.org/kevinb7/stepper)
+
 # stepper.js #
 
 Step through JavaScript using JavaScript.  Based in part on Amjad Masad's

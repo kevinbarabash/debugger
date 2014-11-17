@@ -12,48 +12,98 @@
   <script src="../bower_components/jquery/dist/jquery.js"></script>
   <script src="../build/stepper.js"></script>
   <style type="text/css" media="screen">
+    html {
+      height: 100%;
+    }
+
     body {
       background: gray;
       margin: 0;
-    }
-
-    #editor {
-      float: left;
-
-      width: 800px;
-      height: 600px;
+      height: 100%;
     }
 
     #container {
-      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: row;
+      border: 10px solid transparent;
+      box-sizing: border-box;
     }
 
-    #canvasContainer {
-      float: left;
-      margin-left: 20px;
+    #editor-container {
+      flex-grow: 1;
+      flex-shrink: 1;
+      margin-right: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #editor {
+      flex-grow: 1;
+    }
+
+    #side {
+      flex-shrink: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      flex-shrink: 1;
+      flex-grow: 0;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .tab {
+      background-color: #EEE;
+      flex-shrink: 1;
+      flex-grow: 0;
+      font-family: sans-serif;
+      padding: 4px 10px;
+      border-bottom: solid 1px gray;
+      border-right: solid 1px gray;
     }
 
     canvas {
       background-color: white;
+      margin-bottom: 10px;
     }
 
-    #localVariables {
+    #inspector {
       background-color: white;
       padding: 10px;
-      margin-top: 10px;
+      flex-grow: 1;
+    }
+
+    button {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 12px;
+      margin: 0;
     }
 
     h2 {
       margin: 0;
       padding: 0;
+      font-family: sans-serif;
+      font-weight: normal;
+    }
+
+    .tab.button {
+      background-color: lightgray;
+    }
+
+    #debugControls {
+      margin-bottom: 10px;
     }
 
     #variableList {
       list-style-type: none;
       padding-left:0;
-      /*font-family:'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;*/
-      /*font-size:12px;*/
-      /*font-weight:normal;*/
     }
 
     /* TODO: use stylus */
@@ -78,26 +128,34 @@
 <body>
 
 <div id="container">
-  <div id="editor"></div>
-  <div id="canvasContainer">
-    <canvas width="400" height="400"></canvas>
-    <div id="debugControls">
-      <button id="resetButton">Reset</button>
-      <button id="runButton">Run</button>
-      <button id="stepInButton">Step In</button>
-      <button id="stepOverButton">Step Over</button>
-      <button id="stepOutButton">Step Out</button>
-      <!--<span id="stepCode"></span><br>-->
+  <div id="editor-container">
+    <div class="header">
+      <span class="tab">sketch_01.js</span>
     </div>
-    <div id="localVariables" class="ace_editor">
-      <h2>LocalVariables</h2>
-      <ul id="variableList">
-        <li><span class="label">x:</span> <span class="undefined">undefined</span></li>
-        <li><span class="label">y:</span> <span class="number">5</span></li>
-        <li><span class="label">z:</span> [Object object]</li>
-      </ul>
+    <div id="editor"></div>
+  </div>
+
+  <div id="side">
+    <div class="header">
+      <span class="tab">canvas: 01</span>
+    </div>
+    <canvas width="400" height="400"></canvas>
+
+    <div class="header">
+      <span class="tab">Debugger</span>
+      <span class="tab button"><button id="resetButton">Reset</button></span>
+      <span class="tab button"><button id="runButton">Run</button></span>
+      <span class="tab button"><button id="stepInButton">Step In</button></span>
+      <span class="tab button"><button id="stepOverButton">Step Over</button></span>
+      <span class="tab button"><button id="stepOutButton">Step Out</button></span>
+
+    </div>
+    <div id="inspector" class="ace_editor">
+      <h2>Local Variables:</h2>
+      <ul id="variableList"></ul>
     </div>
   </div>
+
 </div>
 
 
