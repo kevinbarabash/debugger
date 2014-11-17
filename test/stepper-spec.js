@@ -23,6 +23,7 @@ describe('Stepper', function () {
         stepper = new Stepper(context);
     });
 
+
     describe("load", function () {
         it("should reset the halted", function () {
             stepper.load("fill(255,0,0);");
