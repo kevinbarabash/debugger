@@ -144,6 +144,21 @@
         return action;
     };
 
+    Stepper.prototype.runGen = function (gen) {
+        if (!this.halted()) {
+            return;
+        }
+        this._halted = false;
+
+        // assumes the stack is empty... should probably just set the value
+        this.stack.push({
+            gen: gen,
+            line: 0
+        });
+
+        return this.run();
+    };
+
     Stepper.prototype.halted = function () {
         return this._halted;
     };

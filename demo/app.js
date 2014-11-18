@@ -69,6 +69,16 @@ $("#restartButton").click(function () {
     if (stepper.halted()) {
         editor.setHighlightActiveLine(false);
         disableButtons();
+
+        stepper.runGen(processing.draw());
+        if (!stepper.halted()) {
+            enableButtons();
+
+            editor.gotoLine(stepper._line);
+            editor.setHighlightActiveLine(true);
+            updateLocals(stepper.stack.peek().scope);
+        }
+
     } else {
         editor.gotoLine(stepper._line);
         editor.setHighlightActiveLine(true);
