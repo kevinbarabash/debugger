@@ -95,6 +95,19 @@
 
     .tab.button {
       background-color: lightgray;
+      cursor: pointer;
+    }
+
+    .tab.button button {
+      cursor: pointer;
+    }
+
+    button:focus {
+      outline: none;
+    }
+
+    .tab.button[disabled] {
+      color: gray;
     }
 
     #debugControls {
@@ -123,6 +136,10 @@
     .object {
       color: black;
     }
+
+    .ace_breakpoint {
+      background-color: rgb(0, 128, 255);
+    }
   </style>
 </head>
 <body>
@@ -143,11 +160,11 @@
 
     <div class="header">
       <span class="tab">Debugger</span>
-      <span class="tab button"><button id="resetButton">Reset</button></span>
-      <span class="tab button"><button id="runButton">Run</button></span>
-      <span class="tab button"><button id="stepInButton">Step In</button></span>
-      <span class="tab button"><button id="stepOverButton">Step Over</button></span>
-      <span class="tab button"><button id="stepOutButton">Step Out</button></span>
+      <span class="tab button"><button id="restartButton">Restart</button></span>
+      <span class="tab button"><button id="continueButton">Continue</button></span>
+      <span class="tab button"><button id="stepInButton">In</button></span>
+      <span class="tab button"><button id="stepOverButton">Over</button></span>
+      <span class="tab button"><button id="stepOutButton">Out</button></span>
 
     </div>
     <div id="inspector" class="ace_editor">
@@ -157,7 +174,6 @@
   </div>
 
 </div>
-
 
 </body>
 </html>

@@ -34,7 +34,29 @@ gulp.task("watch", function() {
 });
 
 gulp.task("test", ["build"], function() {
-    testee.test(["test/runner.html"], ["firefox"], { browsers: "firefox" })
+    var options = {
+        browsers: "firefox",
+        coverage: {
+            dir: "./report"
+        }
+    };
+    testee.test(["test/runner.html"], ["firefox"], options)
+        .then(function() {
+            process.exit(0);
+        }, function() {
+            process.exit(1);
+        });
+});
+
+gulp.task("coverage", ["build"], function() {
+    var options = {
+        browsers: "firefox",
+        coverage: {
+            dir: "./report",
+            reporters: ["html"]     // requires patch line 383 of node_modules/testee/node_modules/istanbul/lib/report/html.js by prepending a "." to the path
+        }
+    };
+    testee.test(["test/runner.html"], ["firefox"], options)
         .then(function() {
             process.exit(0);
         }, function() {
