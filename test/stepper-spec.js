@@ -205,7 +205,7 @@ describe('Stepper', function () {
 
                 expect(stepper.stepOver().line).to.be(1);
                 expect(stepper.stepOver().line).to.be(5);
-                expect(stepper.stepOver().line).to.be(0);
+                expect(stepper.stepOver().line).to.be(5);
                 expect(stepper.halted()).to.be(true);
             });
 
@@ -1159,6 +1159,76 @@ describe('Stepper', function () {
             stepper.run();
 
             expect(context.x).to.be(5);
+        });
+    });
+
+    describe("calling functions in various places", function () {
+        "use strict";
+
+        describe("var declarations", function () {
+            it("should step into var x = foo()", function () {
+                var code = getFunctionBody(function (){
+                    var foo = function () {
+                        print("foo");
+                    };
+                    var x = foo();
+                });
+
+                stepper.load(code);
+                stepper.stepOver();
+                stepper.stepOver();
+                expect(stepper._line).to.be(4);
+                stepper.stepOver();
+                expect(stepper.halted()).to.be(true);
+            });
+
+            it("should step over var x = foo()", function () {
+                var code = getFunctionBody(function (){
+                    var foo = function () {
+                        print("foo");
+                    };
+                    var bar = function () {
+                        print("bar");
+                    };
+                    var x = foo();
+                    var y = foo();
+                });
+
+                stepper.load(code);
+                stepper.stepOver();
+                stepper.stepOver();
+                stepper.stepOver();
+                expect(stepper._line).to.be(7);
+                stepper.stepOver();
+                expect(stepper._line).to.be(8);
+                stepper.stepOver();
+                expect(stepper.halted()).to.be(true);
+            });
+
+            it("should step over var x = foo(), y = bar()", function () {
+                var code = getFunctionBody(function (){
+                    var foo = function () {
+                        print("foo");
+                    };
+                    var bar = function () {
+                        print("bar");
+                    };
+                    var x = foo(), y = foo();
+                });
+
+                stepper.load(code);
+                stepper.stepOver();
+                stepper.stepOver();
+                stepper.stepOver();
+                expect(stepper._line).to.be(7);
+                stepper.stepOver();
+                expect(stepper._line).to.be(7);
+                expect(stepper.halted()).to.be(true);
+            });
+        });
+
+        describe("for loops", function () {
+
         });
     });
 });
