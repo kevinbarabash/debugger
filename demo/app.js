@@ -1,4 +1,3 @@
-// TODO: support for breakpoints
 // TODO: show call stack
 
 // setup editor
@@ -22,8 +21,8 @@ var getFunctionBody = function(func) {
     return funcString.substring(start, end);
 };
 
+// code to run
 var code = getFunctionBody(function () {
-//size(w, h);
 background(255);
 noStroke();
 
@@ -62,28 +61,57 @@ $("#restartButton").click(function () {
     // reload the code and run it
     code = session.getValue();
     stepper.load(code);
-    stepper.run();
 
-    enableButtons();
+    function timeout() {
+        return new Promise(function (resolve, reject) {
+            setTimeout(resolve, 100 / 60);  // 60 fps
+            // TODO: grab the actual fps from processing
+        });
+    }
 
-    if (stepper.halted()) {
+    // TODO: create a event handlers to proxy mouseDragged, et al
+    // TODO: create a scheduler so that after we step through "draw" we cna step through "mouseDragged" if necessary
+    function loop() {
         editor.setHighlightActiveLine(false);
         disableButtons();
 
-        stepper.runGen(processing.draw());
-        if (!stepper.halted()) {
-            enableButtons();
+        stepper.runGenWithPromises(processing.draw())
+            .then(function () {
+                return timeout();
+            })
+            .then(function () {
+                loop();
+            }, function () {
+                // TODO: make a stop button so that we can start reject promises
+                console.log("stopped");
+            });
 
+        enableButtons();
+
+        if (stepper.paused()) {
             editor.gotoLine(stepper._line);
             editor.setHighlightActiveLine(true);
             updateLocals(stepper.stack.peek().scope);
         }
 
-    } else {
-        editor.gotoLine(stepper._line);
-        editor.setHighlightActiveLine(true);
-        updateLocals(stepper.stack.peek().scope);
     }
+
+
+    editor.setHighlightActiveLine(false);
+    disableButtons();
+    stepper.reset();
+
+    stepper.runWithPromises().then(function () {
+        loop(); // start looping through "draw"
+    }, function () {
+        console.log("stopped");
+    });
+
+    enableButtons();
+
+//    editor.gotoLine(stepper._line);
+//    editor.setHighlightActiveLine(true);
+//    updateLocals(stepper.stack.peek().scope);
 });
 
 

@@ -51,6 +51,10 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._halted = true;
+            if (self.resolve) {
+                self.resolve(self);
+                delete self.resolve;
+            }
         };
         this._halted = false;
         this._paused = false;
@@ -129,10 +133,12 @@
     // there should be a callback that's fired after each action that's
     // run and then we can set call pause() to set this._paused to true
     Stepper.prototype.run = function (ignoreBreakpoints) {
+        this._paused = false;
         while (!this.stack.isEmpty()) {
             var action = this.stepIn();
             if (this.breakpoints[action.line] && action.type !== "stepOut") {
                 if (!ignoreBreakpoints) {
+                    this._paused = true;
                     return action;
                 }
             }
@@ -140,23 +146,53 @@
                 return action;
             }
         }
-        this._halted = true;
         return action;
     };
 
-    Stepper.prototype.runGen = function (gen) {
-        if (!this.halted()) {
-            return;
-        }
-        this._halted = false;
-
-        // assumes the stack is empty... should probably just set the value
-        this.stack.push({
-            gen: gen,
-            line: 0
+    Stepper.prototype.runWithPromises = function () {
+        var self = this;
+        return new Promise(function (resolve, reject) {
+            self.resolve = resolve;
+            while (true) {
+                if (self.stack.isEmpty()) {
+                    break;
+                }
+                var action = self.stepIn();
+                if (self.breakpoints[action.line] && action.type !== "stepOut") {
+                    self._paused = true;
+                    break;
+                }
+            }
         });
+    };
 
-        return this.run();
+    Stepper.prototype.runGenWithPromises = function (gen) {
+        var self = this;
+
+        return new Promise(function (resolve, reject) {
+            if (!self.halted()) {
+                reject();
+            }
+            self._halted = false;
+
+            // assumes the stack is empty... should probably just set the value
+            self.stack.push({
+                gen: gen,
+                line: 0
+            });
+
+            self.resolve = resolve;
+            while (true) {
+                if (self.stack.isEmpty()) {
+                    break;
+                }
+                var action = self.stepIn();
+                if (self.breakpoints[action.line] && action.type !== "stepOut") {
+                    self._paused = true;
+                    break;
+                }
+            }
+        });
     };
 
     Stepper.prototype.halted = function () {
