@@ -4,9 +4,6 @@
     "use strict";
 
     function Action (type, line) {
-        if (line === undefined) {
-            debugger;
-        }
         this.type = type;
         this.line = line;
     }
@@ -16,18 +13,25 @@
         this.line = line;
     }
 
+    function __instantiate__ (Class) {
+        var obj = Object.create(Class.prototype);
+        var args = Array.prototype.slice.call(arguments, 1);
+        var gen = Class.apply(obj, args);
+
+        if (gen) {
+            gen.obj = obj;
+            return gen;
+        } else {
+            return obj;
+        }
+    }
+
     function Stepper (context) {
         // Only support a single context because using multiple "with" statements
         // hurts performance: http://jsperf.com/multiple-withs
         // Multiple contexts can be simulated by merging the dictionaries.
         this.context = context || {};
-        this.context.__instantiate__ = function (Class) {
-            var obj = Object.create(Class.prototype);
-            var args = Array.prototype.slice.call(arguments, 1);
-            var gen = Class.apply(obj, args);
-            gen.obj = obj;
-            return gen;
-        };
+        this.context.__instantiate__ = __instantiate__;
 
         this.breakpoints = {};
     }
@@ -59,11 +63,10 @@
         };
         this._halted = false;
         this._paused = false;
-        this._line = 0;
         this._retVal = undefined;
 
         var gen = this.debugGenerator(this.context);
-        this.stack.push(new Frame(gen, this._line));
+        this.stack.push(new Frame(gen, -1));
     };
 
     Stepper.prototype.stepIn = function () {
@@ -71,9 +74,9 @@
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
-                    this.stack.push(new Frame(result.value.gen, this._line));
+                    this.stack.push(new Frame(result.value.gen, this.line()));
                     this.stepIn();
-                    return new Action("stepIn", this._line);
+                    return new Action("stepIn", this.line());
                 } else {
                     this._retVal = result.value.gen;
                     if (result.value.stepAgain) {
@@ -83,9 +86,9 @@
             }
             if (result.done) {
                 this._popAndStoreReturnValue(result.value);
-                return new Action("stepOut", this._line);
+                return new Action("stepOut", this.line());
             }
-            return new Action("stepOver", this._line);
+            return new Action("stepOver", this.line());
         }
     };
 
@@ -95,8 +98,10 @@
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
                     this._runScope(result.value);
-                    this.stepOver();
-                    return new Action("stepOver", this._line);
+                    if (result.value.stepAgain) {
+                        this.stepOver();
+                    }
+                    return new Action("stepOver", this.line());
                 } else {
                     this._retVal = result.value.gen;
                     if (result.value.stepAgain) {
@@ -106,9 +111,9 @@
             }
             if (result.done) {
                 this._popAndStoreReturnValue(result.value);
-                return new Action("stepOut", this._line);
+                return new Action("stepOut", this.line());
             }
-            return new Action("stepOver", this._line);
+            return new Action("stepOver", this.line());
         }
     };
 
@@ -126,7 +131,7 @@
                 result = this._step();
             }
             this._popAndStoreReturnValue(result.value);
-            return new Action("stepOut", this._line);
+            return new Action("stepOut", this.line());
         }
     };
 
@@ -204,6 +209,14 @@
         return this._paused;
     };
 
+    Stepper.prototype.line = function () {
+        if (!this._halted) {
+            return this.stack.peek().line;
+        } else {
+            return -1;
+        }
+    };
+
     Stepper.prototype.setBreakpoint = function (line) {
         this.breakpoints[line] = true;
     };
@@ -246,25 +259,20 @@
                 this.stack.peek().scope = result.value.scope;
             }
             if (result.value.line) {
-                this._line = result.value.line;
+                frame.line = result.value.line;
             }
         }
         return result;
     };
 
     Stepper.prototype._runScope = function (frame) {
-        if (this._line !== undefined) {
-            this.stack.peek().line = this._line;
-        } else {
-            // TODO: figure out where this._line is set to "undefined"
-        }
         this.stack.push(frame);
 
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
                 if (_isGenerator(result.value.gen)) {
-                    this._runScope(new Frame(result.value.gen, this._line));
+                    this._runScope(new Frame(result.value.gen, this.line()));
                 } else {
                     this._retVal = result.value.gen;
                 }
@@ -278,8 +286,6 @@
     Stepper.prototype._popAndStoreReturnValue = function (value) {
         var frame = this.stack.pop();
         this._retVal = frame.gen.obj || value;
-        this._line = frame.line;
-        return frame;
     };
 
     exports.Stepper = Stepper;

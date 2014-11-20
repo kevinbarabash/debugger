@@ -41,7 +41,8 @@ for (var i = 0; i < 3; i++) {
 
 draw = function () {
     randomColor();
-    ellipse(random(400),random(400),75,75);
+    var p = new PVector(random(400), random(400));
+    ellipse(p.x, p.y, 75, 75);
 };
 });
 
@@ -89,7 +90,7 @@ $("#restartButton").click(function () {
         enableButtons();
 
         if (stepper.paused()) {
-            editor.gotoLine(stepper._line);
+            editor.gotoLine(stepper.line());
             editor.setHighlightActiveLine(true);
             updateLocals(stepper.stack.peek().scope);
         }
@@ -109,7 +110,7 @@ $("#restartButton").click(function () {
 
     enableButtons();
 
-//    editor.gotoLine(stepper._line);
+//    editor.gotoLine(stepper.line());
 //    editor.setHighlightActiveLine(true);
 //    updateLocals(stepper.stack.peek().scope);
 });
@@ -121,7 +122,7 @@ $("#continueButton").click(function () {
         editor.setHighlightActiveLine(false);
         disableButtons();
     } else {
-        editor.gotoLine(stepper._line);
+        editor.gotoLine(stepper.line());
         editor.setHighlightActiveLine(true);
         updateLocals(stepper.stack.peek().scope);
     }
