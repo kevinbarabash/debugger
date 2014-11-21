@@ -238,7 +238,6 @@
 
     Stepper.prototype._createDebugGenerator = function (code) {
         var debugCode = transform(code, this.context);
-        console.log(debugCode);
         var debugFunction = new Function(debugCode);
         return debugFunction(); // returns a generator
     };

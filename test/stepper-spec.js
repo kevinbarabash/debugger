@@ -1186,8 +1186,6 @@ describe('Stepper', function () {
     });
 
     describe("calling functions in various places", function () {
-        "use strict";
-
         describe("var declarations", function () {
             it("should step into var x = foo()", function () {
                 var code = getFunctionBody(function (){
