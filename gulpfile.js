@@ -35,13 +35,7 @@ gulp.task("watch", function() {
 });
 
 gulp.task("test", ["build"], function() {
-    var options = {
-        browsers: "firefox",
-        coverage: {
-            dir: "./report"
-        }
-    };
-    testee.test(["test/runner.html"], ["firefox"], options)
+    testee.test(["test/runner.html"], ["firefox"], { browsers: "firefox" })
         .then(function() {
             process.exit(0);
         }, function() {
