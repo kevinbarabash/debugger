@@ -43,6 +43,11 @@ draw = function () {
     randomColor();
     var p = new PVector(random(400), random(400));
     ellipse(p.x, p.y, 75, 75);
+    p.x += 10;
+    p.y += 20;
+    var x = p.x;
+    var y = p.y;
+    ellipse(x, y, 75, 75);
 };
 });
 
@@ -92,7 +97,7 @@ $("#restartButton").click(function () {
         if (stepper.paused()) {
             editor.gotoLine(stepper.line());
             editor.setHighlightActiveLine(true);
-            updateLocals(stepper.stack.peek().scope);
+            updateLocals(stepper);
         }
 
     }
@@ -122,29 +127,31 @@ $("#continueButton").click(function () {
         editor.setHighlightActiveLine(false);
         disableButtons();
     } else {
+        // TODO: make it so continue runs all of the functional call on this line
+        // and actually proceeds to the next line
         editor.gotoLine(stepper.line());
         editor.setHighlightActiveLine(true);
-        updateLocals(stepper.stack.peek().scope);
+        // TODO: determine if we're in the same context
+        updateLocals(stepper);
     }
 });
 
-function updateLocals(scope) {
-    $("#variableList").empty();
-    if (!scope) {
+function updateLocals(stepper, action) {
+    if (stepper.halted()) {
         return;
     }
-    Object.keys(scope).forEach(function (key) {
-        var value = scope[key];
-        var cls = typeof(value);
-        if (value === undefined) {
-            value = "undefined";
+    var scope = stepper.stack.peek().scope;
+    var $variableList = $("#variableList");
+
+    if (action && action.type === "stepOver") {
+        // don't take any action
+    } else {
+        $variableList.empty();
+        if (!scope) {
+            return;
         }
-        $("#variableList").append(
-            $("<li>: </li>")
-                .prepend($("<span>").addClass("label").text(key))
-                .append($("<span>").addClass(cls).text(value))
-        );
-    });
+        $variableList.append(genPropsList(scope));
+    }
 }
 
 
@@ -163,7 +170,7 @@ $("#stepInButton").click(function () {
         console.log("stepOut: stack size = " + stepper.stack.size());
     }
 
-    updateLocals(stepper.stack.peek().scope);
+    updateLocals(stepper, action);
 
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
@@ -180,7 +187,7 @@ $("#stepOverButton").click(function () {
         console.log("stepOut: stack size = " + stepper.stack.size());
     }
 
-    updateLocals(stepper.stack.peek().scope);
+    updateLocals(stepper, action);
 
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
@@ -197,7 +204,7 @@ $("#stepOutButton").click(function () {
         console.log("stepOut: stack size = " + stepper.stack.size());
     }
 
-    updateLocals(stepper.stack.peek().scope);
+    updateLocals(stepper, action);
 
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);

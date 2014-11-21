@@ -10,6 +10,8 @@
   <script src="../build/stepper.js"></script>
   <script src="../bower_components/processing/processing.js"></script>
   <script src="../bower_components/jquery/dist/jquery.js"></script>
+  <script src="../bower_components/observe-js/src/observe.js"></script>
+  <script src="../external/object-browser/object-browser.js"></script>
   <script src="../build/stepper.js"></script>
   <style type="text/css" media="screen">
     html {
@@ -74,7 +76,6 @@
 
     #inspector {
       background-color: white;
-      padding: 10px;
       flex-grow: 1;
     }
 
@@ -117,30 +118,27 @@
     #variableList {
       list-style-type: none;
       padding-left:0;
-    }
-
-    /* TODO: use stylus */
-    /* TODO: scope these */
-    .label {
-      color: purple;
-    }
-
-    .undefined {
-      color: gray;
-    }
-
-    .number {
-      color: blue;
-    }
-
-    .object {
-      color: black;
+      padding-top:2px;
+      padding-bottom:2px;
+      border-bottom: solid 1px gray;
     }
 
     .ace_breakpoint {
       background-color: rgb(0, 128, 255);
     }
+
+    .section_header {
+      background-color: #EEE;
+      border-bottom: solid 1px gray;
+      font-family: sans-serif;
+      font-size: 14px;
+      font-weight: normal;
+      padding: 5px 10px;
+      padding-bottom: 2px;
+      color: #333;
+    }
   </style>
+  <link rel="stylesheet" href="../external/object-browser/object-browser.css"/>
 </head>
 <body>
 
@@ -168,8 +166,9 @@
 
     </div>
     <div id="inspector" class="ace_editor">
-      <h2>Local Variables:</h2>
-      <ul id="variableList"></ul>
+      <div class="section_header">Local Variables</div>
+      <div id="variableList" class="object-browser"></div>
+      <div class="section_header">Call Stack</div>
     </div>
   </div>
 
