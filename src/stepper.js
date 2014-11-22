@@ -140,9 +140,13 @@
     // run and then we can set call pause() to set this._paused to true
     Stepper.prototype.run = function (ignoreBreakpoints) {
         this._paused = false;
+        var currentLine = this.line();
         while (!this.stack.isEmpty()) {
             var action = this.stepIn();
-            if (this.breakpoints[action.line] && action.type !== "stepOut") {
+            // the currentLine check is so that we have don't hit this breakpoint
+            // the user clicks continue()... stepper should run unti it hits the
+            // next discrete breakpoint
+            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 if (!ignoreBreakpoints) {
                     this._paused = true;
                     return action;
@@ -256,6 +260,9 @@
         if (result.value) {
             if (result.value.scope) {
                 this.stack.peek().scope = result.value.scope;
+            }
+            if (result.value.name) {
+                this.stack.peek().name = result.value.name;
             }
             if (result.value.line) {
                 frame.line = result.value.line;

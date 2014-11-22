@@ -1253,4 +1253,233 @@ describe('Stepper', function () {
 
         });
     });
+
+    describe("Functions", function () {
+        it("should work with empty functions", function () {
+            var code = getFunctionBody(function () {
+                function foo(x,y) {}
+                foo(x,y);
+            });
+
+            stepper.load(code);
+
+            stepper.run();
+        });
+    });
+
+    describe("Call Stack", function () {
+
+        it("should work with anonymous object literals", function () {
+            var code = getFunctionBody(function () {
+                function bar(obj) {
+                    obj.foo();
+                }
+                bar({
+                    foo: function () {
+                        x = 5;
+                    }
+                });
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(6);
+            expect(stepper.stack.peek().name).to.be("<anonymous>.foo");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should work with anonymous functions", function () {
+            var code = getFunctionBody(function () {
+                function bar(callback) {
+                    callback();
+                }
+                bar(function () {
+                    x = 5;
+                });
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(5);
+            expect(stepper.stack.peek().name).to.be("<anonymous>");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should work with object literals (variable declaration)", function () {
+            var code = getFunctionBody(function () {
+                var obj = {
+                    foo: {
+                        bar: function () {
+                            x = 5;
+                        }
+                    }
+                };
+                obj.foo.bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(4);
+            expect(stepper.stack.peek().name).to.be("obj.foo.bar");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should work with object literals (assignment expression)", function () {
+            var code = getFunctionBody(function () {
+                var obj;
+                obj = {
+                    foo: {
+                        bar: function () {
+                            x = 5;
+                        }
+                    }
+                };
+                obj.foo.bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(5);
+            expect(stepper.stack.peek().name).to.be("obj.foo.bar");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should work with methods defined on the prototype (function declaration)", function () {
+            var code = getFunctionBody(function () {
+                function Foo () {}
+                Foo.prototype.bar = function () {
+                    x = 5;
+                };
+                var foo = new Foo();
+                foo.bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(3);
+            expect(stepper.stack.peek().name).to.be("Foo.prototype.bar");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should work with methods defined on the prototype (function expression)", function () {
+            var code = getFunctionBody(function () {
+                var Foo = function () {};
+                Foo.prototype.bar = function () {
+                    x = 5;
+                };
+                var foo = new Foo();
+                foo.bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(3);
+            expect(stepper.stack.peek().name).to.be("Foo.prototype.bar");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        it("should work with methods defined on 'this'", function () {
+            var code = getFunctionBody(function () {
+                var Foo = function() {
+                    this.bar = function () {
+                        x = 5;
+                    }
+                };
+                var foo = new Foo();
+                foo.bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(3);
+            // TODO: fix this so that it says Foo.prototype.bar
+            expect(stepper.stack.peek().name).to.be("this.bar");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+
+        // TODO: fix the stepper so that this test case passes
+        it.skip("should work with methods defined on 'this' (function declaration constructor)", function () {
+            var code = getFunctionBody(function () {
+                function Foo() {
+                    this.bar = function () {
+                        x = 5;  // Foo is hoisted outside of the "with" statement which cause x to refer to window.x
+                    }
+                }
+                var foo = new Foo();
+                foo.bar();
+            });
+
+            stepper.load(code);
+
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepOver();
+            stepper.stepIn();
+
+            expect(stepper.line()).to.be(3);
+            // TODO: fix this so that it says Foo.prototype.bar
+            expect(stepper.stack.peek().name).to.be("this.bar");
+
+            stepper.run();
+
+            expect(context.x).to.be(5);
+        });
+    });
 });

@@ -342,7 +342,6 @@
                         builder.createProperty("stepAgain", true)
                     );
                 }
-                // TODO: add test case for "x = foo()" stepAgain
                 if (node.value.expression.type === "AssignmentExpression") {
                     var expr = node.value.expression.right;
                     if (expr.type === "YieldExpression") {
@@ -413,12 +412,46 @@
         ];
     }
 
+    function stringForId(node) {
+        var name = "";
+        if (node.type === "Identifier") {
+            name = node.name;
+        } else if (node.type === "MemberExpression") {
+            name = stringForId(node.object) + "." + node.property.name;
+        } else if (node.type === "ThisExpression") {
+            name = "this";
+        } else {
+            throw "can't call stringForId on nodes of type '" + node.type + "'";
+        }
+        return name;
+    }
+
+    function getNameForFunctionExpression(node) {
+        var name = "";
+        if (node._parent.type === "Property") {
+            name = node._parent.key.name;
+            if (node._parent._parent.type === "ObjectExpression") {
+                name = getNameForFunctionExpression(node._parent._parent) + "." + name;
+            }
+        } else if (node._parent.type === "AssignmentExpression") {
+            name = stringForId(node._parent.left);
+        } else if (node._parent.type === "VariableDeclarator") {
+            name = stringForId(node._parent.id);
+        } else {
+            name = "<anonymous>"; // TODO: test anonymous callbacks
+        }
+        return name;
+    }
+
     function transform(code, context) {
         var ast = esprima.parse(code, { loc: true });
         var scopeManager = escope.analyze(ast);
         scopeManager.attach();
 
         estraverse.replace(ast, {
+            enter: function(node, parent) {
+                node._parent = parent;
+            },
             leave: function(node, parent) {
                 if (node.type === "Program" || node.type === "BlockStatement") {
                     if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
@@ -428,10 +461,37 @@
                     var bodyList = LinkedList.fromArray(node.body);
                     insertYields(bodyList);
 
+                    if (bodyList.first) {
+                        if (parent.type === "FunctionDeclaration") {
+                            bodyList.first.value.expression.argument.properties.push({
+                                type: "Property",
+                                key: builder.createIdentifier("name"),
+                                value: builder.createLiteral(stringForId(parent.id)),   // NOTE: identifier can be a member expression too!
+                                kind: "init"
+                            });
+                        } else if (parent.type === "FunctionExpression") {
+                            var name = getNameForFunctionExpression(parent);
+                            bodyList.first.value.expression.argument.properties.push({
+                                type: "Property",
+                                key: builder.createIdentifier("name"),
+                                value: builder.createLiteral(name),
+                                kind: "init"
+                            });
+                        } else if (node.type === "Program") {
+                            bodyList.first.value.expression.argument.properties.push({
+                                type: "Property",
+                                key: builder.createIdentifier("name"),
+                                value: builder.createLiteral("<PROGRAM>"),
+                                kind: "init"
+                            });
+                        }
+                    }
+
                     // if there are any variables defined in this scope
                     // create a __scope__ dictionary containing their values
                     // and include in the first yield
-                    if (scope && scope.length > 0) {
+                    if (scope && scope.length > 0 && bodyList.first) {
+                        // TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
                         create__scope__(node, bodyList, scope);
                     } else {
                         node.body = bodyList.toArray();
@@ -457,6 +517,8 @@
                         throw "we don't handle '" + node.callee.type + "' callees";
                     }
                 }
+
+                delete node._parent;
             }
         });
 
@@ -609,9 +671,13 @@
     // run and then we can set call pause() to set this._paused to true
     Stepper.prototype.run = function (ignoreBreakpoints) {
         this._paused = false;
+        var currentLine = this.line();
         while (!this.stack.isEmpty()) {
             var action = this.stepIn();
-            if (this.breakpoints[action.line] && action.type !== "stepOut") {
+            // the currentLine check is so that we have don't hit this breakpoint
+            // the user clicks continue()... stepper should run unti it hits the
+            // next discrete breakpoint
+            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 if (!ignoreBreakpoints) {
                     this._paused = true;
                     return action;
@@ -725,6 +791,9 @@
         if (result.value) {
             if (result.value.scope) {
                 this.stack.peek().scope = result.value.scope;
+            }
+            if (result.value.name) {
+                this.stack.peek().name = result.value.name;
             }
             if (result.value.line) {
                 frame.line = result.value.line;
