@@ -159,36 +159,6 @@
     Stepper.prototype.runWithPromises = function () {
         var self = this;
         return new Promise(function (resolve, reject) {
-            while (true) {
-                if (self.stack.isEmpty()) {
-                    resolve(self);
-                    break;
-                }
-                var action = self.stepIn();
-                if (self.breakpoints[action.line] && action.type !== "stepOut") {
-                    self._paused = true;
-                    resolve(self);
-                    break;
-                }
-            }
-        });
-    };
-
-    Stepper.prototype.runGenWithPromises = function (gen) {
-        var self = this;
-
-        return new Promise(function (resolve, reject) {
-            if (!self.halted()) {
-                reject();
-            }
-            self._halted = false;
-
-            // assumes the stack is empty... should probably just set the value
-            self.stack.push({
-                gen: gen,
-                line: 0
-            });
-
             var currentLine = self.line();
             while (true) {
                 if (self.stack.isEmpty()) {
@@ -204,6 +174,23 @@
                 currentLine = self.line();
             }
         });
+    };
+
+    Stepper.prototype.runGenWithPromises = function (gen) {
+        var self = this;
+
+        if (!self.halted()) {
+            return Promise.reject();
+        }
+        self._halted = false;
+
+        // assumes the stack is empty... should probably just set the value
+        self.stack.push({
+            gen: gen,
+            line: 0
+        });
+
+        return this.runWithPromises();
     };
 
     Stepper.prototype.halted = function () {

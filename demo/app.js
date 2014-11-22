@@ -53,6 +53,7 @@ draw = function () {
 });
 
 editor.getSession().setValue(code);
+editor.setHighlightActiveLine(false);
 var stepper = new Stepper(processing);
 
 var finishedMain = false;
