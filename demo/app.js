@@ -69,20 +69,34 @@ function loop() {
     disableButtons();
 
     if (finishedMain) {
-        stepper.runGenWithPromises(processing.draw())
-            .then(function () {
-                return timeout();
-            })
-            .then(function () {
-                enableButtons();
-                if (stepper.halted()) {
-                    loop();
-                } else {
-                    updateView(stepper);
-                }
-            }, function () {
-                console.log("stopped");
-            });
+        if (stepper.halted()) {
+            stepper.runGenWithPromises(processing.draw())
+                .then(function () {
+                    return timeout();
+                })
+                .then(function () {
+                    enableButtons();
+                    if (stepper.halted()) {
+                        loop();
+                    } else {
+                        updateView(stepper);
+                    }
+                }, function () {
+                    console.log("stopped");
+                });
+        } else {
+            stepper.runWithPromises()
+                .then(function () {
+                    enableButtons();
+                    if (stepper.halted()) {
+                        loop();
+                    } else {
+                        updateView(stepper);
+                    }
+                }, function () {
+                    console.log("stopped");
+                });
+        }
     } else {
         stepper.runWithPromises()
             .then(function () {
@@ -112,18 +126,8 @@ $("#startButton").click(function () {
     loop();
 });
 
-// TODO: make continue run until it halts
 $("#continueButton").click(function () {
-    var action = stepper.stepOut();
-    if (stepper.halted()) {
-        finishedMain = true;
-        disableButtons();
-        editor.setHighlightActiveLine(false);
-        loop();
-        return;
-    }
-
-    updateView(stepper, action);
+    loop();
 });
 
 $("#stepInButton").click(function () {
