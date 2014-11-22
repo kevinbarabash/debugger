@@ -52,14 +52,9 @@ draw = function () {
 });
 
 editor.getSession().setValue(code);
-
 var stepper = new Stepper(processing);
-stepper.load(code);
-stepper.run();
-editor.setHighlightActiveLine(false);
 
-
-$("#restartButton").click(function () {
+$("#startButton").click(function () {
     // reset processing
     processing.size(400,400);
     processing.resetMatrix();
@@ -98,26 +93,27 @@ $("#restartButton").click(function () {
             editor.gotoLine(stepper.line());
             editor.setHighlightActiveLine(true);
             updateLocals(stepper);
+            updateCallStack(stepper);
         }
-
     }
-
 
     editor.setHighlightActiveLine(false);
     disableButtons();
-    stepper.reset();
 
     stepper.runWithPromises().then(function () {
-        loop(); // start looping through "draw"
+        if (stepper.halted()) {
+            loop(); // start looping through "draw"
+        } else if (stepper.paused()) {
+            editor.gotoLine(stepper.line());
+            editor.setHighlightActiveLine(true);
+            updateLocals(stepper);
+            updateCallStack(stepper);
+        }
     }, function () {
         console.log("stopped");
     });
 
     enableButtons();
-
-//    editor.gotoLine(stepper.line());
-//    editor.setHighlightActiveLine(true);
-//    updateLocals(stepper.stack.peek().scope);
 });
 
 
@@ -133,27 +129,9 @@ $("#continueButton").click(function () {
         editor.setHighlightActiveLine(true);
         // TODO: determine if we're in the same context
         updateLocals(stepper);
+        updateCallStack(stepper);
     }
 });
-
-function updateLocals(stepper, action) {
-    if (stepper.halted()) {
-        return;
-    }
-    var scope = stepper.stack.peek().scope;
-    var $variableList = $("#variableList");
-
-    if (action && action.type === "stepOver") {
-        // don't take any action
-    } else {
-        $variableList.empty();
-        if (!scope) {
-            return;
-        }
-        $variableList.append(genPropsList(scope));
-    }
-}
-
 
 $("#stepInButton").click(function () {
     var action = stepper.stepIn();
@@ -171,6 +149,7 @@ $("#stepInButton").click(function () {
     }
 
     updateLocals(stepper, action);
+    updateCallStack(stepper);   // always update the call stack
 
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
@@ -188,6 +167,7 @@ $("#stepOverButton").click(function () {
     }
 
     updateLocals(stepper, action);
+    updateCallStack(stepper);
 
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
@@ -205,6 +185,7 @@ $("#stepOutButton").click(function () {
     }
 
     updateLocals(stepper, action);
+    updateCallStack(stepper);
 
     editor.gotoLine(action.line);
     editor.setHighlightActiveLine(true);
@@ -242,3 +223,44 @@ editor.on("guttermousedown", function(e){
 
     e.stop();
 });
+
+function updateLocals(stepper, action) {
+    if (stepper.halted()) {
+        return;
+    }
+    var scope = stepper.stack.peek().scope;
+    var $variableList = $("#variableList");
+
+    if (action && action.type === "stepOver") {
+        // don't take any action
+    } else {
+        $variableList.empty();
+        if (!scope) {
+            return;
+        }
+        $variableList.append(genPropsList(scope));
+    }
+}
+
+function updateCallStack(stepper) {
+    var $callStack = $("#callStack");
+    $callStack.empty();
+
+    if (stepper.halted()) {
+        return;
+    }
+
+    var scope = stepper.stack.peek().scope;
+
+    if (!scope) {
+        return;
+    }
+
+    var $ul = $("<ul></ul>");
+    stepper.stack.values.forEach(function (frame) {
+        var $name = $("<span></span>").text(frame.name);
+        var $line = $("<span></span>").text(frame.line).css({ float: "right" });
+        $ul.prepend($("<li></li>").append($name, $line));
+    });
+    $callStack.append($ul);
+}

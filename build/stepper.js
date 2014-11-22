@@ -683,6 +683,7 @@
                     return action;
                 }
             }
+            currentLine = this.line();
             if (this.paused()) {
                 return action;
             }
@@ -701,6 +702,10 @@
                 var action = self.stepIn();
                 if (self.breakpoints[action.line] && action.type !== "stepOut") {
                     self._paused = true;
+                    if (self.resolve) {
+                        self.resolve(self);
+                        delete self.resolve;
+                    }
                     break;
                 }
             }
@@ -730,6 +735,10 @@
                 var action = self.stepIn();
                 if (self.breakpoints[action.line] && action.type !== "stepOut") {
                     self._paused = true;
+                    if (self.resolve) {
+                        self.resolve(self);
+                        delete self.resolve;
+                    }
                     break;
                 }
             }

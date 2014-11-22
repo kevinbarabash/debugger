@@ -137,6 +137,17 @@
       padding-bottom: 2px;
       color: #333;
     }
+
+    #callStack ul {
+      list-style-type: none;
+      margin-top: 2px;
+      padding:0;
+    }
+
+    #callStack ul li {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
   </style>
   <link rel="stylesheet" href="../external/object-browser/object-browser.css"/>
 </head>
@@ -158,7 +169,7 @@
 
     <div class="header">
       <span class="tab">Debugger</span>
-      <span class="tab button"><button id="restartButton">Restart</button></span>
+      <span class="tab button"><button id="startButton">Start</button></span>
       <span class="tab button"><button id="continueButton">Continue</button></span>
       <span class="tab button"><button id="stepInButton">In</button></span>
       <span class="tab button"><button id="stepOverButton">Over</button></span>
@@ -169,6 +180,7 @@
       <div class="section_header">Local Variables</div>
       <div id="variableList" class="object-browser"></div>
       <div class="section_header">Call Stack</div>
+      <div id="callStack"></div>
     </div>
   </div>
 
