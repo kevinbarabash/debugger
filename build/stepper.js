@@ -587,10 +587,6 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._halted = true;
-            if (self.resolve) {
-                self.resolve(self);
-                delete self.resolve;
-            }
         };
         this._halted = false;
         this._paused = false;
@@ -694,18 +690,15 @@
     Stepper.prototype.runWithPromises = function () {
         var self = this;
         return new Promise(function (resolve, reject) {
-            self.resolve = resolve;
             while (true) {
                 if (self.stack.isEmpty()) {
+                    resolve(self);
                     break;
                 }
                 var action = self.stepIn();
                 if (self.breakpoints[action.line] && action.type !== "stepOut") {
                     self._paused = true;
-                    if (self.resolve) {
-                        self.resolve(self);
-                        delete self.resolve;
-                    }
+                    resolve(self);
                     break;
                 }
             }
@@ -727,20 +720,19 @@
                 line: 0
             });
 
-            self.resolve = resolve;
+            var currentLine = self.line();
             while (true) {
                 if (self.stack.isEmpty()) {
+                    resolve(self);
                     break;
                 }
                 var action = self.stepIn();
-                if (self.breakpoints[action.line] && action.type !== "stepOut") {
+                if (self.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== self.line()) {
                     self._paused = true;
-                    if (self.resolve) {
-                        self.resolve(self);
-                        delete self.resolve;
-                    }
+                    resolve(self);
                     break;
                 }
+                currentLine = self.line();
             }
         });
     };

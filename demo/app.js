@@ -1,4 +1,5 @@
-// TODO: show call stack
+// TODO: create a event handlers to proxy mouseDragged, et al
+// TODO: create a scheduler so that after we step through "draw" we cna step through "mouseDragged" if necessary
 
 // setup editor
 var editor = ace.edit("editor");
@@ -54,6 +55,50 @@ draw = function () {
 editor.getSession().setValue(code);
 var stepper = new Stepper(processing);
 
+var finishedMain = false;
+
+function timeout() {
+    return new Promise(function (resolve, reject) {
+        setTimeout(resolve, 100 / 60);  // 60 fps
+        // TODO: grab the actual fps from processing
+    });
+}
+
+function loop() {
+    editor.setHighlightActiveLine(false);
+    disableButtons();
+
+    if (finishedMain) {
+        stepper.runGenWithPromises(processing.draw())
+            .then(function () {
+                return timeout();
+            })
+            .then(function () {
+                enableButtons();
+                if (stepper.halted()) {
+                    loop();
+                } else {
+                    updateView(stepper);
+                }
+            }, function () {
+                console.log("stopped");
+            });
+    } else {
+        stepper.runWithPromises()
+            .then(function () {
+                enableButtons();
+                if (stepper.halted()) {
+                    finishedMain = true;
+                    loop();
+                } else {
+                    updateView(stepper);
+                }
+            }, function () {
+                console.log("stopped");
+            });
+    }
+}
+
 $("#startButton").click(function () {
     // reset processing
     processing.size(400,400);
@@ -62,97 +107,36 @@ $("#startButton").click(function () {
     // reload the code and run it
     code = session.getValue();
     stepper.load(code);
+    finishedMain = false;
 
-    function timeout() {
-        return new Promise(function (resolve, reject) {
-            setTimeout(resolve, 100 / 60);  // 60 fps
-            // TODO: grab the actual fps from processing
-        });
-    }
-
-    // TODO: create a event handlers to proxy mouseDragged, et al
-    // TODO: create a scheduler so that after we step through "draw" we cna step through "mouseDragged" if necessary
-    function loop() {
-        editor.setHighlightActiveLine(false);
-        disableButtons();
-
-        stepper.runGenWithPromises(processing.draw())
-            .then(function () {
-                return timeout();
-            })
-            .then(function () {
-                loop();
-            }, function () {
-                // TODO: make a stop button so that we can start reject promises
-                console.log("stopped");
-            });
-
-        enableButtons();
-
-        if (stepper.paused()) {
-            editor.gotoLine(stepper.line());
-            editor.setHighlightActiveLine(true);
-            updateLocals(stepper);
-            updateCallStack(stepper);
-        }
-    }
-
-    editor.setHighlightActiveLine(false);
-    disableButtons();
-
-    stepper.runWithPromises().then(function () {
-        if (stepper.halted()) {
-            loop(); // start looping through "draw"
-        } else if (stepper.paused()) {
-            editor.gotoLine(stepper.line());
-            editor.setHighlightActiveLine(true);
-            updateLocals(stepper);
-            updateCallStack(stepper);
-        }
-    }, function () {
-        console.log("stopped");
-    });
-
-    enableButtons();
+    loop();
 });
 
-
+// TODO: make continue run until it halts
 $("#continueButton").click(function () {
-    stepper.run();
+    var action = stepper.stepOut();
     if (stepper.halted()) {
-        editor.setHighlightActiveLine(false);
+        finishedMain = true;
         disableButtons();
-    } else {
-        // TODO: make it so continue runs all of the functional call on this line
-        // and actually proceeds to the next line
-        editor.gotoLine(stepper.line());
-        editor.setHighlightActiveLine(true);
-        // TODO: determine if we're in the same context
-        updateLocals(stepper);
-        updateCallStack(stepper);
+        editor.setHighlightActiveLine(false);
+        loop();
+        return;
     }
+
+    updateView(stepper, action);
 });
 
 $("#stepInButton").click(function () {
     var action = stepper.stepIn();
     if (stepper.halted()) {
+        finishedMain = true;
         disableButtons();
         editor.setHighlightActiveLine(false);
+        loop();
         return;
     }
-    if (action.type === "stepIn") {
-        console.log("stepIn: stack size = " + stepper.stack.size());
-    } else if (action.type === "stepOver") {
 
-    } else if (action.type === "stepOut") {
-        console.log("stepOut: stack size = " + stepper.stack.size());
-    }
-
-    updateLocals(stepper, action);
-    updateCallStack(stepper);   // always update the call stack
-
-    editor.gotoLine(action.line);
-    editor.setHighlightActiveLine(true);
+    updateView(stepper, action);
 });
 
 $("#stepOverButton").click(function () {
@@ -160,17 +144,13 @@ $("#stepOverButton").click(function () {
     if (stepper.halted()) {
         disableButtons();
         editor.setHighlightActiveLine(false);
+        if (finishedMain) {
+            loop();
+        }
         return;
     }
-    if (action.type === "stepOut") {
-        console.log("stepOut: stack size = " + stepper.stack.size());
-    }
 
-    updateLocals(stepper, action);
-    updateCallStack(stepper);
-
-    editor.gotoLine(action.line);
-    editor.setHighlightActiveLine(true);
+    updateView(stepper, action);
 });
 
 $("#stepOutButton").click(function () {
@@ -178,17 +158,13 @@ $("#stepOutButton").click(function () {
     if (stepper.halted()) {
         disableButtons();
         editor.setHighlightActiveLine(false);
+        if (finishedMain) {
+            loop();
+        }
         return;
     }
-    if (action.type === "stepOut") {
-        console.log("stepOut: stack size = " + stepper.stack.size());
-    }
 
-    updateLocals(stepper, action);
-    updateCallStack(stepper);
-
-    editor.gotoLine(action.line);
-    editor.setHighlightActiveLine(true);
+    updateView(stepper, action);
 });
 
 function disableButtons() {
@@ -211,14 +187,14 @@ editor.on("guttermousedown", function(e){
         return;
     }
 
-    var row = e.getDocumentPosition().row;
+    var row = parseInt(e.domEvent.target.innerText);
 
-    if (e.editor.session.getBreakpoints()[row]) {
-        e.editor.session.clearBreakpoint(row);
-        stepper.clearBreakpoint(row + 1);
+    if (e.editor.session.getBreakpoints()[row - 1]) {
+        e.editor.session.clearBreakpoint(row - 1);
+        stepper.clearBreakpoint(row);
     } else {
-        e.editor.session.setBreakpoint(row);
-        stepper.setBreakpoint(row + 1);
+        e.editor.session.setBreakpoint(row - 1);
+        stepper.setBreakpoint(row);
     }
 
     e.stop();
@@ -263,4 +239,11 @@ function updateCallStack(stepper) {
         $ul.prepend($("<li></li>").append($name, $line));
     });
     $callStack.append($ul);
+}
+
+function updateView(stepper, action) {
+    updateLocals(stepper, action);
+    updateCallStack(stepper);
+    editor.gotoLine(stepper.line());
+    editor.setHighlightActiveLine(true);
 }
