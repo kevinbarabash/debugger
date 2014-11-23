@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title></title>
+  <script src="../bower_components/jquery/dist/jquery.min.js"></script>
+  <script src="../src/linked-list.js"></script>
+  <script src="task.js"></script>
+  <script src="scheduler.js"></script>
+</head>
+<body>
+
+<button id="add">Add Runner</button><input type="text" id="message"><br><br>
+<button id="run">Run Current Runner</button><br><br>
+
+<canvas width="512" height="512"></canvas>
+
+</body>
+</html>
+<script>
+
+  var scheduler = new Scheduler();
+  scheduler.addTask(new Task(randomColor(), 500));
+  scheduler.addTask(new Task("initial task"));
+
+  $(document).click(function (e) {
+    var message = "click @ (" + e.pageX + "," + e.pageY + ")";
+    var task = new Task(message, 0);
+    task.breakpoint = 2;
+    scheduler.addTask(task);
+  });
+
+//  var down = false;
+//  $(document).mousedown(function (e) {
+//    down = true;
+//    var message = "mousedown @ (" + e.pageX + "," + e.pageY + ")";
+//    var task = new Task(message);
+//    scheduler.addTask(task);
+//  });
+//
+//  $(document).mousemove(function (e) {
+//    if (down) {
+//      var message = "mousedrag @ (" + e.pageX + "," + e.pageY + ")";
+//      var task = new Task(message);
+//      scheduler.addTask(task);
+//    }
+//  });
+//
+//  $(document).mouseup(function (e) {
+//    if (down) {
+//      down = false;
+//      var message = "mouseup @ (" + e.pageX + "," + e.pageY + ")";
+//      var task = new Task(message);
+//      scheduler.addTask(task);
+//    }
+//  });
+
+</script>

@@ -193,6 +193,34 @@
         return this.runWithPromises();
     };
 
+    Stepper.prototype.runWithDeferred = function(gen) {
+        if (!this.halted()) {
+            return;
+        }
+        gen = gen || this.debugGenerator;   // TODO: rename debugGenerator to mainGenerator
+        this.deferred = $.Deferred();
+
+        // TODO: need a way to reset the stack
+        self.stack.push({
+            gen: gen,
+            line: 0
+        });
+
+        var currentLine = self.line();
+        while (true) {
+            if (self.stack.isEmpty()) {
+                this.deferred.resolve(this);
+                break;
+            }
+            var action = self.stepIn();
+            if (self.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== self.line()) {
+                self._paused = true;
+                break;
+            }
+            currentLine = self.line();
+        }
+    };
+
     Stepper.prototype.halted = function () {
         return this._halted;
     };
