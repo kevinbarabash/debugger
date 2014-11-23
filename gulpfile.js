@@ -15,7 +15,9 @@ var src = [
     "./external/ast-walker/walker.js",
     "./src/ast-builder.js",
     "./src/transform.js",
-    "./src/stepper.js"
+    "./src/stepper.js",
+    "./src/scheduler.js",
+    "./src/debugger.js"
 ];
 
 gulp.task("build", function () {

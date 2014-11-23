@@ -77,6 +77,10 @@
         }
     };
 
+    LinkedList.prototype.clear = function () {
+        this.first = this.last = null;
+    };
+
     LinkedList.prototype.insertBeforeNode = function (refNode, value) {
         if (refNode === this.first) {
             this.push_front(value);

@@ -43,11 +43,17 @@
         this.prev = null;
     }
 
+    Node.prototype.destroy = function () {
+        delete this.next;
+        delete this.prev;
+        delete this.value;
+    };
+
     function LinkedList () {
         this.first = null;
         this.last = null;
     }
-    
+
     LinkedList.prototype.push_back = function (value) {
         var node = new Node(value);
         if (this.first === null && this.last === null) {
@@ -59,7 +65,7 @@
             this.last = node;
         }
     };
-    
+
     LinkedList.prototype.push_front = function (value) {
         var node = new Node(value);
         if (this.first === null && this.last === null) {
@@ -71,7 +77,47 @@
             this.first = node;
         }
     };
-    
+
+    LinkedList.prototype.pop_back = function () {
+        if (this.last) {
+            var value = this.last.value;
+            if (this.last.prev) {
+                var last = this.last;
+                this.last = last.prev;
+                this.last.next = null;
+                last.destroy();
+            } else {
+                this.last = null;
+                this.first = null;
+            }
+            return value;
+        } else {
+            return null;
+        }
+    };
+
+    LinkedList.prototype.pop_front = function () {
+        if (this.first) {
+            var value = this.first.value;
+            if (this.first.next) {
+                var first = this.first;
+                this.first = first.next;
+                this.first.prev = null;
+                first.destroy();
+            } else {
+                this.first = null;
+                this.last = null;
+            }
+            return value;
+        } else {
+            return null;
+        }
+    };
+
+    LinkedList.prototype.clear = function () {
+        this.first = this.last = null;
+    };
+
     LinkedList.prototype.insertBeforeNode = function (refNode, value) {
         if (refNode === this.first) {
             this.push_front(value);
@@ -83,13 +129,13 @@
             refNode.prev = node;
         }
     };
-    
+
     LinkedList.prototype.inserAfterNode = function (refNode, value) {
         if (refNode === this.last) {
             this.push_back(value);
         } else {
             var node = new Node(value);
-            
+
         }
     };
 
@@ -100,14 +146,14 @@
             node = node.next;
         }
     };
-    
+
     // TODO: provide the index to the callback as well
     LinkedList.prototype.forEach = function (callback, _this) {
         this.forEachNode(function (node) {
-            callback.call(_this, node.value);  
+            callback.call(_this, node.value);
         });
     };
-    
+
     LinkedList.prototype.nodeAtIndex = function (index) {
         var i = 0;
         var node = this.first;
@@ -119,12 +165,12 @@
         }
         return null;
     };
-    
+
     LinkedList.prototype.valueAtIndex = function (index) {
         var node = this.nodeAtIndex(index);
         return node ? node.value : undefined;
     };
-    
+
     LinkedList.prototype.toArray = function () {
         var array = [];
         var node = this.first;
@@ -134,15 +180,15 @@
         }
         return array;
     };
-    
+
     LinkedList.fromArray = function (array) {
         var list = new LinkedList();
         array.forEach(function (value) {
-            list.push_back(value); 
+            list.push_back(value);
         });
         return list;
     };
-    
+
     exports.LinkedList = LinkedList;
 
 })(this);
@@ -544,57 +590,39 @@
         this.line = line;
     }
 
-    function __instantiate__ (Class) {
-        var obj = Object.create(Class.prototype);
-        var args = Array.prototype.slice.call(arguments, 1);
-        var gen = Class.apply(obj, args);
-
-        if (gen) {
-            gen.obj = obj;
-            return gen;
-        } else {
-            return obj;
-        }
-    }
-
-    function Stepper (context) {
-        // Only support a single context because using multiple "with" statements
-        // hurts performance: http://jsperf.com/multiple-withs
-        // Multiple contexts can be simulated by merging the dictionaries.
-        this.context = context || {};
-        this.context.__instantiate__ = __instantiate__;
-
+    function Stepper (generator) {
         this.breakpoints = {};
-    }
+        this.deferred = $.Deferred();
 
-    Stepper.isBrowserSupported = function () {
-        try {
-            return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
-        } catch(e) {
-            return false;
-        }
-    };
+        this._started = false;
+        this._paused = false;
+        this._stopped = false;
 
-    Stepper.prototype.load = function (code) {
-        if (this.debugGenerator = this._createDebugGenerator(code)) {
-            this.reset();
-        }
-    };
-
-    Stepper.prototype.reset = function () {
         this.stack = new Stack();
+        this.stack.push(new Frame(generator, -1));
 
         var self = this;
         this.stack.poppedLastItem = function () {
-            self._halted = true;
+            self._stopped = true;
         };
-        this._halted = false;
-        this._paused = false;
-        this._retVal = undefined;
 
-        var gen = this.debugGenerator(this.context);
-        this.stack.push(new Frame(gen, -1));
-    };
+        this._retVal = undefined;
+    }
+
+//    Stepper.prototype.reset = function () {
+//        this.stack = new Stack();
+//
+//        var self = this;
+//        this.stack.poppedLastItem = function () {
+//            self._stopped = true;
+//        };
+//        this._stopped = false;
+//        this._paused = false;
+//        this._retVal = undefined;
+//
+//        var gen = this.debugGenerator(this.context);
+//        this.stack.push(new Frame(gen, -1));
+//    };
 
     Stepper.prototype.stepIn = function () {
         var result;
@@ -662,28 +690,25 @@
         }
     };
 
-    // TODO: figure out how to respond to UI actions while running
-    // there should be a callback that's fired after each action that's
-    // run and then we can set call pause() to set this._paused to true
-    Stepper.prototype.run = function (ignoreBreakpoints) {
+    // TODO: implement ignoreBreakpoints
+    Stepper.prototype.start = function (ignoreBreakpoints) {
+        this._started = true;
         this._paused = false;
+
         var currentLine = this.line();
-        while (!this.stack.isEmpty()) {
+        while (true) {
+            if (this.stack.isEmpty()) {
+                this.deferred.resolve(this);
+                break;
+            }
             var action = this.stepIn();
-            // the currentLine check is so that we have don't hit this breakpoint
-            // the user clicks continue()... stepper should run unti it hits the
-            // next discrete breakpoint
             if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
-                if (!ignoreBreakpoints) {
-                    this._paused = true;
-                    return action;
-                }
+                this._paused = true;
+                break;
             }
             currentLine = this.line();
-            if (this.paused()) {
-                return action;
-            }
         }
+
         return action;
     };
 
@@ -710,10 +735,10 @@
     Stepper.prototype.runGenWithPromises = function (gen) {
         var self = this;
 
-        if (!self.halted()) {
+        if (!self.stopped()) {
             return Promise.reject();
         }
-        self._halted = false;
+        self._stopped = false;
 
         // assumes the stack is empty... should probably just set the value
         self.stack.push({
@@ -724,16 +749,20 @@
         return this.runWithPromises();
     };
 
-    Stepper.prototype.halted = function () {
-        return this._halted;
+    Stepper.prototype.started = function () {
+        return this._started;
     };
 
     Stepper.prototype.paused = function () {
         return this._paused;
     };
 
+    Stepper.prototype.stopped = function () {
+        return this._stopped;
+    };
+
     Stepper.prototype.line = function () {
-        if (!this._halted) {
+        if (!this._stopped) {
             return this.stack.peek().line;
         } else {
             return -1;
@@ -748,26 +777,16 @@
         delete this.breakpoints[line];
     };
 
-    Stepper.prototype.disableBreakpoint = function (line) {};
-    Stepper.prototype.enableBreakpoint = function (line) {};
-    Stepper.prototype.disableAllBreakpoints = function () {};
-    Stepper.prototype.enableAllBreakpoints = function () {};
-
     /* PRIVATE */
 
     var _isGenerator = function (obj) {
         return obj instanceof Object && obj.toString() === "[object Generator]"
     };
 
-    Stepper.prototype._createDebugGenerator = function (code) {
-        var debugCode = transform(code, this.context);
-        var debugFunction = new Function(debugCode);
-        return debugFunction(); // returns a generator
-    };
-
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
-            this._halted = true;
+            this._stopped = true;
+            this.deferred.resolve();
             return;
         }
         var frame = this.stack.peek();
@@ -815,3 +834,147 @@
 
     exports.Stepper = Stepper;
 })(this);
+
+/**
+ * The purpose of the scheduler is to:
+ * - add tasks to a queue in a certain order
+ * - remove tasks from the queue when they have completed
+ * - reschedule recurring tasks
+ */
+
+function Scheduler () {
+    this.queue = new LinkedList();
+}
+
+Scheduler.prototype.addTask = function (task) {
+    var self = this;
+
+    task.deferred.then(function () {
+        self.queue.pop_back();
+
+        if (task.delay) {
+            task.reset();
+            setTimeout(function () {
+                self.addTask(task);
+            });
+        }
+
+        var currentTask = self.currentTask();
+        if (currentTask !== null && !currentTask.started()) {
+            currentTask.start();
+        }
+    });
+
+    this.queue.push_front(task);
+
+    var currentTask = self.currentTask();
+    if (currentTask !== null && !currentTask.started()) {
+        currentTask.start();
+    }
+};
+
+Scheduler.prototype.currentTask = function () {
+    return this.queue.last ? this.queue.last.value : null;
+};
+
+
+Scheduler.prototype.clear = function () {
+    debugger;
+    this.queue.clear();
+};
+
+/**
+ * The debugger has the following responsibilites:
+ * - create debug code and generators from source code
+ * - create and schedule steppers
+ * - maintain breakpoints and inform steppers of breakpoints
+ */
+
+function Debugger(context) {
+    this.context = context || {};
+    this.context.__instantiate__ = __instantiate__;
+
+    this.breakpoints = {};
+    this.scheduler = new Scheduler();
+}
+
+Debugger.isBrowserSupported = function () {
+    try {
+        var code = "\n" +
+            "var generator = (function* () {\n" +
+            "  yield* (function* () {\n" +
+            "    yield 5; yield 6;\n" +
+            "  }());\n" +
+            "}());\n" +
+            "\n" +
+            "var item = generator.next();\n" +
+            "var passed = item.value === 5 && item.done === false;\n" +
+            "item = generator.next();\n" +
+            "passed &= item.value === 6 && item.done === false;\n" +
+            "item = generator.next();\n" +
+            "passed &= item.value === undefined && item.done === true;\n" +
+            "return passed;";
+        return Function(code)()
+    } catch(e) {
+        return false;
+    }
+};
+
+Debugger.prototype.load = function (code) {
+    var debugCode = transform(code, this.context);
+    var debugFunction = new Function(debugCode);
+    this.main = debugFunction();
+};
+
+Debugger.prototype.start = function () {
+    this.scheduler.clear();
+
+    var generator = this.main(this.context);
+    var task = new Stepper(generator);
+    this.scheduler.addTask(task);
+
+    // clear all task from the scheduler
+    // schedule a single run of the main generator
+    // after the main generator completes schedule any recurring tasks, e.g. draw
+    // need to wait until main completes, because main defines "draw"
+};
+
+Debugger.prototype.pause = function () {
+    // if we aren't paused, break at the start of the next stepper task
+
+};
+
+Debugger.prototype.resume = function () {
+    // continue running if we paused, run to the next breakpoint
+
+};
+
+Debugger.prototype.currentFrameStack = function () {
+    var task = scheduler.currentTask();
+    if (task !== null) {
+        return task.stack;
+    } else {
+        return null;
+    }
+};
+
+Debugger.prototype.setBreakpoint = function (line) {
+    this.breakpoints[line] = true;
+};
+
+Debugger.prototype.clearBreakpoint = function (line) {
+    delete this.breakpoints[line];
+};
+
+function __instantiate__ (Class) {
+    var obj = Object.create(Class.prototype);
+    var args = Array.prototype.slice.call(arguments, 1);
+    var gen = Class.apply(obj, args);
+
+    if (gen) {
+        gen.obj = obj;
+        return gen;
+    } else {
+        return obj;
+    }
+}

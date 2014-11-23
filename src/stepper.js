@@ -13,57 +13,39 @@
         this.line = line;
     }
 
-    function __instantiate__ (Class) {
-        var obj = Object.create(Class.prototype);
-        var args = Array.prototype.slice.call(arguments, 1);
-        var gen = Class.apply(obj, args);
-
-        if (gen) {
-            gen.obj = obj;
-            return gen;
-        } else {
-            return obj;
-        }
-    }
-
-    function Stepper (context) {
-        // Only support a single context because using multiple "with" statements
-        // hurts performance: http://jsperf.com/multiple-withs
-        // Multiple contexts can be simulated by merging the dictionaries.
-        this.context = context || {};
-        this.context.__instantiate__ = __instantiate__;
-
+    function Stepper (generator) {
         this.breakpoints = {};
-    }
+        this.deferred = $.Deferred();
 
-    Stepper.isBrowserSupported = function () {
-        try {
-            return Function("\nvar generator = (function* () {\n  yield* (function* () {\n    yield 5; yield 6;\n  }());\n}());\n\nvar item = generator.next();\nvar passed = item.value === 5 && item.done === false;\nitem = generator.next();\npassed    &= item.value === 6 && item.done === false;\nitem = generator.next();\npassed    &= item.value === undefined && item.done === true;\nreturn passed;\n  ")()
-        } catch(e) {
-            return false;
-        }
-    };
+        this._started = false;
+        this._paused = false;
+        this._stopped = false;
 
-    Stepper.prototype.load = function (code) {
-        if (this.debugGenerator = this._createDebugGenerator(code)) {
-            this.reset();
-        }
-    };
-
-    Stepper.prototype.reset = function () {
         this.stack = new Stack();
+        this.stack.push(new Frame(generator, -1));
 
         var self = this;
         this.stack.poppedLastItem = function () {
-            self._halted = true;
+            self._stopped = true;
         };
-        this._halted = false;
-        this._paused = false;
-        this._retVal = undefined;
 
-        var gen = this.debugGenerator(this.context);
-        this.stack.push(new Frame(gen, -1));
-    };
+        this._retVal = undefined;
+    }
+
+//    Stepper.prototype.reset = function () {
+//        this.stack = new Stack();
+//
+//        var self = this;
+//        this.stack.poppedLastItem = function () {
+//            self._stopped = true;
+//        };
+//        this._stopped = false;
+//        this._paused = false;
+//        this._retVal = undefined;
+//
+//        var gen = this.debugGenerator(this.context);
+//        this.stack.push(new Frame(gen, -1));
+//    };
 
     Stepper.prototype.stepIn = function () {
         var result;
@@ -131,28 +113,25 @@
         }
     };
 
-    // TODO: figure out how to respond to UI actions while running
-    // there should be a callback that's fired after each action that's
-    // run and then we can set call pause() to set this._paused to true
-    Stepper.prototype.run = function (ignoreBreakpoints) {
+    // TODO: implement ignoreBreakpoints
+    Stepper.prototype.start = function (ignoreBreakpoints) {
+        this._started = true;
         this._paused = false;
+
         var currentLine = this.line();
-        while (!this.stack.isEmpty()) {
+        while (true) {
+            if (this.stack.isEmpty()) {
+                this.deferred.resolve(this);
+                break;
+            }
             var action = this.stepIn();
-            // the currentLine check is so that we have don't hit this breakpoint
-            // the user clicks continue()... stepper should run unti it hits the
-            // next discrete breakpoint
             if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
-                if (!ignoreBreakpoints) {
-                    this._paused = true;
-                    return action;
-                }
+                this._paused = true;
+                break;
             }
             currentLine = this.line();
-            if (this.paused()) {
-                return action;
-            }
         }
+
         return action;
     };
 
@@ -179,10 +158,10 @@
     Stepper.prototype.runGenWithPromises = function (gen) {
         var self = this;
 
-        if (!self.halted()) {
+        if (!self.stopped()) {
             return Promise.reject();
         }
-        self._halted = false;
+        self._stopped = false;
 
         // assumes the stack is empty... should probably just set the value
         self.stack.push({
@@ -193,44 +172,20 @@
         return this.runWithPromises();
     };
 
-    Stepper.prototype.runWithDeferred = function(gen) {
-        if (!this.halted()) {
-            return;
-        }
-        gen = gen || this.debugGenerator;   // TODO: rename debugGenerator to mainGenerator
-        this.deferred = $.Deferred();
-
-        // TODO: need a way to reset the stack
-        self.stack.push({
-            gen: gen,
-            line: 0
-        });
-
-        var currentLine = self.line();
-        while (true) {
-            if (self.stack.isEmpty()) {
-                this.deferred.resolve(this);
-                break;
-            }
-            var action = self.stepIn();
-            if (self.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== self.line()) {
-                self._paused = true;
-                break;
-            }
-            currentLine = self.line();
-        }
-    };
-
-    Stepper.prototype.halted = function () {
-        return this._halted;
+    Stepper.prototype.started = function () {
+        return this._started;
     };
 
     Stepper.prototype.paused = function () {
         return this._paused;
     };
 
+    Stepper.prototype.stopped = function () {
+        return this._stopped;
+    };
+
     Stepper.prototype.line = function () {
-        if (!this._halted) {
+        if (!this._stopped) {
             return this.stack.peek().line;
         } else {
             return -1;
@@ -245,26 +200,16 @@
         delete this.breakpoints[line];
     };
 
-    Stepper.prototype.disableBreakpoint = function (line) {};
-    Stepper.prototype.enableBreakpoint = function (line) {};
-    Stepper.prototype.disableAllBreakpoints = function () {};
-    Stepper.prototype.enableAllBreakpoints = function () {};
-
     /* PRIVATE */
 
     var _isGenerator = function (obj) {
         return obj instanceof Object && obj.toString() === "[object Generator]"
     };
 
-    Stepper.prototype._createDebugGenerator = function (code) {
-        var debugCode = transform(code, this.context);
-        var debugFunction = new Function(debugCode);
-        return debugFunction(); // returns a generator
-    };
-
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
-            this._halted = true;
+            this._stopped = true;
+            this.deferred.resolve();
             return;
         }
         var frame = this.stack.peek();
