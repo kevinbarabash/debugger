@@ -606,6 +606,7 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
+            self.emit('done');
         };
 
         this._retVal = undefined;
@@ -641,7 +642,7 @@
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
-                    this._runScope(result.value);
+                    this._runScope(result.value.gen);
                     if (result.value.stepAgain) {
                         this.stepOver();
                     }
@@ -667,7 +668,7 @@
             while (!result.done) {
                 if (result.value.hasOwnProperty('gen')) {
                     if (_isGenerator(result.value.gen)) {
-                        this._runScope(result.value);
+                        this._runScope(result.value.gen);
                     } else {
                         this._retVal = result.value.gen;
                     }
@@ -687,7 +688,6 @@
         var currentLine = this.line();
         while (true) {
             if (this.stack.isEmpty()) {
-                this.emit('done');
                 break;
             }
             var action = this.stepIn();
@@ -699,6 +699,21 @@
         }
 
         return action;
+    };
+
+    Stepper.prototype.resume = function () {
+        var currentLine = this.line();
+        while (true) {
+            if (this.stack.isEmpty()) {
+                break;
+            }
+            var action = this.stepIn();
+            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
+                this._paused = true;
+                break;
+            }
+            currentLine = this.line();
+        }
     };
 
     Stepper.prototype.started = function () {
@@ -737,8 +752,6 @@
 
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
-            this._stopped = true;
-            this.emit('done');
             return;
         }
         var frame = this.stack.peek();
@@ -761,14 +774,14 @@
         return result;
     };
 
-    Stepper.prototype._runScope = function (frame) {
-        this.stack.push(frame);
+    Stepper.prototype._runScope = function (gen) {
+        this.stack.push(new Frame(gen, this.line()));
 
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
                 if (_isGenerator(result.value.gen)) {
-                    this._runScope(new Frame(result.value.gen, this.line()));
+                    this._runScope(result.value.gen);
                 } else {
                     this._retVal = result.value.gen;
                 }
@@ -817,7 +830,7 @@ Scheduler.prototype.tick = function () {
         if (currentTask !== null && !currentTask.started()) {
             currentTask.start();
         }
-    });
+    }, 0);  // defer execution
 };
 
 Scheduler.prototype.currentTask = function () {
@@ -886,6 +899,7 @@ Debugger.prototype.start = function () {
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
 
     this.scheduler.addTask(task);
+    task.start();   // start the initial task synchronously
 };
 
 Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
@@ -898,7 +912,7 @@ Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
     setTimeout(function () {
         self.queueGenerator(gen)
             .on('done', function () {
-                self.queueRecurringGenerator(gen);
+                self.queueRecurringGenerator(gen, delay);
             });
     }, delay);
 };
@@ -914,7 +928,7 @@ Debugger.prototype.queueGenerator = function (gen) {
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
     if (draw) {
-        this.queueRecurringGenerator(draw, 1000/60);
+        this.queueRecurringGenerator(draw, 1000 / 60);
     }
 
     var self = this;
@@ -941,7 +955,8 @@ Debugger.prototype.pause = function () {
 
 Debugger.prototype.resume = function () {
     // continue running if we paused, run to the next breakpoint
-
+    var stepper = this.currentStepper();
+    return stepper ? stepper.resume() : null;
 };
 
 Debugger.prototype.stop = function () {
@@ -983,6 +998,8 @@ Debugger.prototype.setBreakpoint = function (line) {
 Debugger.prototype.clearBreakpoint = function (line) {
     delete this.breakpoints[line];
 };
+
+/* PRIVATE */
 
 function __instantiate__ (Class) {
     var obj = Object.create(Class.prototype);

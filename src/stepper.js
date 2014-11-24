@@ -29,6 +29,7 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
+            self.emit('done');
         };
 
         this._retVal = undefined;
@@ -64,7 +65,7 @@
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
-                    this._runScope(result.value);
+                    this._runScope(result.value.gen);
                     if (result.value.stepAgain) {
                         this.stepOver();
                     }
@@ -90,7 +91,7 @@
             while (!result.done) {
                 if (result.value.hasOwnProperty('gen')) {
                     if (_isGenerator(result.value.gen)) {
-                        this._runScope(result.value);
+                        this._runScope(result.value.gen);
                     } else {
                         this._retVal = result.value.gen;
                     }
@@ -110,7 +111,6 @@
         var currentLine = this.line();
         while (true) {
             if (this.stack.isEmpty()) {
-                this.emit('done');
                 break;
             }
             var action = this.stepIn();
@@ -122,6 +122,21 @@
         }
 
         return action;
+    };
+
+    Stepper.prototype.resume = function () {
+        var currentLine = this.line();
+        while (true) {
+            if (this.stack.isEmpty()) {
+                break;
+            }
+            var action = this.stepIn();
+            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
+                this._paused = true;
+                break;
+            }
+            currentLine = this.line();
+        }
     };
 
     Stepper.prototype.started = function () {
@@ -160,8 +175,6 @@
 
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
-            this._stopped = true;
-            this.emit('done');
             return;
         }
         var frame = this.stack.peek();
@@ -184,14 +197,14 @@
         return result;
     };
 
-    Stepper.prototype._runScope = function (frame) {
-        this.stack.push(frame);
+    Stepper.prototype._runScope = function (gen) {
+        this.stack.push(new Frame(gen, this.line()));
 
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
                 if (_isGenerator(result.value.gen)) {
-                    this._runScope(new Frame(result.value.gen, this.line()));
+                    this._runScope(result.value.gen);
                 } else {
                     this._retVal = result.value.gen;
                 }

@@ -28,7 +28,7 @@ Scheduler.prototype.tick = function () {
         if (currentTask !== null && !currentTask.started()) {
             currentTask.start();
         }
-    });
+    }, 0);  // defer execution
 };
 
 Scheduler.prototype.currentTask = function () {
