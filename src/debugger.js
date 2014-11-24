@@ -50,7 +50,14 @@ Debugger.prototype.start = function () {
 
     var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
     task.on('done', this.handleMainDone.bind(this));
-    task.on('break', this.handleBreakpoint.bind(this));
+
+    var self = this;
+    task.on('break', function () {
+        self.emit('break');
+    });
+    task.on('done', function () {
+        self.emit('done');
+    });
 
     // when the scheduler finishes the last task in the queue it should
     // emit a message so that we can toggle buttons appropriately
@@ -70,12 +77,18 @@ Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
     setTimeout(function () {
         self.queueGenerator(gen)
             .on('done', self.queueRecurringGenerator.bind(self, gen, delay))
-            .on('break', self.handleBreakpoint.bind(self));
     }, delay);
 };
 
 Debugger.prototype.queueGenerator = function (gen) {
     var task = new Stepper(gen(), this.breakpoints);
+    var self = this;
+    task.on('break', function () {
+        self.emit('break');
+    });
+    task.on('done', function () {
+        self.emit('done');
+    });
     this.scheduler.addTask(task);
     return task;
 };
@@ -103,10 +116,6 @@ Debugger.prototype.handleMainDone = function () {
             self.queueGenerator(mouseDragged);
         };
     }
-};
-
-Debugger.prototype.handleBreakpoint = function () {
-    this.emit('break');
 };
 
 Debugger.prototype.pause = function () {

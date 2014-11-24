@@ -37,15 +37,20 @@ for (var i = 0; i < 3; i++) {
     ellipse(random(400),random(400),75,75);
 }
 
-draw = function () {
+//draw = function () {
+//    randomColor();
+//    var p = new PVector(random(400), random(400));
+//    ellipse(p.x, p.y, 75, 75);
+//    p.x += 10;
+//    p.y += 20;
+//    var x = p.x;
+//    var y = p.y;
+//    ellipse(x, y, 75, 75);
+//};
+
+mouseClicked = function () {
     randomColor();
-    var p = new PVector(random(400), random(400));
-    ellipse(p.x, p.y, 75, 75);
-    p.x += 10;
-    p.y += 20;
-    var x = p.x;
-    var y = p.y;
-    ellipse(x, y, 75, 75);
+    ellipse(mouseX, mouseY, 75, 75);
 };
 });
 
@@ -53,18 +58,14 @@ editor.getSession().setValue(code);
 editor.setHighlightActiveLine(false);
 var debugr = new Debugger(processing);
 
-var finishedMain = false;
-
-function timeout() {
-    return new Promise(function (resolve, reject) {
-        setTimeout(resolve, 100 / 60);  // 60 fps
-        // TODO: grab the actual fps from processing
-    });
-}
-
 debugr.on('break', function () {
     enableButtons();
     updateView(debugr);
+});
+
+debugr.on('done', function () {
+    disableButtons();
+    editor.setHighlightActiveLine(false);
 });
 
 $("#startButton").click(function () {
@@ -168,12 +169,6 @@ function updateCallStack(debugr) {
         return;
     }
 
-    var scope = stepper.stack.peek().scope;
-
-    if (!scope) {
-        return;
-    }
-
     var $ul = $("<ul></ul>");
     stepper.stack.values.forEach(function (frame) {
         var $name = $("<span></span>").text(frame.name);
@@ -184,8 +179,12 @@ function updateCallStack(debugr) {
 }
 
 function updateView(debugr, action) {
-    editor.gotoLine(debugr.currentLine());
-    editor.setHighlightActiveLine(true);
+    if (action && action.line === -1) {
+        editor.setHighlightActiveLine(false);
+    } else {
+        editor.gotoLine(debugr.currentLine());
+        editor.setHighlightActiveLine(true);
+    }
 
     updateLocals(debugr, action);
     updateCallStack(debugr);
