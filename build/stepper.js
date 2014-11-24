@@ -685,20 +685,7 @@
         this._started = true;
         this._paused = false;
 
-        var currentLine = this.line();
-        while (true) {
-            if (this.stack.isEmpty()) {
-                break;
-            }
-            var action = this.stepIn();
-            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
-                this._paused = true;
-                break;
-            }
-            currentLine = this.line();
-        }
-
-        return action;
+        this.resume();
     };
 
     Stepper.prototype.resume = function () {
@@ -710,6 +697,7 @@
             var action = this.stepIn();
             if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 this._paused = true;
+                this.emit('break');
                 break;
             }
             currentLine = this.line();
@@ -893,6 +881,7 @@ Debugger.prototype.start = function () {
 
     var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
     task.on('done', this.handleMainDone.bind(this));
+    task.on('break', this.handleBreakpoint.bind(this));
 
     // when the scheduler finishes the last task in the queue it should
     // emit a message so that we can toggle buttons appropriately
@@ -911,9 +900,8 @@ Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
 
     setTimeout(function () {
         self.queueGenerator(gen)
-            .on('done', function () {
-                self.queueRecurringGenerator(gen, delay);
-            });
+            .on('done', self.queueRecurringGenerator.bind(self, gen, delay))
+            .on('break', self.handleBreakpoint.bind(self));
     }, delay);
 };
 
@@ -946,6 +934,10 @@ Debugger.prototype.handleMainDone = function () {
             self.queueGenerator(mouseDragged);
         };
     }
+};
+
+Debugger.prototype.handleBreakpoint = function () {
+    this.emit('break');
 };
 
 Debugger.prototype.pause = function () {
@@ -982,13 +974,18 @@ Debugger.prototype.currentStepper = function () {
     return this.scheduler.currentTask();
 };
 
-Debugger.prototype.currentFrameStack = function () {
-    var task = scheduler.currentTask();
+Debugger.prototype.currentStack = function () {
+    var task = this.scheduler.currentTask();
     if (task !== null) {
         return task.stack;
     } else {
         return null;
     }
+};
+
+Debugger.prototype.currentLine = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.line() : null;
 };
 
 Debugger.prototype.setBreakpoint = function (line) {

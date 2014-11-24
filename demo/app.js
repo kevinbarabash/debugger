@@ -1,6 +1,3 @@
-// TODO: create a event handlers to proxy mouseDragged, et al
-// TODO: create a scheduler so that after we step through "draw" we cna step through "mouseDragged" if necessary
-
 // setup editor
 var editor = ace.edit("editor");
 editor.setTheme("ace/theme/chrome");
@@ -54,7 +51,7 @@ draw = function () {
 
 editor.getSession().setValue(code);
 editor.setHighlightActiveLine(false);
-var stepper = new Stepper(processing);
+var debugr = new Debugger(processing);
 
 var finishedMain = false;
 
@@ -65,54 +62,10 @@ function timeout() {
     });
 }
 
-function loop() {
-    editor.setHighlightActiveLine(false);
-    disableButtons();
-
-    if (finishedMain) {
-        if (stepper.halted()) {
-            stepper.runGenWithPromises(processing.draw())
-                .then(function () {
-                    return timeout();
-                })
-                .then(function () {
-                    enableButtons();
-                    if (stepper.halted()) {
-                        loop();
-                    } else {
-                        updateView(stepper);
-                    }
-                }, function () {
-                    console.log("stopped");
-                });
-        } else {
-            stepper.runWithPromises()
-                .then(function () {
-                    enableButtons();
-                    if (stepper.halted()) {
-                        loop();
-                    } else {
-                        updateView(stepper);
-                    }
-                }, function () {
-                    console.log("stopped");
-                });
-        }
-    } else {
-        stepper.runWithPromises()
-            .then(function () {
-                enableButtons();
-                if (stepper.halted()) {
-                    finishedMain = true;
-                    loop();
-                } else {
-                    updateView(stepper);
-                }
-            }, function () {
-                console.log("stopped");
-            });
-    }
-}
+debugr.on('break', function () {
+    enableButtons();
+    updateView(debugr);
+});
 
 $("#startButton").click(function () {
     // reset processing
@@ -121,55 +74,29 @@ $("#startButton").click(function () {
 
     // reload the code and run it
     code = session.getValue();
-    stepper.load(code);
-    finishedMain = false;
-
-    loop();
+    debugr.load(code);
+    disableButtons();
+    debugr.start();
 });
 
 $("#continueButton").click(function () {
-    loop();
+    disableButtons();
+    debugr.resume();
 });
 
 $("#stepInButton").click(function () {
-    var action = stepper.stepIn();
-    if (stepper.halted()) {
-        finishedMain = true;
-        disableButtons();
-        editor.setHighlightActiveLine(false);
-        loop();
-        return;
-    }
-
-    updateView(stepper, action);
+    var action = debugr.stepIn();
+    updateView(debugr, action);
 });
 
 $("#stepOverButton").click(function () {
-    var action = stepper.stepOver();
-    if (stepper.halted()) {
-        disableButtons();
-        editor.setHighlightActiveLine(false);
-        if (finishedMain) {
-            loop();
-        }
-        return;
-    }
-
-    updateView(stepper, action);
+    var action = debugr.stepOver();
+    updateView(debugr, action);
 });
 
 $("#stepOutButton").click(function () {
-    var action = stepper.stepOut();
-    if (stepper.halted()) {
-        disableButtons();
-        editor.setHighlightActiveLine(false);
-        if (finishedMain) {
-            loop();
-        }
-        return;
-    }
-
-    updateView(stepper, action);
+    var action = debugr.stepOut();
+    updateView(debugr, action);
 });
 
 function disableButtons() {
@@ -196,20 +123,26 @@ editor.on("guttermousedown", function(e){
 
     if (e.editor.session.getBreakpoints()[row - 1]) {
         e.editor.session.clearBreakpoint(row - 1);
-        stepper.clearBreakpoint(row);
+        debugr.clearBreakpoint(row);
     } else {
         e.editor.session.setBreakpoint(row - 1);
-        stepper.setBreakpoint(row);
+        debugr.setBreakpoint(row);
     }
 
     e.stop();
 });
 
-function updateLocals(stepper, action) {
-    if (stepper.halted()) {
+function updateLocals(debugr, action) {
+    var stepper = debugr.currentStepper();
+    if (!stepper) {
         return;
     }
-    var scope = stepper.stack.peek().scope;
+    if (stepper.done) {
+        return;
+    }
+
+    var stack = debugr.currentStack();
+    var scope = stack.peek().scope;
     var $variableList = $("#variableList");
 
     if (action && action.type === "stepOver") {
@@ -223,11 +156,15 @@ function updateLocals(stepper, action) {
     }
 }
 
-function updateCallStack(stepper) {
+function updateCallStack(debugr) {
     var $callStack = $("#callStack");
     $callStack.empty();
 
-    if (stepper.halted()) {
+    var stepper = debugr.currentStepper();
+    if (!stepper) {
+        return;
+    }
+    if (stepper.done) {
         return;
     }
 
@@ -246,9 +183,10 @@ function updateCallStack(stepper) {
     $callStack.append($ul);
 }
 
-function updateView(stepper, action) {
-    updateLocals(stepper, action);
-    updateCallStack(stepper);
-    editor.gotoLine(stepper.line());
+function updateView(debugr, action) {
+    editor.gotoLine(debugr.currentLine());
     editor.setHighlightActiveLine(true);
+
+    updateLocals(debugr, action);
+    updateCallStack(debugr);
 }

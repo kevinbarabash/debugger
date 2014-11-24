@@ -108,20 +108,7 @@
         this._started = true;
         this._paused = false;
 
-        var currentLine = this.line();
-        while (true) {
-            if (this.stack.isEmpty()) {
-                break;
-            }
-            var action = this.stepIn();
-            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
-                this._paused = true;
-                break;
-            }
-            currentLine = this.line();
-        }
-
-        return action;
+        this.resume();
     };
 
     Stepper.prototype.resume = function () {
@@ -133,6 +120,7 @@
             var action = this.stepIn();
             if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 this._paused = true;
+                this.emit('break');
                 break;
             }
             currentLine = this.line();

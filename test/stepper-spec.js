@@ -798,7 +798,8 @@ describe("Stepper", function () {
 
         it("should pause on the correct lines", function () {
             stepper.setBreakpoint(3);
-            expect(stepper.start().line).to.be(3);
+            stepper.start();
+            expect(stepper.line()).to.be(3);
             expect(context.x).to.be(0);
             stepper.stepOver();
             expect(context.x).to.be(5);
@@ -806,7 +807,8 @@ describe("Stepper", function () {
 
         it("should run after after hitting a breakpoint", function () {
             stepper.setBreakpoint(3);
-            expect(stepper.start().line).to.be(3);
+            stepper.start()
+            expect(stepper.line()).to.be(3);
             stepper.start();
             expect(context.rect.callCount).to.be(2);
         });
@@ -814,8 +816,10 @@ describe("Stepper", function () {
         it("should hit a breakpoint after hitting a breakpoint", function () {
             stepper.setBreakpoint(2);
             stepper.setBreakpoint(4);
-            expect(stepper.start().line).to.be(2);
-            expect(stepper.start().line).to.be(4);
+            stepper.start();
+            expect(stepper.line()).to.be(2);
+            stepper.resume();
+            expect(stepper.line()).to.be(4);
             expect(context.y).to.be(0);
             stepper.stepOver();
             expect(context.y).to.be(10);
