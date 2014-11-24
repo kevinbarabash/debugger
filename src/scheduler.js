@@ -12,36 +12,29 @@ function Scheduler () {
 Scheduler.prototype.addTask = function (task) {
     var self = this;
 
-    task.deferred.then(function () {
+    task.on('done', function () {
         self.queue.pop_back();
+        self.tick();
+    });
 
-        if (task.delay) {
-            task.reset();
-            setTimeout(function () {
-                self.addTask(task);
-            });
-        }
+    this.queue.push_front(task);
+    this.tick();
+};
 
+Scheduler.prototype.tick = function () {
+    var self = this;
+    setTimeout(function () {
         var currentTask = self.currentTask();
         if (currentTask !== null && !currentTask.started()) {
             currentTask.start();
         }
     });
-
-    this.queue.push_front(task);
-
-    var currentTask = self.currentTask();
-    if (currentTask !== null && !currentTask.started()) {
-        currentTask.start();
-    }
 };
 
 Scheduler.prototype.currentTask = function () {
     return this.queue.last ? this.queue.last.value : null;
 };
 
-
 Scheduler.prototype.clear = function () {
-    debugger;
     this.queue.clear();
 };

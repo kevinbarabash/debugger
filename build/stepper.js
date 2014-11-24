@@ -590,8 +590,10 @@
         this.line = line;
     }
 
-    function Stepper (generator) {
-        this.breakpoints = {};
+    function Stepper (genObj, breakpoints) {
+        EventEmitter.call(this);
+
+        this.breakpoints = breakpoints || {};
         this.deferred = $.Deferred();
 
         this._started = false;
@@ -599,7 +601,7 @@
         this._stopped = false;
 
         this.stack = new Stack();
-        this.stack.push(new Frame(generator, -1));
+        this.stack.push(new Frame(genObj, -1));
 
         var self = this;
         this.stack.poppedLastItem = function () {
@@ -609,20 +611,7 @@
         this._retVal = undefined;
     }
 
-//    Stepper.prototype.reset = function () {
-//        this.stack = new Stack();
-//
-//        var self = this;
-//        this.stack.poppedLastItem = function () {
-//            self._stopped = true;
-//        };
-//        this._stopped = false;
-//        this._paused = false;
-//        this._retVal = undefined;
-//
-//        var gen = this.debugGenerator(this.context);
-//        this.stack.push(new Frame(gen, -1));
-//    };
+    Stepper.prototype = new EventEmitter();
 
     Stepper.prototype.stepIn = function () {
         var result;
@@ -698,7 +687,7 @@
         var currentLine = this.line();
         while (true) {
             if (this.stack.isEmpty()) {
-                this.deferred.resolve(this);
+                this.emit('done');
                 break;
             }
             var action = this.stepIn();
@@ -710,43 +699,6 @@
         }
 
         return action;
-    };
-
-    Stepper.prototype.runWithPromises = function () {
-        var self = this;
-        return new Promise(function (resolve, reject) {
-            var currentLine = self.line();
-            while (true) {
-                if (self.stack.isEmpty()) {
-                    resolve(self);
-                    break;
-                }
-                var action = self.stepIn();
-                if (self.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== self.line()) {
-                    self._paused = true;
-                    resolve(self);
-                    break;
-                }
-                currentLine = self.line();
-            }
-        });
-    };
-
-    Stepper.prototype.runGenWithPromises = function (gen) {
-        var self = this;
-
-        if (!self.stopped()) {
-            return Promise.reject();
-        }
-        self._stopped = false;
-
-        // assumes the stack is empty... should probably just set the value
-        self.stack.push({
-            gen: gen,
-            line: 0
-        });
-
-        return this.runWithPromises();
     };
 
     Stepper.prototype.started = function () {
@@ -786,7 +738,7 @@
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
             this._stopped = true;
-            this.deferred.resolve();
+            this.emit('done');
             return;
         }
         var frame = this.stack.peek();
@@ -849,37 +801,30 @@ function Scheduler () {
 Scheduler.prototype.addTask = function (task) {
     var self = this;
 
-    task.deferred.then(function () {
+    task.on('done', function () {
         self.queue.pop_back();
+        self.tick();
+    });
 
-        if (task.delay) {
-            task.reset();
-            setTimeout(function () {
-                self.addTask(task);
-            });
-        }
+    this.queue.push_front(task);
+    this.tick();
+};
 
+Scheduler.prototype.tick = function () {
+    var self = this;
+    setTimeout(function () {
         var currentTask = self.currentTask();
         if (currentTask !== null && !currentTask.started()) {
             currentTask.start();
         }
     });
-
-    this.queue.push_front(task);
-
-    var currentTask = self.currentTask();
-    if (currentTask !== null && !currentTask.started()) {
-        currentTask.start();
-    }
 };
 
 Scheduler.prototype.currentTask = function () {
     return this.queue.last ? this.queue.last.value : null;
 };
 
-
 Scheduler.prototype.clear = function () {
-    debugger;
     this.queue.clear();
 };
 
@@ -891,12 +836,16 @@ Scheduler.prototype.clear = function () {
  */
 
 function Debugger(context) {
+    EventEmitter.call(this);
+
     this.context = context || {};
     this.context.__instantiate__ = __instantiate__;
 
     this.breakpoints = {};
     this.scheduler = new Scheduler();
 }
+
+Debugger.prototype = new EventEmitter();
 
 Debugger.isBrowserSupported = function () {
     try {
@@ -923,20 +872,66 @@ Debugger.isBrowserSupported = function () {
 Debugger.prototype.load = function (code) {
     var debugCode = transform(code, this.context);
     var debugFunction = new Function(debugCode);
-    this.main = debugFunction();
+    this.mainGenerator = debugFunction();
 };
 
 Debugger.prototype.start = function () {
     this.scheduler.clear();
 
-    var generator = this.main(this.context);
-    var task = new Stepper(generator);
-    this.scheduler.addTask(task);
+    var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
+    task.on('done', this.handleMainDone.bind(this));
 
-    // clear all task from the scheduler
-    // schedule a single run of the main generator
-    // after the main generator completes schedule any recurring tasks, e.g. draw
-    // need to wait until main completes, because main defines "draw"
+    // when the scheduler finishes the last task in the queue it should
+    // emit a message so that we can toggle buttons appropriately
+    // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
+
+    this.scheduler.addTask(task);
+};
+
+Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
+    if (this.done) {
+        return;
+    }
+
+    var self = this;
+
+    setTimeout(function () {
+        self.queueGenerator(gen)
+            .on('done', function () {
+                self.queueRecurringGenerator(gen);
+            });
+    }, delay);
+};
+
+Debugger.prototype.queueGenerator = function (gen) {
+    var task = new Stepper(gen(), this.breakpoints);
+    this.scheduler.addTask(task);
+    return task;
+};
+
+// This should be run whenever the values of any of the special functions
+// are changed.  This suggests using something like observe-js
+Debugger.prototype.handleMainDone = function () {
+    var draw = this.context.draw;
+    if (draw) {
+        this.queueRecurringGenerator(draw, 1000/60);
+    }
+
+    var self = this;
+
+    var mouseClicked = this.context.mouseClicked;
+    if (mouseClicked) {
+        this.context.mouseClicked = function () {
+            self.queueGenerator(mouseClicked);
+        };
+    }
+
+    var mouseDragged = this.context.mouseDragged;
+    if (mouseDragged) {
+        this.context.mouseDragged = function () {
+            self.queueGenerator(mouseDragged);
+        };
+    }
 };
 
 Debugger.prototype.pause = function () {
@@ -947,6 +942,29 @@ Debugger.prototype.pause = function () {
 Debugger.prototype.resume = function () {
     // continue running if we paused, run to the next breakpoint
 
+};
+
+Debugger.prototype.stop = function () {
+    this.done = true;
+};
+
+Debugger.prototype.stepIn = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.stepIn() : null;
+};
+
+Debugger.prototype.stepOver = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.stepOver() : null;
+};
+
+Debugger.prototype.stepOut = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.stepOut() : null;
+};
+
+Debugger.prototype.currentStepper = function () {
+    return this.scheduler.currentTask();
 };
 
 Debugger.prototype.currentFrameStack = function () {

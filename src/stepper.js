@@ -13,8 +13,10 @@
         this.line = line;
     }
 
-    function Stepper (generator) {
-        this.breakpoints = {};
+    function Stepper (genObj, breakpoints) {
+        EventEmitter.call(this);
+
+        this.breakpoints = breakpoints || {};
         this.deferred = $.Deferred();
 
         this._started = false;
@@ -22,7 +24,7 @@
         this._stopped = false;
 
         this.stack = new Stack();
-        this.stack.push(new Frame(generator, -1));
+        this.stack.push(new Frame(genObj, -1));
 
         var self = this;
         this.stack.poppedLastItem = function () {
@@ -32,20 +34,7 @@
         this._retVal = undefined;
     }
 
-//    Stepper.prototype.reset = function () {
-//        this.stack = new Stack();
-//
-//        var self = this;
-//        this.stack.poppedLastItem = function () {
-//            self._stopped = true;
-//        };
-//        this._stopped = false;
-//        this._paused = false;
-//        this._retVal = undefined;
-//
-//        var gen = this.debugGenerator(this.context);
-//        this.stack.push(new Frame(gen, -1));
-//    };
+    Stepper.prototype = new EventEmitter();
 
     Stepper.prototype.stepIn = function () {
         var result;
@@ -121,7 +110,7 @@
         var currentLine = this.line();
         while (true) {
             if (this.stack.isEmpty()) {
-                this.deferred.resolve(this);
+                this.emit('done');
                 break;
             }
             var action = this.stepIn();
@@ -133,43 +122,6 @@
         }
 
         return action;
-    };
-
-    Stepper.prototype.runWithPromises = function () {
-        var self = this;
-        return new Promise(function (resolve, reject) {
-            var currentLine = self.line();
-            while (true) {
-                if (self.stack.isEmpty()) {
-                    resolve(self);
-                    break;
-                }
-                var action = self.stepIn();
-                if (self.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== self.line()) {
-                    self._paused = true;
-                    resolve(self);
-                    break;
-                }
-                currentLine = self.line();
-            }
-        });
-    };
-
-    Stepper.prototype.runGenWithPromises = function (gen) {
-        var self = this;
-
-        if (!self.stopped()) {
-            return Promise.reject();
-        }
-        self._stopped = false;
-
-        // assumes the stack is empty... should probably just set the value
-        self.stack.push({
-            gen: gen,
-            line: 0
-        });
-
-        return this.runWithPromises();
     };
 
     Stepper.prototype.started = function () {
@@ -209,7 +161,7 @@
     Stepper.prototype._step = function () {
         if (this.stack.isEmpty()) {
             this._stopped = true;
-            this.deferred.resolve();
+            this.emit('done');
             return;
         }
         var frame = this.stack.peek();

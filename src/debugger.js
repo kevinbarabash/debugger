@@ -6,12 +6,16 @@
  */
 
 function Debugger(context) {
+    EventEmitter.call(this);
+
     this.context = context || {};
     this.context.__instantiate__ = __instantiate__;
 
     this.breakpoints = {};
     this.scheduler = new Scheduler();
 }
+
+Debugger.prototype = new EventEmitter();
 
 Debugger.isBrowserSupported = function () {
     try {
@@ -38,20 +42,66 @@ Debugger.isBrowserSupported = function () {
 Debugger.prototype.load = function (code) {
     var debugCode = transform(code, this.context);
     var debugFunction = new Function(debugCode);
-    this.main = debugFunction();
+    this.mainGenerator = debugFunction();
 };
 
 Debugger.prototype.start = function () {
     this.scheduler.clear();
 
-    var generator = this.main(this.context);
-    var task = new Stepper(generator);
-    this.scheduler.addTask(task);
+    var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
+    task.on('done', this.handleMainDone.bind(this));
 
-    // clear all task from the scheduler
-    // schedule a single run of the main generator
-    // after the main generator completes schedule any recurring tasks, e.g. draw
-    // need to wait until main completes, because main defines "draw"
+    // when the scheduler finishes the last task in the queue it should
+    // emit a message so that we can toggle buttons appropriately
+    // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
+
+    this.scheduler.addTask(task);
+};
+
+Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
+    if (this.done) {
+        return;
+    }
+
+    var self = this;
+
+    setTimeout(function () {
+        self.queueGenerator(gen)
+            .on('done', function () {
+                self.queueRecurringGenerator(gen);
+            });
+    }, delay);
+};
+
+Debugger.prototype.queueGenerator = function (gen) {
+    var task = new Stepper(gen(), this.breakpoints);
+    this.scheduler.addTask(task);
+    return task;
+};
+
+// This should be run whenever the values of any of the special functions
+// are changed.  This suggests using something like observe-js
+Debugger.prototype.handleMainDone = function () {
+    var draw = this.context.draw;
+    if (draw) {
+        this.queueRecurringGenerator(draw, 1000/60);
+    }
+
+    var self = this;
+
+    var mouseClicked = this.context.mouseClicked;
+    if (mouseClicked) {
+        this.context.mouseClicked = function () {
+            self.queueGenerator(mouseClicked);
+        };
+    }
+
+    var mouseDragged = this.context.mouseDragged;
+    if (mouseDragged) {
+        this.context.mouseDragged = function () {
+            self.queueGenerator(mouseDragged);
+        };
+    }
 };
 
 Debugger.prototype.pause = function () {
@@ -62,6 +112,29 @@ Debugger.prototype.pause = function () {
 Debugger.prototype.resume = function () {
     // continue running if we paused, run to the next breakpoint
 
+};
+
+Debugger.prototype.stop = function () {
+    this.done = true;
+};
+
+Debugger.prototype.stepIn = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.stepIn() : null;
+};
+
+Debugger.prototype.stepOver = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.stepOver() : null;
+};
+
+Debugger.prototype.stepOut = function () {
+    var stepper = this.currentStepper();
+    return stepper ? stepper.stepOut() : null;
+};
+
+Debugger.prototype.currentStepper = function () {
+    return this.scheduler.currentTask();
 };
 
 Debugger.prototype.currentFrameStack = function () {

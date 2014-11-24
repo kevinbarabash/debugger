@@ -1449,4 +1449,21 @@ describe("Stepper", function () {
             expect(context.x).to.be(5);
         });
     });
+
+    describe("lifecyle", function () {
+        it("should emit 'done' when complete", function (done) {
+            var code = getFunctionBody(function () {
+                fill(255,0,0);
+                rect(100,200,50,50);
+            });
+
+            stepper = stepperWithCode(code);
+            stepper.on('done', function () {
+                expect(stepper.stopped()).to.be(true);
+                done();
+            });
+
+            stepper.start();
+        });
+    });
 });
