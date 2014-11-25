@@ -10,46 +10,14 @@ session.setMode("ace/mode/javascript");
 
 // iframe communication
 var iframe = $("iframe").get(0);
-
-// TODO: create an adapter between an event emitter and our object which wraps postMessage
-// if we just resubmit then we have to filter out locals
-
-function Poster(target) {
-    this.target = target;
-    this.origin = "*";
-    this.listeners = {};
-
-    var self = this;
-    window.addEventListener("message", function (e) {
-        var channel = e.data.channel;
-        var listener = self.listeners[channel];
-        if (listener) {
-            listener.apply(null, e.data.args);
-        }
-    });
-}
-
-Poster.prototype.post = function (channel) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    var message = {
-        channel: channel,
-        args: args
-    };
-    this.target.postMessage(message, this.origin);
-};
-
-// TODO: support multiple listeners in the future
-Poster.prototype.listen = function (channel, callback) {
-    this.listeners[channel] = callback;
-};
-
-// TODO: check if the target is an iframe and do-the-right-thing
+var overlay = createIframeOverlay(iframe);
+// TODO: remove the need for specific ordering
+// createIframeOverlay repositions the iframe in the DOM
+// which throws away the contentWindow and probably forces it to reload
 var poster = new Poster(iframe.contentWindow);
 
-var paused = true;
-
 poster.listen("break", function (line) {
-    paused = true;
+    overlay.paused = true;
     enableButtons();
     if (line > 0) {
         updateView(line);
@@ -60,20 +28,20 @@ poster.listen("break", function (line) {
 });
 
 poster.listen("done", function () {
-    paused = false;
+    overlay.paused = false;
     disableButtons();
     editor.setHighlightActiveLine(false);
 });
 
 $("#startButton").click(function () {
-    paused = false;
+    overlay.paused = false;
     var code = session.getValue();
     poster.post("load", code);
     poster.post("start");
 });
 
 $("#continueButton").click(function () {
-    paused = false;
+    overlay.paused = false;
     poster.post("resume");
 });
 
@@ -129,59 +97,59 @@ function enableButtons() {
     $("#continueButton,#stepOverButton,#stepInButton,#stepOutButton").removeAttr("disabled");
 }
 
-// TODO: automatically create the wrapper and overlay
-var wrapper = document.querySelector(".wrapper");
-var overlay = document.querySelector(".overlay");
-var down = false;
-
-overlay.addEventListener("mousedown", function (e) {
-    down = true;
-    if (!paused) {
-        poster.post("mouse", {
-            type: "mousedown",
-            x: e.pageX - wrapper.offsetLeft,
-            y: e.pageY - wrapper.offsetTop
-        });
-        e.preventDefault();
-    }
-});
-
-overlay.addEventListener("mousemove", function (e) {
-    if (!down) {
-        if (!paused) {
-            poster.post("mouse", {
-                type: "mousemove",
-                x: e.pageX - wrapper.offsetLeft,
-                y: e.pageY - wrapper.offsetTop
-            });
-        }
-    }
-});
-
-document.addEventListener("mousemove", function (e) {
-    if (down) {
-        if (!paused) {
-            poster.post("mouse", {
-                type: "mousemove",
-                x: e.pageX - wrapper.offsetLeft,
-                y: e.pageY - wrapper.offsetTop
-            });
-        }
-    }
-});
-
-document.addEventListener("mouseup", function (e) {
-    if (down) {
-        if (!paused) {
-            poster.post("mouse", {
-                type: "mouseup",
-                x: e.pageX - wrapper.offsetLeft,
-                y: e.pageY - wrapper.offsetTop
-            });
-        }
-        down = false;
-    }
-});
+//// TODO: automatically create the wrapper and overlay
+//var wrapper = document.querySelector(".wrapper");
+//var overlay = document.querySelector(".overlay");
+//var down = false;
+//
+//overlay.addEventListener("mousedown", function (e) {
+//    down = true;
+//    if (!paused) {
+//        poster.post("mouse", {
+//            type: "mousedown",
+//            x: e.pageX - wrapper.offsetLeft,
+//            y: e.pageY - wrapper.offsetTop
+//        });
+//        e.preventDefault();
+//    }
+//});
+//
+//overlay.addEventListener("mousemove", function (e) {
+//    if (!down) {
+//        if (!paused) {
+//            poster.post("mouse", {
+//                type: "mousemove",
+//                x: e.pageX - wrapper.offsetLeft,
+//                y: e.pageY - wrapper.offsetTop
+//            });
+//        }
+//    }
+//});
+//
+//document.addEventListener("mousemove", function (e) {
+//    if (down) {
+//        if (!paused) {
+//            poster.post("mouse", {
+//                type: "mousemove",
+//                x: e.pageX - wrapper.offsetLeft,
+//                y: e.pageY - wrapper.offsetTop
+//            });
+//        }
+//    }
+//});
+//
+//document.addEventListener("mouseup", function (e) {
+//    if (down) {
+//        if (!paused) {
+//            poster.post("mouse", {
+//                type: "mouseup",
+//                x: e.pageX - wrapper.offsetLeft,
+//                y: e.pageY - wrapper.offsetTop
+//            });
+//        }
+//        down = false;
+//    }
+//});
 
 // TODO: update local variables
 // TODO: update call stack
