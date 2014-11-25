@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title></title>
+  <script src="../bower_components/ace/build/src/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script src="../bower_components/eventEmitter/EventEmitter.js"></script>
+  <script src="../bower_components/jquery/dist/jquery.js"></script>
+  <script src="outer.js" async></script>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    .wrapper {
+      display: inline-block;
+      padding: 0;
+      margin: 0;
+      position: relative;
+    }
+
+    .overlay {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="container">
+  <div id="editor-container">
+    <div class="header">
+      <span class="tab">sketch_01.js</span>
+    </div>
+    <div id="editor">background(255);
+noStroke();
+
+var randomColor = function () {
+  var r;
+  r = random(255);
+  var g = random(255);
+  var b = random(255);
+  fill(r,g,b);
+};
+
+for (var i = 0; i < 3; i++) {
+  randomColor();
+  ellipse(random(400),random(400),75,75);
+}
+
+//draw = function () {
+//    randomColor();
+//    var p = new PVector(random(400), random(400));
+//    ellipse(p.x, p.y, 75, 75);
+//    p.x += 10;
+//    p.y += 20;
+//    var x = p.x;
+//    var y = p.y;
+//    ellipse(x, y, 75, 75);
+//};
+
+mouseClicked = function () {
+  randomColor();
+  ellipse(mouseX, mouseY, 75, 75);
+};
+</div>
+  </div>
+
+  <div id="side">
+    <div class="header">
+      <span class="tab">canvas: 01</span>
+    </div>
+    <span class="wrapper">
+      <iframe width="400" height="400" src="inner.html"></iframe>
+      <span class="overlay"></span>
+    </span>
+
+    <div class="header">
+      <span class="tab">Debugger</span>
+      <span class="tab button"><button id="startButton">Start</button></span>
+      <span class="tab button"><button id="continueButton">Continue</button></span>
+      <span class="tab button"><button id="stepInButton">In</button></span>
+      <span class="tab button"><button id="stepOverButton">Over</button></span>
+      <span class="tab button"><button id="stepOutButton">Out</button></span>
+
+    </div>
+    <div id="inspector" class="ace_editor">
+      <div class="section_header">Local Variables</div>
+      <div id="variableList" class="object-browser"></div>
+      <div class="section_header">Call Stack</div>
+      <div id="callStack"></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
