@@ -16,11 +16,12 @@ var overlay = createIframeOverlay(iframe);
 // which throws away the contentWindow and probably forces it to reload
 var poster = new Poster(iframe.contentWindow);
 
-poster.listen("break", function (line) {
+poster.listen("break", function (line, stackValues) {
     overlay.paused = true;
     enableButtons();
     if (line > 0) {
         updateView(line);
+        updateCallStack(stackValues);
     } else {
         disableButtons();
         editor.setHighlightActiveLine(false);
@@ -97,59 +98,18 @@ function enableButtons() {
     $("#continueButton,#stepOverButton,#stepInButton,#stepOutButton").removeAttr("disabled");
 }
 
-//// TODO: automatically create the wrapper and overlay
-//var wrapper = document.querySelector(".wrapper");
-//var overlay = document.querySelector(".overlay");
-//var down = false;
-//
-//overlay.addEventListener("mousedown", function (e) {
-//    down = true;
-//    if (!paused) {
-//        poster.post("mouse", {
-//            type: "mousedown",
-//            x: e.pageX - wrapper.offsetLeft,
-//            y: e.pageY - wrapper.offsetTop
-//        });
-//        e.preventDefault();
-//    }
-//});
-//
-//overlay.addEventListener("mousemove", function (e) {
-//    if (!down) {
-//        if (!paused) {
-//            poster.post("mouse", {
-//                type: "mousemove",
-//                x: e.pageX - wrapper.offsetLeft,
-//                y: e.pageY - wrapper.offsetTop
-//            });
-//        }
-//    }
-//});
-//
-//document.addEventListener("mousemove", function (e) {
-//    if (down) {
-//        if (!paused) {
-//            poster.post("mouse", {
-//                type: "mousemove",
-//                x: e.pageX - wrapper.offsetLeft,
-//                y: e.pageY - wrapper.offsetTop
-//            });
-//        }
-//    }
-//});
-//
-//document.addEventListener("mouseup", function (e) {
-//    if (down) {
-//        if (!paused) {
-//            poster.post("mouse", {
-//                type: "mouseup",
-//                x: e.pageX - wrapper.offsetLeft,
-//                y: e.pageY - wrapper.offsetTop
-//            });
-//        }
-//        down = false;
-//    }
-//});
+function updateCallStack(stackValues) {
+    var $callStack = $("#callStack");
+    $callStack.empty();
+
+    var $ul = $("<ul></ul>");
+    stackValues.forEach(function (frame) {
+        var $name = $("<span></span>").text(frame.name);
+        var $line = $("<span></span>").text(frame.line).css({ float: "right" });
+        $ul.prepend($("<li></li>").append($name, $line));
+    });
+    $callStack.append($ul);
+}
 
 // TODO: update local variables
 // TODO: update call stack
@@ -177,26 +137,7 @@ function enableButtons() {
 //    }
 //}
 //
-//function updateCallStack(debugr) {
-//    var $callStack = $("#callStack");
-//    $callStack.empty();
-//
-//    var stepper = debugr.currentStepper();
-//    if (!stepper) {
-//        return;
-//    }
-//    if (stepper.done) {
-//        return;
-//    }
-//
-//    var $ul = $("<ul></ul>");
-//    stepper.stack.values.forEach(function (frame) {
-//        var $name = $("<span></span>").text(frame.name);
-//        var $line = $("<span></span>").text(frame.line).css({ float: "right" });
-//        $ul.prepend($("<li></li>").append($name, $line));
-//    });
-//    $callStack.append($ul);
-//}
+
 //
 //function updateView(debugr, action) {
 //    if (action && action.line === -1) {

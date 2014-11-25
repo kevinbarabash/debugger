@@ -26,17 +26,17 @@ poster.listen("resume", function () {
 
 poster.listen("stepIn", function () {
     debugr.stepIn();
-    poster.post("break", debugr.currentLine());
+    poster.post("break", debugr.currentLine(), debugr.currentStack());
 });
 
 poster.listen("stepOver", function () {
     debugr.stepOver();
-    poster.post("break", debugr.currentLine());
+    poster.post("break", debugr.currentLine(), debugr.currentStack());
 });
 
 poster.listen("stepOut", function () {
     debugr.stepOut();
-    poster.post("break", debugr.currentLine());
+    poster.post("break", debugr.currentLine(), debugr.currentStack());
 });
 
 poster.listen("setBreakpoint", function (line) {
@@ -48,7 +48,7 @@ poster.listen("clearBreakpoint", function (line) {
 });
 
 debugr.on("break", function () {
-    poster.post("break", debugr.currentLine());
+    poster.post("break", debugr.currentLine(), debugr.currentStack());
 //    enableButtons();
 //    updateView(debugr);
 });

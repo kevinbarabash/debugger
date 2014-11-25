@@ -1,7 +1,7 @@
 (function (exports) {
 
-    function Stack () {
-        this.values = [];
+    function Stack (values) {
+        this.values = values || [];
 
         // delegate methods
         this.poppedLastItem = function () {};

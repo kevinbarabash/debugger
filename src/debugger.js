@@ -102,20 +102,17 @@ Debugger.prototype.handleMainDone = function () {
     }
 
     var self = this;
+    var wrapProcessingEventHandler = function(name) {
+        var eventHandler = self.context[name];
+        if (eventHandler) {
+            self.context[name] = function () {
+                self.queueGenerator(eventHandler);
+            };
+        }
+    };
 
-    var mouseClicked = this.context.mouseClicked;
-    if (mouseClicked) {
-        this.context.mouseClicked = function () {
-            self.queueGenerator(mouseClicked);
-        };
-    }
-
-    var mouseDragged = this.context.mouseDragged;
-    if (mouseDragged) {
-        this.context.mouseDragged = function () {
-            self.queueGenerator(mouseDragged);
-        };
-    }
+    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased"];
+    events.forEach(wrapProcessingEventHandler);
 };
 
 Debugger.prototype.pause = function () {
@@ -153,12 +150,21 @@ Debugger.prototype.currentStepper = function () {
 };
 
 Debugger.prototype.currentStack = function () {
-    var task = this.scheduler.currentTask();
-    if (task !== null) {
-        return task.stack;
+    var stepper = this.scheduler.currentTask();
+    if (stepper !== null) {
+        return stepper.stack.values.map(function (frame) {
+            return {
+                name: frame.name,
+                line: frame.line
+            };
+        });
     } else {
-        return null;
+        return [];
     }
+};
+
+Debugger.prototype.currentScope = function () {
+
 };
 
 Debugger.prototype.currentLine = function () {
