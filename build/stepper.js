@@ -1406,7 +1406,7 @@ Debugger.prototype.queueGenerator = function (gen) {
 // are changed.  This suggests using something like observe-js
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
-    if (draw && Object.getPrototypeOf(draw).name === "GeneratorFunctionPrototype") {
+    if (draw && Object.getPrototypeOf(draw).constructor.name === "GeneratorFunction") {
         this.queueRecurringGenerator(draw, 1000 / 60);
     }
 
