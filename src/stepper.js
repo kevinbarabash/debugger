@@ -17,7 +17,6 @@
         EventEmitter.call(this);
 
         this.breakpoints = breakpoints || {};
-        this.deferred = $.Deferred();
 
         this._started = false;
         this._paused = false;

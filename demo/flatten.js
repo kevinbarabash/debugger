@@ -17,8 +17,8 @@
  * @returns {Array}
  */
 function flatten(root) {
-    if (!root) {
-        return [];
+    if (root === undefined || root === null) {
+        return null;
     }
     var originalObjects = [];
     var flattenedObjects = [];
@@ -66,8 +66,8 @@ function flatten(root) {
  * @param {Array} flattenedObjects
  */
 function unflatten(flattenedObjects) {
-    if (flattenedObjects.length === 0) {
-        return Object.create(null);
+    if (flattenedObjects === null) {
+        return null;
     }
     var originalObjects = [];
 

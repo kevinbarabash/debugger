@@ -3,16 +3,16 @@ var rename = require("gulp-rename");
 var concat = require("gulp-concat");
 var testee = require("testee");
 
-var deps = [
-    "./bower_components/esprima/esprima.js",
-    "./bower_components/escodegen/escodegen.browser.min.js",
-    "./build/stepper.js"
-];
+//var deps = [
+//    "./bower_components/esprima/esprima.js",
+//    "./bower_components/escodegen/escodegen.browser.min.js",
+//    "./build/stepper.js"
+//];
 
 var src = [
+    "./bower_components/eventEmitter/EventEmitter.js",
     "./src/stack.js",
     "./src/linked-list.js",
-    "./external/ast-walker/walker.js",
     "./src/ast-builder.js",
     "./src/transform.js",
     "./src/stepper.js",
@@ -26,11 +26,11 @@ gulp.task("build", function () {
         .pipe(gulp.dest("./build"))
 });
 
-gulp.task("build-standalone", ["build"], function () {
-    gulp.src(deps)
-        .pipe(concat("stepper-standalone.js"))
-        .pipe(gulp.dest("./build"))
-});
+//gulp.task("build-standalone", ["build"], function () {
+//    gulp.src(deps)
+//        .pipe(concat("stepper-standalone.js"))
+//        .pipe(gulp.dest("./build"))
+//});
 
 gulp.task("watch", function() {
     gulp.watch(src, ["build"]);
