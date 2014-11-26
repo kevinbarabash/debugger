@@ -26,17 +26,20 @@ poster.listen("resume", function () {
 
 poster.listen("stepIn", function () {
     debugr.stepIn();
-    poster.post("break", debugr.currentLine(), debugr.currentStack());
+    var scope = flatten(debugr.currentScope());
+    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
 });
 
 poster.listen("stepOver", function () {
     debugr.stepOver();
-    poster.post("break", debugr.currentLine(), debugr.currentStack());
+    var scope = flatten(debugr.currentScope());
+    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
 });
 
 poster.listen("stepOut", function () {
     debugr.stepOut();
-    poster.post("break", debugr.currentLine(), debugr.currentStack());
+    var scope = flatten(debugr.currentScope());
+    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
 });
 
 poster.listen("setBreakpoint", function (line) {
@@ -48,7 +51,8 @@ poster.listen("clearBreakpoint", function (line) {
 });
 
 debugr.on("break", function () {
-    poster.post("break", debugr.currentLine(), debugr.currentStack());
+    var scope = flatten(debugr.currentScope());
+    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
 //    enableButtons();
 //    updateView(debugr);
 });

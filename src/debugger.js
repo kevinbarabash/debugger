@@ -164,7 +164,14 @@ Debugger.prototype.currentStack = function () {
 };
 
 Debugger.prototype.currentScope = function () {
-
+    var stepper = this.currentStepper();
+    if (stepper) {
+        var scope = stepper.stack.peek().scope;
+        if (scope) {
+            return scope;
+        }
+    }
+    return null;
 };
 
 Debugger.prototype.currentLine = function () {

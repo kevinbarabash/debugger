@@ -16,12 +16,13 @@ var overlay = createIframeOverlay(iframe);
 // which throws away the contentWindow and probably forces it to reload
 var poster = new Poster(iframe.contentWindow);
 
-poster.listen("break", function (line, stackValues) {
+poster.listen("break", function (line, stackValues, scope) {
     overlay.paused = true;
     enableButtons();
     if (line > 0) {
         updateView(line);
         updateCallStack(stackValues);
+        updateLocals(unflatten(scope));
     } else {
         disableButtons();
         editor.setHighlightActiveLine(false);
@@ -111,31 +112,15 @@ function updateCallStack(stackValues) {
     $callStack.append($ul);
 }
 
-// TODO: update local variables
-// TODO: update call stack
-//function updateLocals(debugr, action) {
-//    var stepper = debugr.currentStepper();
-//    if (!stepper) {
-//        return;
-//    }
-//    if (stepper.done) {
-//        return;
-//    }
-//
-//    var stack = debugr.currentStack();
-//    var scope = stack.peek().scope;
-//    var $variableList = $("#variableList");
-//
-//    if (action && action.type === "stepOver") {
-//        // don't take any action
-//    } else {
-//        $variableList.empty();
-//        if (!scope) {
-//            return;
-//        }
-//        $variableList.append(genPropsList(scope));
-//    }
-//}
+function updateLocals(scope) {
+    var $variableList = $("#variableList");
+
+    $variableList.empty();
+    if (!scope) {
+        return;
+    }
+    $variableList.append(genPropsList(scope));
+}
 //
 
 //
