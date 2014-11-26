@@ -45,7 +45,7 @@ Debugger.prototype.load = function (code) {
     this.mainGenerator = debugFunction();
 };
 
-Debugger.prototype.start = function () {
+Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
 
     var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
@@ -64,7 +64,7 @@ Debugger.prototype.start = function () {
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
 
     this.scheduler.addTask(task);
-    task.start();   // start the initial task synchronously
+    task.start(paused);   // start the initial task synchronously
 };
 
 Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
@@ -97,7 +97,7 @@ Debugger.prototype.queueGenerator = function (gen) {
 // are changed.  This suggests using something like observe-js
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
-    if (draw) {
+    if (draw && Object.getPrototypeOf(draw).name === "GeneratorFunctionPrototype") {
         this.queueRecurringGenerator(draw, 1000 / 60);
     }
 

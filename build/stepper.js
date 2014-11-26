@@ -1078,7 +1078,7 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
-            self.emit('done');
+            self.emit("done");
         };
 
         this._retVal = undefined;
@@ -1153,14 +1153,18 @@
     };
 
     // TODO: implement ignoreBreakpoints
-    Stepper.prototype.start = function (ignoreBreakpoints) {
+    Stepper.prototype.start = function (paused) {
         this._started = true;
-        this._paused = false;
-
-        this.resume();
+        this._paused = !!paused;
+        this._run();
     };
 
     Stepper.prototype.resume = function () {
+        this._paused = false;
+        this._run();
+    };
+
+    Stepper.prototype._run = function () {
         var currentLine = this.line();
         while (true) {
             if (this.stack.isEmpty()) {
@@ -1169,7 +1173,9 @@
             var action = this.stepIn();
             if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 this._paused = true;
-                this.emit('break');
+            }
+            if (this._paused) {
+                this.emit("break");
                 break;
             }
             currentLine = this.line();
@@ -1348,7 +1354,7 @@ Debugger.prototype.load = function (code) {
     this.mainGenerator = debugFunction();
 };
 
-Debugger.prototype.start = function () {
+Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
 
     var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
@@ -1367,7 +1373,7 @@ Debugger.prototype.start = function () {
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
 
     this.scheduler.addTask(task);
-    task.start();   // start the initial task synchronously
+    task.start(paused);   // start the initial task synchronously
 };
 
 Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
@@ -1400,7 +1406,7 @@ Debugger.prototype.queueGenerator = function (gen) {
 // are changed.  This suggests using something like observe-js
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
-    if (draw) {
+    if (draw && Object.getPrototypeOf(draw).name === "GeneratorFunctionPrototype") {
         this.queueRecurringGenerator(draw, 1000 / 60);
     }
 
