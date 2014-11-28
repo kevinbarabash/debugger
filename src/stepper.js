@@ -28,6 +28,7 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
+            console.log("done");
             self.emit("done");
         };
 
@@ -117,7 +118,7 @@
     Stepper.prototype._run = function () {
         var currentLine = this.line();
         while (true) {
-            if (this.stack.isEmpty()) {
+            if (this.stack.isEmpty) {
                 break;
             }
             var action = this.stepIn();
@@ -167,7 +168,7 @@
     };
 
     Stepper.prototype._step = function () {
-        if (this.stack.isEmpty()) {
+        if (this.stack.isEmpty) {
             return;
         }
         var frame = this.stack.peek();

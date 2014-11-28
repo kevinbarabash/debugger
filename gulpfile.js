@@ -11,8 +11,8 @@ var testee = require("testee");
 
 var src = [
     "./bower_components/eventEmitter/EventEmitter.js",
-    "./src/stack.js",
-    "./src/linked-list.js",
+    "./bower_components/basic-ds/dist/Stack.js",
+    "./bower_components/basic-ds/dist/LinkedList.js",
     "./src/ast-builder.js",
     "./src/transform.js",
     "./src/stepper.js",

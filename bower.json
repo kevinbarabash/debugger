@@ -23,7 +23,8 @@
     "ace": "~1.1.8",
     "jquery": "~2.1.1",
     "observe-js": "~0.5.1",
-    "eventEmitter": "~4.2.9"
+    "eventEmitter": "~4.2.9",
+    "basic-ds": "*"
   },
   "devDependencies": {
     "mocha": "~2.0.1",

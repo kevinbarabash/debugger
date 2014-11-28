@@ -471,86 +471,77 @@
     }
 }.call(this));
 
-(function (exports) {
-
-    function Stack (values) {
-        this.values = values || [];
-
-        // delegate methods
-        this.poppedLastItem = function () {};
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Stack=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var Stack = (function () {
+    function Stack() {
+        this.items = [];
+        this.poppedLastItem = function (item) {
+        };
     }
-
-    Stack.prototype.isEmpty = function () {
-        return this.values.length === 0;
+    Stack.prototype.push = function (item) {
+        this.items.push(item);
     };
-
-    Stack.prototype.push = function (value) {
-        this.values.push(value);
-    };
-
     Stack.prototype.pop = function () {
-        var item = this.values.pop();
-        if (this.isEmpty()) {
+        var item = this.items.pop();
+        if (this.isEmpty) {
             this.poppedLastItem(item);
         }
         return item;
     };
-
     Stack.prototype.peek = function () {
-        return this.values[this.values.length - 1];
+        return this.items[this.items.length - 1];
     };
+    Object.defineProperty(Stack.prototype, "size", {
+        get: function () {
+            return this.items.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Stack.prototype, "isEmpty", {
+        get: function () {
+            return this.items.length === 0;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return Stack;
+})();
+module.exports = Stack;
 
-    Stack.prototype.size = function () {
-        return this.values.length;
-    };
-
-    exports.Stack = Stack;
-
-})(this);
-
-(function (exports) {
-
-    function Node (value) {
-        this.value = value;
-        this.next = null;
-        this.prev = null;
-    }
-
-    Node.prototype.destroy = function () {
-        delete this.next;
-        delete this.prev;
-        delete this.value;
-    };
-
-    function LinkedList () {
+},{}]},{},[1])(1)
+});
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.LinkedList=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var ListNode = require("./ListNode");
+var LinkedList = (function () {
+    function LinkedList() {
         this.first = null;
         this.last = null;
     }
-
     LinkedList.prototype.push_back = function (value) {
-        var node = new Node(value);
+        var node = new ListNode(value);
         if (this.first === null && this.last === null) {
             this.first = node;
             this.last = node;
-        } else {
+        }
+        else {
             node.prev = this.last;
             this.last.next = node;
             this.last = node;
         }
     };
-
     LinkedList.prototype.push_front = function (value) {
-        var node = new Node(value);
+        var node = new ListNode(value);
         if (this.first === null && this.last === null) {
             this.first = node;
             this.last = node;
-        } else {
+        }
+        else {
             node.next = this.first;
             this.first.prev = node;
             this.first = node;
         }
     };
-
     LinkedList.prototype.pop_back = function () {
         if (this.last) {
             var value = this.last.value;
@@ -559,16 +550,17 @@
                 this.last = last.prev;
                 this.last.next = null;
                 last.destroy();
-            } else {
+            }
+            else {
                 this.last = null;
                 this.first = null;
             }
             return value;
-        } else {
+        }
+        else {
             return null;
         }
     };
-
     LinkedList.prototype.pop_front = function () {
         if (this.first) {
             var value = this.first.value;
@@ -577,41 +569,32 @@
                 this.first = first.next;
                 this.first.prev = null;
                 first.destroy();
-            } else {
+            }
+            else {
                 this.first = null;
                 this.last = null;
             }
             return value;
-        } else {
+        }
+        else {
             return null;
         }
     };
-
     LinkedList.prototype.clear = function () {
         this.first = this.last = null;
     };
-
     LinkedList.prototype.insertBeforeNode = function (refNode, value) {
         if (refNode === this.first) {
             this.push_front(value);
-        } else {
-            var node = new Node(value);
+        }
+        else {
+            var node = new ListNode(value);
             node.prev = refNode.prev;
             node.next = refNode;
             refNode.prev.next = node;
             refNode.prev = node;
         }
     };
-
-    LinkedList.prototype.inserAfterNode = function (refNode, value) {
-        if (refNode === this.last) {
-            this.push_back(value);
-        } else {
-            var node = new Node(value);
-
-        }
-    };
-
     LinkedList.prototype.forEachNode = function (callback, _this) {
         var node = this.first;
         while (node !== null) {
@@ -619,14 +602,11 @@
             node = node.next;
         }
     };
-
-    // TODO: provide the index to the callback as well
     LinkedList.prototype.forEach = function (callback, _this) {
         this.forEachNode(function (node) {
             callback.call(_this, node.value);
-        });
+        }, _this);
     };
-
     LinkedList.prototype.nodeAtIndex = function (index) {
         var i = 0;
         var node = this.first;
@@ -638,12 +618,10 @@
         }
         return null;
     };
-
     LinkedList.prototype.valueAtIndex = function (index) {
         var node = this.nodeAtIndex(index);
         return node ? node.value : undefined;
     };
-
     LinkedList.prototype.toArray = function () {
         var array = [];
         var node = this.first;
@@ -653,7 +631,6 @@
         }
         return array;
     };
-
     LinkedList.fromArray = function (array) {
         var list = new LinkedList();
         array.forEach(function (value) {
@@ -661,11 +638,28 @@
         });
         return list;
     };
+    return LinkedList;
+})();
+module.exports = LinkedList;
 
-    exports.LinkedList = LinkedList;
+},{"./ListNode":2}],2:[function(require,module,exports){
+var ListNode = (function () {
+    function ListNode(value) {
+        this.value = value;
+        this.next = null;
+        this.prev = null;
+    }
+    ListNode.prototype.destroy = function () {
+        this.value = null;
+        this.prev = null;
+        this.next = null;
+    };
+    return ListNode;
+})();
+module.exports = ListNode;
 
-})(this);
-
+},{}]},{},[1])(1)
+});
 /* build Parser API style AST nodes and trees */
 
 (function (exports) {
@@ -1078,6 +1072,7 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
+            console.log("done");
             self.emit("done");
         };
 
@@ -1167,7 +1162,7 @@
     Stepper.prototype._run = function () {
         var currentLine = this.line();
         while (true) {
-            if (this.stack.isEmpty()) {
+            if (this.stack.isEmpty) {
                 break;
             }
             var action = this.stepIn();
@@ -1217,7 +1212,7 @@
     };
 
     Stepper.prototype._step = function () {
-        if (this.stack.isEmpty()) {
+        if (this.stack.isEmpty) {
             return;
         }
         var frame = this.stack.peek();
@@ -1461,7 +1456,7 @@ Debugger.prototype.currentStepper = function () {
 Debugger.prototype.currentStack = function () {
     var stepper = this.scheduler.currentTask();
     if (stepper !== null) {
-        return stepper.stack.values.map(function (frame) {
+        return stepper.stack.items.map(function (frame) {
             return {
                 name: frame.name,
                 line: frame.line

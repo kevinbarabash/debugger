@@ -17,9 +17,9 @@ var overlay = createIframeOverlay(iframe);
 var poster = new Poster(iframe.contentWindow);
 
 poster.listen("break", function (line, stackValues, scope) {
-    overlay.paused = true;
     enableButtons();
     if (line > 0) {
+        overlay.paused = true;
         updateView(line);
         updateCallStack(stackValues);
         updateLocals(teleporter.unflatten(scope));
@@ -30,9 +30,15 @@ poster.listen("break", function (line, stackValues, scope) {
 });
 
 poster.listen("done", function () {
+    console.log("outer: done");
     overlay.paused = false;
     disableButtons();
     editor.setHighlightActiveLine(false);
+
+    // clear call stack and locals
+    updateCallStack([]);
+    updateLocals();
+    overlay.paused = false;
 });
 
 $("#startButton").click(function () {

@@ -152,7 +152,7 @@ Debugger.prototype.currentStepper = function () {
 Debugger.prototype.currentStack = function () {
     var stepper = this.scheduler.currentTask();
     if (stepper !== null) {
-        return stepper.stack.values.map(function (frame) {
+        return stepper.stack.items.map(function (frame) {
             return {
                 name: frame.name,
                 line: frame.line
