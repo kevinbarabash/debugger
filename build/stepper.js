@@ -1061,6 +1061,7 @@ module.exports = ListNode;
         EventEmitter.call(this);
 
         this.breakpoints = breakpoints || {};
+        this.breakpointsEnabled = true;
 
         this._started = false;
         this._paused = false;
@@ -1072,7 +1073,6 @@ module.exports = ListNode;
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
-            console.log("done");
             self.emit("done");
         };
 
@@ -1147,7 +1147,6 @@ module.exports = ListNode;
         }
     };
 
-    // TODO: implement ignoreBreakpoints
     Stepper.prototype.start = function (paused) {
         this._started = true;
         this._paused = !!paused;
@@ -1166,7 +1165,7 @@ module.exports = ListNode;
                 break;
             }
             var action = this.stepIn();
-            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
+            if (this.breakpointsEnabled && this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 this._paused = true;
             }
             if (this._paused) {
@@ -1315,8 +1314,11 @@ function Debugger(context) {
     this.context = context || {};
     this.context.__instantiate__ = __instantiate__;
 
-    this.breakpoints = {};
     this.scheduler = new Scheduler();
+
+    this.breakpoints = {};
+    this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
+    this._paused = false;               // read-only, needs a getter
 }
 
 Debugger.prototype = new EventEmitter();
@@ -1352,63 +1354,46 @@ Debugger.prototype.load = function (code) {
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
 
-    var task = new Stepper(this.mainGenerator(this.context), this.breakpoints);
-    task.on('done', this.handleMainDone.bind(this));
+    var stepper = this._createStepper(this.mainGenerator(this.context));
+    stepper.on("done", this.handleMainDone.bind(this));
 
-    var self = this;
-    task.on('break', function () {
-        self.emit('break');
-    });
-    task.on('done', function () {
-        self.emit('done');
-    });
-
-    // when the scheduler finishes the last task in the queue it should
-    // emit a message so that we can toggle buttons appropriately
+    // TODO: have the schedule emit a message when its queue is empty so we can toggle buttons
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
 
-    this.scheduler.addTask(task);
-    task.start(paused);   // start the initial task synchronously
+    this.scheduler.addTask(stepper);
+    stepper.start(paused);   // start the initial task synchronously
 };
 
-Debugger.prototype.queueRecurringGenerator = function (gen, delay) {
+Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
     if (this.done) {
         return;
     }
 
+    var stepper = this._createStepper(gen());
     var self = this;
-
-    setTimeout(function () {
-        self.queueGenerator(gen)
-            .on('done', self.queueRecurringGenerator.bind(self, gen, delay))
-    }, delay);
-};
-
-Debugger.prototype.queueGenerator = function (gen) {
-    var task = new Stepper(gen(), this.breakpoints);
-    var self = this;
-    task.on('break', function () {
-        self.emit('break');
+    stepper.on("done", function () {
+        if (repeat) {
+            setTimeout(function () {
+                self.queueGenerator(gen, repeat, delay);
+            }, delay);
+        }
     });
-    task.on('done', function () {
-        self.emit('done');
-    });
-    this.scheduler.addTask(task);
-    return task;
+
+    this.scheduler.addTask(stepper);
 };
 
 // This should be run whenever the values of any of the special functions
 // are changed.  This suggests using something like observe-js
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
-    if (draw && Object.getPrototypeOf(draw).constructor.name === "GeneratorFunction") {
-        this.queueRecurringGenerator(draw, 1000 / 60);
+    if (_isGeneratorFunction(draw)) {
+        this.queueGenerator(draw, true, 1000 / 60);
     }
 
     var self = this;
     var wrapProcessingEventHandler = function(name) {
         var eventHandler = self.context[name];
-        if (eventHandler) {
+        if (_isGeneratorFunction(eventHandler)) {
             self.context[name] = function () {
                 self.queueGenerator(eventHandler);
             };
@@ -1419,42 +1404,44 @@ Debugger.prototype.handleMainDone = function () {
     events.forEach(wrapProcessingEventHandler);
 };
 
-Debugger.prototype.pause = function () {
-    // if we aren't paused, break at the start of the next stepper task
-
-};
+// TODO: implement a method to "pause" at the start of the next stepper
 
 Debugger.prototype.resume = function () {
-    // continue running if we paused, run to the next breakpoint
-    var stepper = this.currentStepper();
-    return stepper ? stepper.resume() : null;
+    if (this._paused) {
+        this._paused = false;
+        this._currentStepper().resume();
+    }
 };
 
+Debugger.prototype.stepIn = function () {
+    if (this._paused) {
+        this._currentStepper().stepIn();
+    }
+};
+
+Debugger.prototype.stepOver = function () {
+    if (this._paused) {
+        this._currentStepper().stepOver();
+    }
+};
+
+Debugger.prototype.stepOut = function () {
+    if (this._paused) {
+        this._currentStepper().stepOut();
+    }
+};
+
+Debugger.prototype.paused = function () {
+    return this._paused;
+};
+
+// used by tests right now to stop execution
 Debugger.prototype.stop = function () {
     this.done = true;
 };
 
-Debugger.prototype.stepIn = function () {
-    var stepper = this.currentStepper();
-    return stepper ? stepper.stepIn() : null;
-};
-
-Debugger.prototype.stepOver = function () {
-    var stepper = this.currentStepper();
-    return stepper ? stepper.stepOver() : null;
-};
-
-Debugger.prototype.stepOut = function () {
-    var stepper = this.currentStepper();
-    return stepper ? stepper.stepOut() : null;
-};
-
-Debugger.prototype.currentStepper = function () {
-    return this.scheduler.currentTask();
-};
-
 Debugger.prototype.currentStack = function () {
-    var stepper = this.scheduler.currentTask();
+    var stepper = this._currentStepper();
     if (stepper !== null) {
         return stepper.stack.items.map(function (frame) {
             return {
@@ -1468,7 +1455,7 @@ Debugger.prototype.currentStack = function () {
 };
 
 Debugger.prototype.currentScope = function () {
-    var stepper = this.currentStepper();
+    var stepper = this._currentStepper();
     if (stepper) {
         var scope = stepper.stack.peek().scope;
         if (scope) {
@@ -1479,8 +1466,9 @@ Debugger.prototype.currentScope = function () {
 };
 
 Debugger.prototype.currentLine = function () {
-    var stepper = this.currentStepper();
-    return stepper ? stepper.line() : null;
+    if (this._paused) {
+        return this._currentStepper().line();
+    }
 };
 
 Debugger.prototype.setBreakpoint = function (line) {
@@ -1493,6 +1481,25 @@ Debugger.prototype.clearBreakpoint = function (line) {
 
 /* PRIVATE */
 
+Debugger.prototype._currentStepper = function () {
+    return this.scheduler.currentTask();
+};
+
+Debugger.prototype._createStepper = function (genObj) {
+    var stepper = new Stepper(genObj, this.breakpoints);
+    stepper.breakpointsEnabled = this.breakpointsEnabled;
+    var self = this;
+    stepper.on("break", function () {
+        self._paused = true;
+        self.emit("break");
+    });
+    stepper.on("done", function () {
+        self._paused = false;
+        self.emit("done");
+    });
+    return stepper;
+};
+
 function __instantiate__ (Class) {
     var obj = Object.create(Class.prototype);
     var args = Array.prototype.slice.call(arguments, 1);
@@ -1504,4 +1511,8 @@ function __instantiate__ (Class) {
     } else {
         return obj;
     }
+}
+
+function _isGeneratorFunction (value) {
+    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
 }

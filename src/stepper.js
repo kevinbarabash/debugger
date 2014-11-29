@@ -17,6 +17,7 @@
         EventEmitter.call(this);
 
         this.breakpoints = breakpoints || {};
+        this.breakpointsEnabled = true;
 
         this._started = false;
         this._paused = false;
@@ -28,7 +29,6 @@
         var self = this;
         this.stack.poppedLastItem = function () {
             self._stopped = true;
-            console.log("done");
             self.emit("done");
         };
 
@@ -103,7 +103,6 @@
         }
     };
 
-    // TODO: implement ignoreBreakpoints
     Stepper.prototype.start = function (paused) {
         this._started = true;
         this._paused = !!paused;
@@ -122,7 +121,7 @@
                 break;
             }
             var action = this.stepIn();
-            if (this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
+            if (this.breakpointsEnabled && this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
                 this._paused = true;
             }
             if (this._paused) {

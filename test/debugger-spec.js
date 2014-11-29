@@ -67,6 +67,48 @@ describe("Debugger", function () {
             debugr.stepOver();
             expect(context.rect.called).to.be(true);
         });
+
+        it("should shouldn't hit breakpoints if they're disabled", function () {
+            var code = getFunctionBody(function () {
+                fill(255,0,0);
+                rect(100,200,50,50);
+            });
+
+            debugr.load(code);
+
+            debugr.setBreakpoint(1);
+            debugr.breakpointsEnabled = false;
+            debugr.start();
+
+            expect(context.fill.called).to.be(true);
+            expect(context.rect.called).to.be(true);
+        });
+
+        it("should be paused after hitting a breakpoint", function () {
+            var code = getFunctionBody(function () {
+                fill(255,0,0);
+                rect(100,200,50,50);
+            });
+
+            debugr.load(code);
+
+            debugr.setBreakpoint(1);
+            debugr.start();
+
+            expect(debugr.paused()).to.be(true);
+        });
+
+        it("should not be paused after it finishes running", function () {
+            var code = getFunctionBody(function () {
+                fill(255,0,0);
+                rect(100,200,50,50);
+            });
+
+            debugr.load(code);
+            debugr.start();
+
+            expect(debugr.paused()).to.be(false);
+        });
     });
 
     describe("Recurring Tasks (draw)", function () {
