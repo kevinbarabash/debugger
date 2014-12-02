@@ -30,7 +30,6 @@ poster.listen("break", function (line, stackValues, scope) {
 });
 
 poster.listen("done", function () {
-    console.log("outer: done");
     overlay.paused = false;
     disableButtons();
     editor.setHighlightActiveLine(false);

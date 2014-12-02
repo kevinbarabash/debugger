@@ -8,6 +8,7 @@
 var Stepper = require("./stepper");
 var Scheduler = require("./scheduler");
 var transform = require("./transform");
+var EventEmitter = require("events").EventEmitter;
 
 function Debugger(context) {
     EventEmitter.call(this);
@@ -56,7 +57,7 @@ Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
-    stepper.on("done", this.handleMainDone.bind(this));
+    stepper.once("done", this.handleMainDone.bind(this));
 
     // TODO: have the schedule emit a message when its queue is empty so we can toggle buttons
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
@@ -72,7 +73,7 @@ Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
 
     var stepper = this._createStepper(gen());
     var self = this;
-    stepper.on("done", function () {
+    stepper.once("done", function () {
         if (repeat) {
             setTimeout(function () {
                 self.queueGenerator(gen, repeat, delay);
@@ -190,11 +191,14 @@ Debugger.prototype._createStepper = function (genObj) {
     var stepper = new Stepper(genObj, this.breakpoints);
     stepper.breakpointsEnabled = this.breakpointsEnabled;
     var self = this;
-    stepper.on("break", function () {
+    var breakListener = function () {
         self._paused = true;
         self.emit("break");
-    });
-    stepper.on("done", function () {
+    };
+    stepper.on("break", breakListener);
+    // TODO: write a test to detect the memory leak
+    stepper.once("done", function () {
+        stepper.removeListener("break", breakListener);
         self._paused = false;
         self.emit("done");
     });

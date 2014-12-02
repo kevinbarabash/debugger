@@ -14,7 +14,7 @@ function Scheduler () {
 Scheduler.prototype.addTask = function (task) {
     var self = this;
 
-    task.on('done', function () {
+    task.once("done", function () {
         self.queue.pop_back();
         self.tick();
     });
