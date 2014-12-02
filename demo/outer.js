@@ -22,7 +22,7 @@ poster.listen("break", function (line, stackValues, scope) {
         overlay.paused = true;
         updateView(line);
         updateCallStack(stackValues);
-        updateLocals(teleporter.unflatten(scope));
+        updateLocals(gehry.reconstruct(scope));
     } else {
         disableButtons();
         editor.setHighlightActiveLine(false);

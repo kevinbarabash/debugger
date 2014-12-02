@@ -5,6 +5,10 @@
  * - maintain breakpoints and inform steppers of breakpoints
  */
 
+var Stepper = require("./stepper");
+var Scheduler = require("./scheduler");
+var transform = require("./transform");
+
 function Debugger(context) {
     EventEmitter.call(this);
 
@@ -213,3 +217,5 @@ function __instantiate__ (Class) {
 function _isGeneratorFunction (value) {
     return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
 }
+
+module.exports = Debugger;

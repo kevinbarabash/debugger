@@ -4,7 +4,7 @@
   "description": "Step through JavaScript using JavaScript",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/testee test/runner.html --browsers firefox"
   },
   "repository": {
     "type": "git",
@@ -18,13 +18,11 @@
   "homepage": "https://github.com/kevinb7/js-step",
   "dependencies": {},
   "devDependencies": {
-    "gulp": "^3.8.9",
-    "gulp-browserify": "^0.5.0",
-    "gulp-concat": "^2.4.1",
-    "gulp-rename": "^1.2.0",
-    "testee": "^0.1.3",
-    "poster": "git://github.com/kevinb7/poster.git",
+    "basic-ds": "git://github.com/kevinb7/basic-ds.git",
+    "browserify": "^6.3.3",
+    "gehry": "git://github.com/kevinb7/gehry.git",
     "iframe-overlay": "git://github.com/kevinb7/iframe-overlay.git",
-    "teleporter": "git://github.com/kevinb7/teleporter.git"
+    "poster": "git://github.com/kevinb7/poster.git",
+    "testee": "^0.1.3"
   }
 }

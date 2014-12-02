@@ -5,9 +5,8 @@ before_install:
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
 before_script:
-  - npm install -g gulp
   - npm install -g bower
   - bower install
   - sed 's/parenthesize(result, Precedence.Yield, precedence)/parenthesize(result, Precedence.Yield, Infinity)/g' bower_components/escodegen/escodegen.browser.js > temp.js
   - mv temp.js bower_components/escodegen/escodegen.browser.js
-script: gulp test
+script: npm test

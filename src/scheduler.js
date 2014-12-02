@@ -5,8 +5,10 @@
  * - reschedule recurring tasks
  */
 
+var basic = require("basic-ds");
+
 function Scheduler () {
-    this.queue = new LinkedList();
+    this.queue = new basic.LinkedList();
 }
 
 Scheduler.prototype.addTask = function (task) {
@@ -38,3 +40,5 @@ Scheduler.prototype.currentTask = function () {
 Scheduler.prototype.clear = function () {
     this.queue.clear();
 };
+
+module.exports = Scheduler;

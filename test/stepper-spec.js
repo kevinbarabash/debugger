@@ -6,9 +6,11 @@ describe("Stepper", function () {
     var fill, rect, print;
 
     function stepperWithCode(code) {
-        var debugCode = transform(code, context);
-        var debugFunction = new Function(debugCode);
-        var mainGenerator = debugFunction();
+        var debugr = new Debugger(context);
+        debugr.load(code);
+        //var debugCode = transform(code, context);
+        //var debugFunction = new Function(debugCode);
+        var mainGenerator = debugr.mainGenerator;
 
         return new Stepper(mainGenerator(context));
     }
