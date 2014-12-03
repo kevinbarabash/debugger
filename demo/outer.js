@@ -10,7 +10,7 @@ session.setMode("ace/mode/javascript");
 
 // iframe communication
 var iframe = $("iframe").get(0);
-var overlay = createIframeOverlay(iframe);
+var overlay = iframeOverlay.createOverlay(iframe);
 // TODO: remove the need for specific ordering
 // createIframeOverlay repositions the iframe in the DOM
 // which throws away the contentWindow and probably forces it to reload
@@ -92,8 +92,6 @@ editor.on("guttermousedown", function(e){
 function updateView(line) {
     editor.gotoLine(line);
     editor.setHighlightActiveLine(true);
-//    updateLocals(debugr, action);
-//    updateCallStack(debugr);
 }
 
 function disableButtons() {
@@ -126,17 +124,3 @@ function updateLocals(scope) {
     }
     $variableList.append(genPropsList(scope));
 }
-//
-
-//
-//function updateView(debugr, action) {
-//    if (action && action.line === -1) {
-//        editor.setHighlightActiveLine(false);
-//    } else {
-//        editor.gotoLine(debugr.currentLine());
-//        editor.setHighlightActiveLine(true);
-//    }
-//
-//    updateLocals(debugr, action);
-//    updateCallStack(debugr);
-//}

@@ -53,19 +53,10 @@ poster.listen("clearBreakpoint", function (line) {
 debugr.on("break", function () {
     var scope = gehry.deconstruct(debugr.currentScope());
     poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
-//    enableButtons();
-//    updateView(debugr);
 });
 
 debugr.on("done", function () {
     poster.post("done");
-//    disableButtons();
-//    editor.setHighlightActiveLine(false);
 });
 
-poster.listen("mouse", function (e) {
-    $(canvas).simulate(e.type, {
-        clientX: e.x,
-        clientY: e.y
-    });
-});
+iframeOverlay.createRelay(canvas);

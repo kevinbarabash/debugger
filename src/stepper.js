@@ -125,7 +125,6 @@ Stepper.prototype._run = function () {
             this._paused = true;
         }
         if (this._paused) {
-            debugger;
             this.emit("break");
             break;
         }

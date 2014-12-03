@@ -55,6 +55,7 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
+    // TODO: remove all event handlers
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
     stepper.once("done", this.handleMainDone.bind(this));
@@ -102,7 +103,7 @@ Debugger.prototype.handleMainDone = function () {
         }
     };
 
-    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased"];
+    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
     events.forEach(wrapProcessingEventHandler);
 };
 
