@@ -688,7 +688,12 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
-    // TODO: remove all event handlers
+    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
+    events.forEach(function (event) {
+        this.context[event] = undefined;
+    }, this);
+
+    // TODO: remove all repeating function calls
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
     stepper.once("done", this.handleMainDone.bind(this));

@@ -56,7 +56,15 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
-    // TODO: remove all event handlers
+
+    // TODO: create a delegate definition so that we can customize the behaviour for processing.js or something else like the DOM
+    // clear all of the event handlers in the context
+    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
+    events.forEach(function (event) {
+        this.context[event] = undefined;
+    }, this);
+
+    // TODO: remove all repeating function calls
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
     stepper.once("done", this.handleMainDone.bind(this));
