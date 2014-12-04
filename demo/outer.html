@@ -53,18 +53,18 @@ mouseClicked = function () {
   ellipse(mouseX, mouseY, 75, 75);
 };
 
-keyTyped = function () {
-  console.log("key = " + key);
-};
-/*
 keyPressed = function () {
-  console.log("keyPressed, keyCode = " + keyCode);
+  console.log("keyPressed, keyCode = " + keyCode + ", key = " + key);
 };
 
 keyReleased = function () {
-  console.log("keyReleased, keyCode = " + keyCode);
+  console.log("keyReleased, keyCode = " + keyCode + ", key = " + key);
 };
-*/
+
+keyTyped = function () {
+console.log("__keyTyped__");
+};
+
     </div>
   </div>
 

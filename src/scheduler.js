@@ -11,13 +11,8 @@ function Scheduler () {
     this.queue = new basic.LinkedList();
 }
 
-Scheduler.prototype.addTask = function (task) {
-    var self = this;
-
-    task.once("done", function () {
-        self.queue.pop_back();
-        self.tick();
-    });
+Scheduler.prototype.addTask = function (task, name) {
+    task.name = name;
 
     this.queue.push_front(task);
     this.tick();
@@ -28,9 +23,21 @@ Scheduler.prototype.tick = function () {
     setTimeout(function () {
         var currentTask = self.currentTask();
         if (currentTask !== null && !currentTask.started()) {
-            currentTask.start();
+            self.startTask(currentTask);
         }
     }, 0);  // defer execution
+};
+
+Scheduler.prototype.startTask = function (task) {
+    var self = this;
+    task.once("done", function () {
+        var poppedTask = self.queue.pop_back();
+        if (!poppedTask.started()) {
+            throw "popping a task that hasn't started";
+        }
+        self.tick();
+    });
+    task.start();
 };
 
 Scheduler.prototype.currentTask = function () {

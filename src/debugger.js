@@ -63,34 +63,37 @@ Debugger.prototype.start = function (paused) {
     // TODO: have the schedule emit a message when its queue is empty so we can toggle buttons
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
 
-    this.scheduler.addTask(stepper);
-    stepper.start(paused);   // start the initial task synchronously
+    this.scheduler.addTask(stepper, "main");    // TODO: figure out how pause the stepper before running it
+    this.scheduler.startTask(stepper);
+    //stepper.start(paused);   // start the initial task synchronously
 };
 
-Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
+Debugger.prototype.queueGenerator = function (gen, name, repeat, delay) {
     if (this.done) {
         return;
     }
 
     var stepper = this._createStepper(gen());
+    stepper.name = gen.name;
     var self = this;
     stepper.once("done", function () {
         if (repeat) {
             setTimeout(function () {
-                self.queueGenerator(gen, repeat, delay);
+                self.queueGenerator(gen, name, repeat, delay);
             }, delay);
         }
     });
 
-    this.scheduler.addTask(stepper);
+    this.scheduler.addTask(stepper, name);
 };
 
 // This should be run whenever the values of any of the special functions
 // are changed.  This suggests using something like observe-js
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
+    // TODO: create a repating task object that can be safely stopped
     if (_isGeneratorFunction(draw)) {
-        this.queueGenerator(draw, true, 1000 / 60);
+        this.queueGenerator(draw, "draw", true, 1000);
     }
 
     var self = this;
@@ -98,7 +101,7 @@ Debugger.prototype.handleMainDone = function () {
         var eventHandler = self.context[name];
         if (_isGeneratorFunction(eventHandler)) {
             self.context[name] = function () {
-                self.queueGenerator(eventHandler);
+                self.queueGenerator(eventHandler, name);
             };
         }
     };
