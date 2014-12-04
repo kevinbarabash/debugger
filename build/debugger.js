@@ -688,6 +688,9 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
+
+    // TODO: create a delegate definition so that we can customize the behaviour for processing.js or something else like the DOM
+    // clear all of the event handlers in the context
     var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
     events.forEach(function (event) {
         this.context[event] = undefined;
@@ -737,9 +740,16 @@ Debugger.prototype.handleMainDone = function () {
     var wrapProcessingEventHandler = function(name) {
         var eventHandler = self.context[name];
         if (_isGeneratorFunction(eventHandler)) {
-            self.context[name] = function () {
-                self.queueGenerator(eventHandler);
-            };
+            if (name === "keyTyped") {
+                self.context[name] = function () {
+                    // TODO: need a way to specify delegate method to be called before the task starts
+                    self.queueGenerator(eventHandler);
+                };
+            } else {
+                self.context[name] = function () {
+                    self.queueGenerator(eventHandler);
+                };
+            }
         }
     };
 

@@ -19,7 +19,7 @@ var poster = new Poster(iframe.contentWindow);
 poster.listen("break", function (line, stackValues, scope) {
     enableButtons();
     if (line > 0) {
-        overlay.paused = true;
+        overlay.pause();
         updateView(line);
         updateCallStack(stackValues);
         updateLocals(gehry.reconstruct(scope));
@@ -30,26 +30,26 @@ poster.listen("break", function (line, stackValues, scope) {
 });
 
 poster.listen("done", function () {
-    overlay.paused = false;
+    overlay.resume();
     disableButtons();
     editor.setHighlightActiveLine(false);
 
     // clear call stack and locals
     updateCallStack([]);
     updateLocals();
-    overlay.paused = false;
+    overlay.resume();
 });
 
 $("#startButton").click(function () {
-    overlay.paused = false;
+    overlay.resume();
     var code = session.getValue();
     poster.post("load", code);
     poster.post("start");
 });
 
 $("#continueButton").click(function () {
-    overlay.paused = false;
     poster.post("resume");
+    overlay.resume();
 });
 
 $("#stepInButton").click(function () {

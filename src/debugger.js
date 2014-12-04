@@ -108,9 +108,16 @@ Debugger.prototype.handleMainDone = function () {
     var wrapProcessingEventHandler = function(name) {
         var eventHandler = self.context[name];
         if (_isGeneratorFunction(eventHandler)) {
-            self.context[name] = function () {
-                self.queueGenerator(eventHandler);
-            };
+            if (name === "keyTyped") {
+                self.context[name] = function () {
+                    // TODO: need a way to specify delegate method to be called before the task starts
+                    self.queueGenerator(eventHandler);
+                };
+            } else {
+                self.context[name] = function () {
+                    self.queueGenerator(eventHandler);
+                };
+            }
         }
     };
 
