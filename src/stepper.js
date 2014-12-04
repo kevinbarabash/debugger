@@ -35,7 +35,8 @@ function Stepper (genObj, breakpoints) {
     this._retVal = undefined;
 }
 
-Stepper.prototype = new EventEmitter();
+Stepper.prototype = Object.create(EventEmitter.prototype);
+Stepper.prototype.constructor = Stepper;
 
 Stepper.prototype.stepIn = function () {
     var result;

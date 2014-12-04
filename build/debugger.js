@@ -655,7 +655,8 @@ function Debugger(context) {
     this._paused = false;               // read-only, needs a getter
 }
 
-Debugger.prototype = new EventEmitter();
+Debugger.prototype = Object.create(EventEmitter.prototype);
+Debugger.prototype.constructor = Debugger;
 
 Debugger.isBrowserSupported = function () {
     try {
@@ -695,28 +696,27 @@ Debugger.prototype.start = function (paused) {
     // TODO: have the schedule emit a message when its queue is empty so we can toggle buttons
     // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
 
-    this.scheduler.addTask(stepper, "main");    // TODO: figure out how pause the stepper before running it
+    this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
     this.scheduler.startTask(stepper);
     //stepper.start(paused);   // start the initial task synchronously
 };
 
-Debugger.prototype.queueGenerator = function (gen, name, repeat, delay) {
+Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
     if (this.done) {
         return;
     }
 
     var stepper = this._createStepper(gen());
-    stepper.name = gen.name;
     var self = this;
     stepper.once("done", function () {
         if (repeat) {
             setTimeout(function () {
-                self.queueGenerator(gen, name, repeat, delay);
+                self.queueGenerator(gen, repeat, delay);
             }, delay);
         }
     });
 
-    this.scheduler.addTask(stepper, name);
+    this.scheduler.addTask(stepper);
 };
 
 // This should be run whenever the values of any of the special functions
@@ -733,7 +733,7 @@ Debugger.prototype.handleMainDone = function () {
         var eventHandler = self.context[name];
         if (_isGeneratorFunction(eventHandler)) {
             self.context[name] = function () {
-                self.queueGenerator(eventHandler, name);
+                self.queueGenerator(eventHandler);
             };
         }
     };
@@ -874,9 +874,7 @@ function Scheduler () {
     this.queue = new basic.LinkedList();
 }
 
-Scheduler.prototype.addTask = function (task, name) {
-    task.name = name;
-
+Scheduler.prototype.addTask = function (task) {
     this.queue.push_front(task);
     this.tick();
 };
@@ -895,7 +893,7 @@ Scheduler.prototype.startTask = function (task) {
     var self = this;
     task.once("done", function () {
         var poppedTask = self.queue.pop_back();
-        if (!poppedTask.started()) {
+        if (poppedTask !== null && !poppedTask.started()) {
             throw "popping a task that hasn't started";
         }
         self.tick();
@@ -908,6 +906,9 @@ Scheduler.prototype.currentTask = function () {
 };
 
 Scheduler.prototype.clear = function () {
+    this.queue.forEach(function (task) {
+        task.removeAllListeners("done");
+    });
     this.queue.clear();
 };
 
@@ -951,7 +952,8 @@ function Stepper (genObj, breakpoints) {
     this._retVal = undefined;
 }
 
-Stepper.prototype = new EventEmitter();
+Stepper.prototype = Object.create(EventEmitter.prototype);
+Stepper.prototype.constructor = Stepper;
 
 Stepper.prototype.stepIn = function () {
     var result;

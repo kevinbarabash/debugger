@@ -11,9 +11,7 @@ function Scheduler () {
     this.queue = new basic.LinkedList();
 }
 
-Scheduler.prototype.addTask = function (task, name) {
-    task.name = name;
-
+Scheduler.prototype.addTask = function (task) {
     this.queue.push_front(task);
     this.tick();
 };
@@ -32,7 +30,7 @@ Scheduler.prototype.startTask = function (task) {
     var self = this;
     task.once("done", function () {
         var poppedTask = self.queue.pop_back();
-        if (!poppedTask.started()) {
+        if (poppedTask !== null && !poppedTask.started()) {
             throw "popping a task that hasn't started";
         }
         self.tick();
@@ -45,6 +43,9 @@ Scheduler.prototype.currentTask = function () {
 };
 
 Scheduler.prototype.clear = function () {
+    this.queue.forEach(function (task) {
+        task.removeAllListeners("done");
+    });
     this.queue.clear();
 };
 
