@@ -6,7 +6,7 @@
  */
 
 var Stepper = require("./stepper");
-var Scheduler = require("./scheduler");
+var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var EventEmitter = require("events").EventEmitter;
 
