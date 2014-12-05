@@ -8,7 +8,15 @@ processing.size(400,400);
 processing.resetMatrix();
 
 var poster = new Poster(window.parent);
-var debugr = new Debugger(processing);
+var debugr = new Debugger(
+    processing,     // context
+    function () {   // breakCallback
+        var scope = gehry.deconstruct(debugr.currentScope());
+        poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
+    },
+    function () {   // doneCallback
+        poster.post("done");
+    });
 
 // TODO: remote procedure calling
 // TODO: remote object proxying
@@ -48,15 +56,6 @@ poster.listen("setBreakpoint", function (line) {
 
 poster.listen("clearBreakpoint", function (line) {
     debugr.clearBreakpoint(line);
-});
-
-debugr.on("break", function () {
-    var scope = gehry.deconstruct(debugr.currentScope());
-    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
-});
-
-debugr.on("done", function () {
-    poster.post("done");
 });
 
 iframeOverlay.createRelay(canvas);

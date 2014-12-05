@@ -13,7 +13,7 @@ function Frame (gen, line) {
     this.line = line;
 }
 
-function Stepper (genObj, breakpoints) {
+function Stepper (genObj, breakpoints, breakCallback, doneCallback) {
     EventEmitter.call(this);
 
     this.breakpoints = breakpoints || {};
@@ -30,7 +30,16 @@ function Stepper (genObj, breakpoints) {
     this.stack.poppedLastItem = function () {
         self._stopped = true;
         self.emit("done");
+        self.doneCallbacks.forEach(function (callback) {
+             callback();
+        });
     };
+
+    this.breakCallback = breakCallback || function () {};
+    this.doneCallbacks = [];
+    if (doneCallback) {
+        this.doneCallbacks.push(doneCallback);
+    }
 
     this._retVal = undefined;
 }
@@ -127,6 +136,7 @@ Stepper.prototype._run = function () {
         }
         if (this._paused) {
             this.emit("break");
+            this.breakCallback();
             break;
         }
         currentLine = this.line();

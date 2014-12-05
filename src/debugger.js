@@ -8,12 +8,9 @@
 var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
-var EventEmitter = require("events").EventEmitter;
 var ProcessingDelegate = require("../lib/processing-delegate");
 
-function Debugger(context) {
-    EventEmitter.call(this);
-
+function Debugger(context, breakCallback, doneCallback) {
     this.context = context || {};
     this.context.__instantiate__ = __instantiate__;
 
@@ -24,10 +21,10 @@ function Debugger(context) {
     this._paused = false;               // read-only, needs a getter
 
     this.delegate = new ProcessingDelegate(context);
-}
 
-Debugger.prototype = Object.create(EventEmitter.prototype);
-Debugger.prototype.constructor = Debugger;
+    this.breakCallback = breakCallback || function () {};
+    this.doneCallback = doneCallback || function () {};
+}
 
 Debugger.isBrowserSupported = function () {
     try {
@@ -62,7 +59,10 @@ Debugger.prototype.start = function (paused) {
     this.delegate.debuggerWillStart(this);
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
-    stepper.once("done", this.delegate.debuggerFinishedMain.bind(this.delegate, this));
+    var self = this;
+    stepper.doneCallbacks.push(function () {
+        self.delegate.debuggerFinishedMain(self);
+    });
 
     this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
     this.scheduler.startTask(stepper);
@@ -158,19 +158,21 @@ Debugger.prototype._currentStepper = function () {
 };
 
 Debugger.prototype._createStepper = function (genObj) {
-    var stepper = new Stepper(genObj, this.breakpoints);
-    stepper.breakpointsEnabled = this.breakpointsEnabled;
     var self = this;
-    var breakListener = function () {
-        self._paused = true;
-        self.emit("break");
-    };
-    stepper.on("break", breakListener);
-    stepper.once("done", function () {
-        stepper.removeListener("break", breakListener);
-        self._paused = false;
-        self.emit("done");
-    });
+    var stepper = new Stepper(
+        genObj,
+        this.breakpoints,
+        function () {   // break
+            self._paused = true;
+            self.breakCallback();
+            // TODO: also tell the scheduler to remove this task
+        },
+        function () {   // done
+            self._paused = false;
+            self.doneCallback();
+        });
+
+    stepper.breakpointsEnabled = this.breakpointsEnabled;
     return stepper;
 };
 
