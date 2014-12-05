@@ -264,8 +264,49 @@ var basic;
 module.exports = basic;
 
 },{}],3:[function(require,module,exports){
+var ProcessingDelegate = (function () {
+    function ProcessingDelegate() {
+        this.repeater = null;
+    }
+    ProcessingDelegate.prototype.debuggerWillStart = function (debugr) {
+        if (this.repeater) {
+            this.repeater.stop();
+        }
+        ProcessingDelegate.events.forEach(function (event) {
+            debugr.context[event] = undefined;
+        }, this);
+    };
+    ProcessingDelegate.prototype.debuggerFinishedMain = function (debugr) {
+        var draw = debugr.context.draw;
+        if (draw) {
+            this.repeater = debugr.scheduler.createRepeater(function () {
+                return debugr._createStepper(draw());
+            }, 1000 / 60);
+            this.repeater.start();
+        }
+        ProcessingDelegate.events.forEach(function (name) {
+            var eventHandler = debugr.context[name];
+            if (_isGeneratorFunction(eventHandler)) {
+                if (name === "keyTyped") {
+                    debugr.context.keyCode = 0;
+                }
+                debugr.context[name] = function () {
+                    debugr.queueGenerator(eventHandler);
+                };
+            }
+        }, this);
+    };
+    ProcessingDelegate.events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
+    return ProcessingDelegate;
+})();
+function _isGeneratorFunction(value) {
+    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
+}
+module.exports = ProcessingDelegate;
+
+},{}],4:[function(require,module,exports){
 module.exports=require(2)
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],4:[function(require,module,exports){
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],5:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -568,7 +609,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {
@@ -708,7 +749,7 @@ exports.createVariableDeclaration = createVariableDeclaration;
 exports.createVariableDeclarator = createVariableDeclarator;
 exports.replaceNode = replaceNode;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * The debugger has the following responsibilites:
  * - create debug code and generators from source code
@@ -720,6 +761,7 @@ var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var EventEmitter = require("events").EventEmitter;
+var ProcessingDelegate = require("../lib/processing-delegate");
 
 function Debugger(context) {
     EventEmitter.call(this);
@@ -732,6 +774,8 @@ function Debugger(context) {
     this.breakpoints = {};
     this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
     this._paused = false;               // read-only, needs a getter
+
+    this.delegate = new ProcessingDelegate(context);
 }
 
 Debugger.prototype = Object.create(EventEmitter.prototype);
@@ -767,79 +811,21 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
-    if (this.repeater) {
-        this.repeater.stop();
-    }
-
-    // TODO: create a delegate definition so that we can customize the behaviour for processing.js or something else like the DOM
-    // clear all of the event handlers in the context
-    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
-    events.forEach(function (event) {
-        this.context[event] = undefined;
-    }, this);
-
-    // TODO: remove all repeating function calls
+    this.delegate.debuggerWillStart(this);
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
-    stepper.once("done", this.handleMainDone.bind(this));
-
-    // TODO: have the schedule emit a message when its queue is empty so we can toggle buttons
-    // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
+    stepper.once("done", this.delegate.debuggerFinishedMain.bind(this.delegate, this));
 
     this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
     this.scheduler.startTask(stepper);
     //stepper.start(paused);   // start the initial task synchronously
 };
 
-Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
-    if (this.done) {
-        return;
+Debugger.prototype.queueGenerator = function (gen) {
+    if (!this.done) {
+        var stepper = this._createStepper(gen());
+        this.scheduler.addTask(stepper);
     }
-
-    var stepper = this._createStepper(gen());
-    var self = this;
-    stepper.once("done", function () {
-        if (repeat) {
-            setTimeout(function () {
-                self.queueGenerator(gen, repeat, delay);
-            }, delay);
-        }
-    });
-
-    this.scheduler.addTask(stepper);
-};
-
-// This should be run whenever the values of any of the special functions
-// are changed.  This suggests using something like observe-js
-Debugger.prototype.handleMainDone = function () {
-    var draw = this.context.draw;
-    var self = this;
-
-    if (draw) {
-        this.repeater = this.scheduler.createRepeater(function () {
-            return self._createStepper(draw());
-        }, 1000 / 60);
-        this.repeater.start();
-    }
-
-    var wrapProcessingEventHandler = function(name) {
-        var eventHandler = self.context[name];
-        if (_isGeneratorFunction(eventHandler)) {
-            if (name === "keyTyped") {
-                self.context[name] = function () {
-                    // TODO: need a way to specify delegate method to be called before the task starts
-                    self.queueGenerator(eventHandler);
-                };
-            } else {
-                self.context[name] = function () {
-                    self.queueGenerator(eventHandler);
-                };
-            }
-        }
-    };
-
-    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
-    events.forEach(wrapProcessingEventHandler);
 };
 
 // TODO: implement a method to "pause" at the start of the next stepper
@@ -953,13 +939,9 @@ function __instantiate__ (Class) {
     }
 }
 
-function _isGeneratorFunction (value) {
-    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
-}
-
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":1,"./stepper":7,"./transform":8,"events":4}],7:[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":1,"../lib/processing-delegate":3,"./stepper":8,"./transform":9,"events":5}],8:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var EventEmitter = require("events").EventEmitter;
@@ -1178,7 +1160,7 @@ Stepper.prototype._popAndStoreReturnValue = function (value) {
 
 module.exports = Stepper;
 
-},{"basic-ds":3,"events":4}],8:[function(require,module,exports){
+},{"basic-ds":4,"events":5}],9:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var builder = require("./ast-builder");
@@ -1415,5 +1397,5 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./ast-builder":5,"basic-ds":3}]},{},[6])(6)
+},{"./ast-builder":6,"basic-ds":4}]},{},[7])(7)
 });

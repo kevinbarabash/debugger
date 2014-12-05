@@ -201,6 +201,33 @@ describe("Debugger", function () {
                 }, 50);
             }, 50);
         });
+
+        it("should stop calling the old 'draw'", function (done) {
+            var code1 = getFunctionBody(function () {
+                draw = function () {
+                    fill(255,0,0);
+                    rect(100,200,50,50);
+                };
+            });
+
+            var code2 = getFunctionBody(function () {
+                draw = function () {
+                    fill(0,0,255);
+                    rect(300,200,100,100);
+                };
+            });
+
+            debugr.load(code1);
+            debugr.start();
+            debugr.stop();
+
+            debugr.load(code2);
+            debugr.start();
+            debugr.stop();
+
+            done();
+            //setTimeout(function ())
+        });
     });
 
     describe("Event Handlers (mouseClicked)", function () {

@@ -9,6 +9,7 @@ var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var EventEmitter = require("events").EventEmitter;
+var ProcessingDelegate = require("../lib/processing-delegate");
 
 function Debugger(context) {
     EventEmitter.call(this);
@@ -21,6 +22,8 @@ function Debugger(context) {
     this.breakpoints = {};
     this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
     this._paused = false;               // read-only, needs a getter
+
+    this.delegate = new ProcessingDelegate(context);
 }
 
 Debugger.prototype = Object.create(EventEmitter.prototype);
@@ -56,79 +59,21 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
-    if (this.repeater) {
-        this.repeater.stop();
-    }
-
-    // TODO: create a delegate definition so that we can customize the behaviour for processing.js or something else like the DOM
-    // clear all of the event handlers in the context
-    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
-    events.forEach(function (event) {
-        this.context[event] = undefined;
-    }, this);
-
-    // TODO: remove all repeating function calls
+    this.delegate.debuggerWillStart(this);
 
     var stepper = this._createStepper(this.mainGenerator(this.context));
-    stepper.once("done", this.handleMainDone.bind(this));
-
-    // TODO: have the schedule emit a message when its queue is empty so we can toggle buttons
-    // if there's a draw function that's being run on a loop then we shouldn't toggle buttons
+    stepper.once("done", this.delegate.debuggerFinishedMain.bind(this.delegate, this));
 
     this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
     this.scheduler.startTask(stepper);
     //stepper.start(paused);   // start the initial task synchronously
 };
 
-Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
-    if (this.done) {
-        return;
+Debugger.prototype.queueGenerator = function (gen) {
+    if (!this.done) {
+        var stepper = this._createStepper(gen());
+        this.scheduler.addTask(stepper);
     }
-
-    var stepper = this._createStepper(gen());
-    var self = this;
-    stepper.once("done", function () {
-        if (repeat) {
-            setTimeout(function () {
-                self.queueGenerator(gen, repeat, delay);
-            }, delay);
-        }
-    });
-
-    this.scheduler.addTask(stepper);
-};
-
-// This should be run whenever the values of any of the special functions
-// are changed.  This suggests using something like observe-js
-Debugger.prototype.handleMainDone = function () {
-    var draw = this.context.draw;
-    var self = this;
-
-    if (draw) {
-        this.repeater = this.scheduler.createRepeater(function () {
-            return self._createStepper(draw());
-        }, 1000 / 60);
-        this.repeater.start();
-    }
-
-    var wrapProcessingEventHandler = function(name) {
-        var eventHandler = self.context[name];
-        if (_isGeneratorFunction(eventHandler)) {
-            if (name === "keyTyped") {
-                self.context[name] = function () {
-                    // TODO: need a way to specify delegate method to be called before the task starts
-                    self.queueGenerator(eventHandler);
-                };
-            } else {
-                self.context[name] = function () {
-                    self.queueGenerator(eventHandler);
-                };
-            }
-        }
-    };
-
-    var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
-    events.forEach(wrapProcessingEventHandler);
 };
 
 // TODO: implement a method to "pause" at the start of the next stepper
@@ -240,10 +185,6 @@ function __instantiate__ (Class) {
     } else {
         return obj;
     }
-}
-
-function _isGeneratorFunction (value) {
-    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
 }
 
 module.exports = Debugger;

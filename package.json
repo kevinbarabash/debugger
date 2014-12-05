@@ -23,6 +23,7 @@
     "gehry": "git://github.com/kevinb7/gehry.git",
     "iframe-overlay": "git://github.com/kevinb7/iframe-overlay.git",
     "poster": "git://github.com/kevinb7/poster.git",
-    "testee": "^0.1.3"
+    "testee": "^0.1.3",
+    "typescript": "^1.3.0"
   }
 }
