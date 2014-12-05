@@ -5,14 +5,15 @@ describe("Stepper", function () {
     var stepper, context;
     var fill, rect, print;
 
-    function stepperWithCode(code, doneCallback) {
+    function stepperWithCode(code, breakpoints, breakCallback, doneCallback) {
         var debugr = new Debugger(context);
         debugr.load(code);
         //var debugCode = transform(code, context);
         //var debugFunction = new Function(debugCode);
         var mainGenerator = debugr.mainGenerator;
 
-        return new Stepper(mainGenerator(context), doneCallback);
+        breakpoints = breakpoints || {};
+        return new Stepper(mainGenerator(context), breakpoints, breakCallback, doneCallback);
     }
 
     beforeEach(function () {
@@ -1463,10 +1464,18 @@ describe("Stepper", function () {
                 rect(100,200,50,50);
             });
 
-            stepper = stepperWithCode(code, function () {
-                expect(stepper.stopped()).to.be(true);
-                done();
-            });
+            var breakpoints = {};
+
+            stepper = stepperWithCode(
+                code,
+                breakpoints,
+                function () {
+                    // breakpointCallback
+                },
+                function () {
+                    expect(stepper.stopped()).to.be(true);
+                    done();
+                });
 
             stepper.start();
         });

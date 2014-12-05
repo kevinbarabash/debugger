@@ -1,5 +1,10 @@
 /**
- *
+ * ProcessingDelegate is used to create a delegate instance which a
+ * Debugger will use to customize its behaviour.  In this case, the
+ * delegate resets event handlers and the "draw" method every time
+ * the debugger starts.  Also, after the main program is finished
+ * running it will set up a repeating "draw" function if "draw" has
+ * been defined as well as set up any event handlers.
  */
 
 /// <reference path="./debugger-delegate.ts"/>

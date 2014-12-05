@@ -251,7 +251,6 @@ describe("Debugger", function () {
                 }, 50);
             }, 50);
         });
-
     });
 });
 

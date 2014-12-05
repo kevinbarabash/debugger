@@ -5,22 +5,24 @@ var Scheduler = (function () {
         this.queue = new basic.LinkedList();
     }
     Scheduler.prototype.addTask = function (task) {
+        var _this = this;
+        var done = task.doneCallback;
+        task.doneCallback = function () {
+            _this.removeTask(task);
+            done();
+        };
         this.queue.push_front(task);
         this.tick();
     };
     Scheduler.prototype.tick = function () {
-        var self = this;
+        var _this = this;
         setTimeout(function () {
-            var currentTask = self.currentTask();
+            var currentTask = _this.currentTask();
             if (currentTask !== null && !currentTask.started()) {
-                self.startTask(currentTask);
-                self.tick();
+                currentTask.start();
+                _this.tick();
             }
         }, 0);
-    };
-    Scheduler.prototype.startTask = function (task) {
-        var self = this;
-        task.start();
     };
     Scheduler.prototype.removeTask = function (task) {
         if (task === this.currentTask()) {
@@ -53,7 +55,6 @@ var Scheduler = (function () {
                 if (_repeat) {
                     setTimeout(repeatFunc, _delay);
                 }
-                _scheduler.removeTask(task);
             };
             _scheduler.addTask(task);
         }
@@ -514,9 +515,8 @@ Debugger.prototype.start = function (paused) {
 
     var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
-    this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
-    this.scheduler.startTask(stepper);
-    //stepper.start(paused);   // start the initial task synchronously
+    this.scheduler.addTask(stepper);
+    stepper.start();    // TODO: add a param to start to pause immediately
 };
 
 Debugger.prototype.queueGenerator = function (gen) {
@@ -619,7 +619,6 @@ Debugger.prototype._createStepper = function (genObj, isMain) {
         function () {   // done
             self._paused = false;
             self.doneCallback();
-            self.scheduler.removeTask(stepper);
             if (isMain) {
                 self.delegate.debuggerFinishedMain(self);
             }

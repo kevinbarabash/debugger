@@ -60,9 +60,8 @@ Debugger.prototype.start = function (paused) {
 
     var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
-    this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
-    this.scheduler.startTask(stepper);
-    //stepper.start(paused);   // start the initial task synchronously
+    this.scheduler.addTask(stepper);
+    stepper.start();    // TODO: add a param to start to pause immediately
 };
 
 Debugger.prototype.queueGenerator = function (gen) {
@@ -165,7 +164,6 @@ Debugger.prototype._createStepper = function (genObj, isMain) {
         function () {   // done
             self._paused = false;
             self.doneCallback();
-            self.scheduler.removeTask(stepper);
             if (isMain) {
                 self.delegate.debuggerFinishedMain(self);
             }
