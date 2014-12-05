@@ -377,7 +377,7 @@ describe("Stepper", function () {
                 lineNumbers.forEach(function (line) {
                     expect(stepper.stepIn().line).to.be(line);
                 });
-                stepper.stepIn();   // TODO: try to get rid of this extra call
+                stepper.stepIn();
 
                 expect(stepper.stopped()).to.be(true);
             });
@@ -434,7 +434,7 @@ describe("Stepper", function () {
                 lineNumbers.forEach(function (line) {
                     expect(stepper.stepIn().line).to.be(line);
                 });
-                stepper.stepIn();   // TODO: get rid of this extra call
+                stepper.stepIn();
                 expect(stepper.stopped()).to.be(true);
             });
 
