@@ -58,11 +58,7 @@ Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
     this.delegate.debuggerWillStart(this);
 
-    var stepper = this._createStepper(this.mainGenerator(this.context));
-    var self = this;
-    stepper.doneCallbacks.push(function () {
-        self.delegate.debuggerFinishedMain(self);
-    });
+    var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
     this.scheduler.addTask(stepper);    // TODO: figure out how pause the stepper before running it
     this.scheduler.startTask(stepper);
@@ -157,7 +153,7 @@ Debugger.prototype._currentStepper = function () {
     return this.scheduler.currentTask();
 };
 
-Debugger.prototype._createStepper = function (genObj) {
+Debugger.prototype._createStepper = function (genObj, isMain) {
     var self = this;
     var stepper = new Stepper(
         genObj,
@@ -165,11 +161,14 @@ Debugger.prototype._createStepper = function (genObj) {
         function () {   // break
             self._paused = true;
             self.breakCallback();
-            // TODO: also tell the scheduler to remove this task
         },
         function () {   // done
             self._paused = false;
             self.doneCallback();
+            self.scheduler.removeTask(stepper);
+            if (isMain) {
+                self.delegate.debuggerFinishedMain(self);
+            }
         });
 
     stepper.breakpointsEnabled = this.breakpointsEnabled;

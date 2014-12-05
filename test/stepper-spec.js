@@ -5,14 +5,14 @@ describe("Stepper", function () {
     var stepper, context;
     var fill, rect, print;
 
-    function stepperWithCode(code) {
+    function stepperWithCode(code, doneCallback) {
         var debugr = new Debugger(context);
         debugr.load(code);
         //var debugCode = transform(code, context);
         //var debugFunction = new Function(debugCode);
         var mainGenerator = debugr.mainGenerator;
 
-        return new Stepper(mainGenerator(context));
+        return new Stepper(mainGenerator(context), doneCallback);
     }
 
     beforeEach(function () {
@@ -1457,14 +1457,13 @@ describe("Stepper", function () {
     });
 
     describe("lifecyle", function () {
-        it("should emit 'done' when complete", function (done) {
+        it("should call 'doneCallback' when complete", function (done) {
             var code = getFunctionBody(function () {
                 fill(255,0,0);
                 rect(100,200,50,50);
             });
 
-            stepper = stepperWithCode(code);
-            stepper.on('done', function () {
+            stepper = stepperWithCode(code, function () {
                 expect(stepper.stopped()).to.be(true);
                 done();
             });

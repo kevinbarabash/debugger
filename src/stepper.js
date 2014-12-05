@@ -1,6 +1,5 @@
 /*global recast, esprima, escodegen, injector */
 
-var EventEmitter = require("events").EventEmitter;
 var basic = require("basic-ds");
 
 function Action (type, line) {
@@ -14,8 +13,6 @@ function Frame (gen, line) {
 }
 
 function Stepper (genObj, breakpoints, breakCallback, doneCallback) {
-    EventEmitter.call(this);
-
     this.breakpoints = breakpoints || {};
     this.breakpointsEnabled = true;
 
@@ -29,23 +26,14 @@ function Stepper (genObj, breakpoints, breakCallback, doneCallback) {
     var self = this;
     this.stack.poppedLastItem = function () {
         self._stopped = true;
-        self.emit("done");
-        self.doneCallbacks.forEach(function (callback) {
-             callback();
-        });
+        self.doneCallback();
     };
 
     this.breakCallback = breakCallback || function () {};
-    this.doneCallbacks = [];
-    if (doneCallback) {
-        this.doneCallbacks.push(doneCallback);
-    }
+    this.doneCallback = doneCallback || function () {};
 
     this._retVal = undefined;
 }
-
-Stepper.prototype = Object.create(EventEmitter.prototype);
-Stepper.prototype.constructor = Stepper;
 
 Stepper.prototype.stepIn = function () {
     var result;
@@ -135,7 +123,6 @@ Stepper.prototype._run = function () {
             this._paused = true;
         }
         if (this._paused) {
-            this.emit("break");
             this.breakCallback();
             break;
         }

@@ -16,9 +16,13 @@ class ProcessingDelegate implements DebuggerDelegate {
             this.repeater.stop();
         }
 
+        // reset all event handlers
         ProcessingDelegate.events.forEach(function (event) {
             debugr.context[event] = undefined;
         }, this);
+
+        // reset draw
+        debugr.context.draw = undefined;
     }
 
     debuggerFinishedMain(debugr) {
