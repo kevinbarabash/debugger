@@ -18,7 +18,7 @@ var Scheduler = (function () {
         var _this = this;
         setTimeout(function () {
             var currentTask = _this.currentTask();
-            if (currentTask !== null && !currentTask.started()) {
+            if (currentTask !== null && !currentTask.started) {
                 currentTask.start();
                 _this.tick();
             }
@@ -37,9 +37,6 @@ var Scheduler = (function () {
         return this.queue.last ? this.queue.last.value : null;
     };
     Scheduler.prototype.clear = function () {
-        this.queue.forEach(function (task) {
-            task.doneCallbacks = [];
-        });
         this.queue.clear();
     };
     Scheduler.prototype.createRepeater = function (createFunc, delay) {
@@ -311,8 +308,217 @@ function _isGeneratorFunction(value) {
 module.exports = ProcessingDelegate;
 
 },{}],4:[function(require,module,exports){
+var basic = require("../node_modules/basic-ds/lib/basic");
+var Action = (function () {
+    function Action(type, line) {
+        this.type = type;
+        this.line = line;
+    }
+    return Action;
+})();
+var Frame = (function () {
+    function Frame(gen, line) {
+        this.gen = gen;
+        this.line = line;
+    }
+    return Frame;
+})();
+function emptyCallback() {
+}
+var Stepper = (function () {
+    function Stepper(genObj, breakpoints, breakCallback, doneCallback) {
+        var _this = this;
+        if (breakCallback === void 0) { breakCallback = emptyCallback; }
+        if (doneCallback === void 0) { doneCallback = emptyCallback; }
+        this.breakCallback = breakCallback;
+        this.doneCallback = doneCallback;
+        this.breakpoints = breakpoints || {};
+        this.breakpointsEnabled = true;
+        this._started = false;
+        this._paused = false;
+        this._stopped = false;
+        this.stack = new basic.Stack();
+        this.stack.push(new Frame(genObj, -1));
+        this.stack.poppedLastItem = function () {
+            _this._stopped = true;
+            _this.doneCallback();
+        };
+        this._retVal = undefined;
+    }
+    Stepper.prototype.stepIn = function () {
+        var result;
+        if (result = this._step()) {
+            if (result.value && result.value.hasOwnProperty('gen')) {
+                if (_isGenerator(result.value.gen)) {
+                    this.stack.push(new Frame(result.value.gen, this.line));
+                    this.stepIn();
+                    return "stepIn";
+                }
+                else {
+                    this._retVal = result.value.gen;
+                    if (result.value.stepAgain) {
+                        result = this._step();
+                    }
+                }
+            }
+            if (result.done) {
+                this._popAndStoreReturnValue(result.value);
+                return "stepOut";
+            }
+            return "stepOver";
+        }
+    };
+    Stepper.prototype.stepOver = function () {
+        var result;
+        if (result = this._step()) {
+            if (result.value && result.value.hasOwnProperty('gen')) {
+                if (_isGenerator(result.value.gen)) {
+                    this._runScope(result.value.gen);
+                    if (result.value.stepAgain) {
+                        this.stepOver();
+                    }
+                    return "stepOver";
+                }
+                else {
+                    this._retVal = result.value.gen;
+                    if (result.value.stepAgain) {
+                        result = this._step();
+                    }
+                }
+            }
+            if (result.done) {
+                this._popAndStoreReturnValue(result.value);
+                return "stepOut";
+            }
+            return "stepOver";
+        }
+    };
+    Stepper.prototype.stepOut = function () {
+        var result;
+        if (result = this._step()) {
+            while (!result.done) {
+                if (result.value.hasOwnProperty('gen')) {
+                    if (_isGenerator(result.value.gen)) {
+                        this._runScope(result.value.gen);
+                    }
+                    else {
+                        this._retVal = result.value.gen;
+                    }
+                }
+                result = this._step();
+            }
+            this._popAndStoreReturnValue(result.value);
+            return "stepOut";
+        }
+    };
+    Stepper.prototype.start = function (paused) {
+        this._started = true;
+        this._paused = !!paused;
+        this._run();
+    };
+    Stepper.prototype.resume = function () {
+        this._paused = false;
+        this._run();
+    };
+    Stepper.prototype._run = function () {
+        var currentLine = this.line;
+        while (true) {
+            if (this.stack.isEmpty) {
+                break;
+            }
+            var action = this.stepIn();
+            if (this.breakpointsEnabled && this.breakpoints[this.line] && action !== "stepOut" && currentLine !== this.line) {
+                this._paused = true;
+            }
+            if (this._paused) {
+                this.breakCallback();
+                break;
+            }
+            currentLine = this.line;
+        }
+    };
+    Stepper.prototype.setBreakpoint = function (line) {
+        this.breakpoints[line] = true;
+    };
+    Stepper.prototype.clearBreakpoint = function (line) {
+        delete this.breakpoints[line];
+    };
+    Object.defineProperty(Stepper.prototype, "started", {
+        get: function () {
+            return this._started;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Stepper.prototype, "stopped", {
+        get: function () {
+            return this._stopped;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Stepper.prototype, "line", {
+        get: function () {
+            if (!this._stopped) {
+                return this.stack.peek().line;
+            }
+            else {
+                return -1;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Stepper.prototype._step = function () {
+        if (this.stack.isEmpty) {
+            return;
+        }
+        var frame = this.stack.peek();
+        var result = frame.gen.next(this._retVal);
+        this._retVal = undefined;
+        if (result.value) {
+            if (result.value.scope) {
+                this.stack.peek().scope = result.value.scope;
+            }
+            if (result.value.name) {
+                this.stack.peek().name = result.value.name;
+            }
+            if (result.value.line) {
+                frame.line = result.value.line;
+            }
+        }
+        return result;
+    };
+    Stepper.prototype._runScope = function (gen) {
+        this.stack.push(new Frame(gen, this.line));
+        var result = this._step();
+        while (!result.done) {
+            if (result.value.gen) {
+                if (_isGenerator(result.value.gen)) {
+                    this._runScope(result.value.gen);
+                }
+                else {
+                    this._retVal = result.value.gen;
+                }
+            }
+            result = this._step();
+        }
+        this._popAndStoreReturnValue(result.value);
+    };
+    Stepper.prototype._popAndStoreReturnValue = function (value) {
+        var frame = this.stack.pop();
+        this._retVal = frame.gen.obj || value;
+    };
+    return Stepper;
+})();
+var _isGenerator = function (obj) {
+    return obj instanceof Object && obj.toString() === "[object Generator]";
+};
+module.exports = Stepper;
+
+},{"../node_modules/basic-ds/lib/basic":5}],5:[function(require,module,exports){
 module.exports=require(2)
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],5:[function(require,module,exports){
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],6:[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {
@@ -452,7 +658,7 @@ exports.createVariableDeclaration = createVariableDeclaration;
 exports.createVariableDeclarator = createVariableDeclarator;
 exports.replaceNode = replaceNode;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * The debugger has the following responsibilites:
  * - create debug code and generators from source code
@@ -460,7 +666,7 @@ exports.replaceNode = replaceNode;
  * - maintain breakpoints and inform steppers of breakpoints
  */
 
-var Stepper = require("./stepper");
+var Stepper = require("../lib/stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var ProcessingDelegate = require("../lib/processing-delegate");
@@ -516,7 +722,7 @@ Debugger.prototype.start = function (paused) {
     var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
     this.scheduler.addTask(stepper);
-    stepper.start();    // TODO: add a param to start to pause immediately
+    stepper.start(paused);  // paused = true -> start paused on the first line
 };
 
 Debugger.prototype.queueGenerator = function (gen) {
@@ -589,7 +795,7 @@ Debugger.prototype.currentScope = function () {
 
 Debugger.prototype.currentLine = function () {
     if (this._paused) {
-        return this._currentStepper().line();
+        return this._currentStepper().line;
     }
 };
 
@@ -643,223 +849,7 @@ function __instantiate__ (Class) {
 
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":1,"../lib/processing-delegate":3,"./stepper":7,"./transform":8}],7:[function(require,module,exports){
-/*global recast, esprima, escodegen, injector */
-
-var basic = require("basic-ds");
-
-function Action (type, line) {
-    this.type = type;
-    this.line = line;
-}
-
-function Frame (gen, line) {
-    this.gen = gen;
-    this.line = line;
-}
-
-function Stepper (genObj, breakpoints, breakCallback, doneCallback) {
-    this.breakpoints = breakpoints || {};
-    this.breakpointsEnabled = true;
-
-    this._started = false;
-    this._paused = false;
-    this._stopped = false;
-
-    this.stack = new basic.Stack();
-    this.stack.push(new Frame(genObj, -1));
-
-    var self = this;
-    this.stack.poppedLastItem = function () {
-        self._stopped = true;
-        self.doneCallback();
-    };
-
-    this.breakCallback = breakCallback || function () {};
-    this.doneCallback = doneCallback || function () {};
-
-    this._retVal = undefined;
-}
-
-Stepper.prototype.stepIn = function () {
-    var result;
-    if (result = this._step()) {
-        if (result.value && result.value.hasOwnProperty('gen')) {
-            if (_isGenerator(result.value.gen)) {
-                this.stack.push(new Frame(result.value.gen, this.line()));
-                this.stepIn();
-                return new Action("stepIn", this.line());
-            } else {
-                this._retVal = result.value.gen;
-                if (result.value.stepAgain) {
-                    result = this._step();
-                }
-            }
-        }
-        if (result.done) {
-            this._popAndStoreReturnValue(result.value);
-            return new Action("stepOut", this.line());
-        }
-        return new Action("stepOver", this.line());
-    }
-};
-
-Stepper.prototype.stepOver = function () {
-    var result;
-    if (result = this._step()) {
-        if (result.value && result.value.hasOwnProperty('gen')) {
-            if (_isGenerator(result.value.gen)) {
-                this._runScope(result.value.gen);
-                if (result.value.stepAgain) {
-                    this.stepOver();
-                }
-                return new Action("stepOver", this.line());
-            } else {
-                this._retVal = result.value.gen;
-                if (result.value.stepAgain) {
-                    result = this._step();
-                }
-            }
-        }
-        if (result.done) {
-            this._popAndStoreReturnValue(result.value);
-            return new Action("stepOut", this.line());
-        }
-        return new Action("stepOver", this.line());
-    }
-};
-
-Stepper.prototype.stepOut = function () {
-    var result;
-    if (result = this._step()) {
-        while (!result.done) {
-            if (result.value.hasOwnProperty('gen')) {
-                if (_isGenerator(result.value.gen)) {
-                    this._runScope(result.value.gen);
-                } else {
-                    this._retVal = result.value.gen;
-                }
-            }
-            result = this._step();
-        }
-        this._popAndStoreReturnValue(result.value);
-        return new Action("stepOut", this.line());
-    }
-};
-
-Stepper.prototype.start = function (paused) {
-    this._started = true;
-    this._paused = !!paused;
-    this._run();
-};
-
-Stepper.prototype.resume = function () {
-    this._paused = false;
-    this._run();
-};
-
-Stepper.prototype._run = function () {
-    var currentLine = this.line();
-    while (true) {
-        if (this.stack.isEmpty) {
-            break;
-        }
-        var action = this.stepIn();
-        if (this.breakpointsEnabled && this.breakpoints[action.line] && action.type !== "stepOut" && currentLine !== this.line()) {
-            this._paused = true;
-        }
-        if (this._paused) {
-            this.breakCallback();
-            break;
-        }
-        currentLine = this.line();
-    }
-};
-
-Stepper.prototype.started = function () {
-    return this._started;
-};
-
-Stepper.prototype.paused = function () {
-    return this._paused;
-};
-
-Stepper.prototype.stopped = function () {
-    return this._stopped;
-};
-
-Stepper.prototype.line = function () {
-    if (!this._stopped) {
-        return this.stack.peek().line;
-    } else {
-        return -1;
-    }
-};
-
-Stepper.prototype.setBreakpoint = function (line) {
-    this.breakpoints[line] = true;
-};
-
-Stepper.prototype.clearBreakpoint = function (line) {
-    delete this.breakpoints[line];
-};
-
-/* PRIVATE */
-
-var _isGenerator = function (obj) {
-    return obj instanceof Object && obj.toString() === "[object Generator]"
-};
-
-Stepper.prototype._step = function () {
-    if (this.stack.isEmpty) {
-        return;
-    }
-    var frame = this.stack.peek();
-    var result = frame.gen.next(this._retVal);
-    this._retVal = undefined;
-
-    // if the result.value contains scope information add it to the
-    // current stack frame
-    if (result.value) {
-        if (result.value.scope) {
-            this.stack.peek().scope = result.value.scope;
-        }
-        if (result.value.name) {
-            this.stack.peek().name = result.value.name;
-        }
-        if (result.value.line) {
-            frame.line = result.value.line;
-        }
-    }
-    return result;
-};
-
-Stepper.prototype._runScope = function (gen) {
-    this.stack.push(new Frame(gen, this.line()));
-
-    var result = this._step();
-    while (!result.done) {
-        if (result.value.gen) {
-            if (_isGenerator(result.value.gen)) {
-                this._runScope(result.value.gen);
-            } else {
-                this._retVal = result.value.gen;
-            }
-        }
-        result = this._step();
-    }
-
-    this._popAndStoreReturnValue(result.value);
-};
-
-Stepper.prototype._popAndStoreReturnValue = function (value) {
-    var frame = this.stack.pop();
-    this._retVal = frame.gen.obj || value;
-};
-
-module.exports = Stepper;
-
-},{"basic-ds":4}],8:[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":1,"../lib/processing-delegate":3,"../lib/stepper":4,"./transform":8}],8:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var builder = require("./ast-builder");
@@ -1096,5 +1086,5 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./ast-builder":5,"basic-ds":4}]},{},[6])(6)
+},{"./ast-builder":6,"basic-ds":5}]},{},[7])(7)
 });

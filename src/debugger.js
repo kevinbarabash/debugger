@@ -5,7 +5,7 @@
  * - maintain breakpoints and inform steppers of breakpoints
  */
 
-var Stepper = require("./stepper");
+var Stepper = require("../lib/stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var ProcessingDelegate = require("../lib/processing-delegate");
@@ -61,7 +61,7 @@ Debugger.prototype.start = function (paused) {
     var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
     this.scheduler.addTask(stepper);
-    stepper.start();    // TODO: add a param to start to pause immediately
+    stepper.start(paused);  // paused = true -> start paused on the first line
 };
 
 Debugger.prototype.queueGenerator = function (gen) {
@@ -134,7 +134,7 @@ Debugger.prototype.currentScope = function () {
 
 Debugger.prototype.currentLine = function () {
     if (this._paused) {
-        return this._currentStepper().line();
+        return this._currentStepper().line;
     }
 };
 
