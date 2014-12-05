@@ -1,7 +1,7 @@
 {
-  "name": "js-step",
-  "version": "0.0.1",
-  "description": "Step through JavaScript using JavaScript",
+  "name": "stepper",
+  "version": "0.1.0",
+  "description": "Debug JavaScript using JavaScript",
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/testee test/runner.html --browsers firefox"

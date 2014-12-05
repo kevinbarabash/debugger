@@ -56,6 +56,9 @@ Debugger.prototype.load = function (code) {
 
 Debugger.prototype.start = function (paused) {
     this.scheduler.clear();
+    if (this.repeater) {
+        this.repeater.stop();
+    }
 
     // TODO: create a delegate definition so that we can customize the behaviour for processing.js or something else like the DOM
     // clear all of the event handlers in the context
@@ -99,12 +102,15 @@ Debugger.prototype.queueGenerator = function (gen, repeat, delay) {
 // are changed.  This suggests using something like observe-js
 Debugger.prototype.handleMainDone = function () {
     var draw = this.context.draw;
-    // TODO: create a repating task object that can be safely stopped
-    if (_isGeneratorFunction(draw)) {
-        this.queueGenerator(draw, "draw", true, 1000);
+    var self = this;
+
+    if (draw) {
+        this.repeater = this.scheduler.createRepeater(function () {
+            return self._createStepper(draw());
+        }, 1000 / 60);
+        this.repeater.start();
     }
 
-    var self = this;
     var wrapProcessingEventHandler = function(name) {
         var eventHandler = self.context[name];
         if (_isGeneratorFunction(eventHandler)) {
@@ -215,7 +221,6 @@ Debugger.prototype._createStepper = function (genObj) {
         self.emit("break");
     };
     stepper.on("break", breakListener);
-    // TODO: write a test to detect the memory leak
     stepper.once("done", function () {
         stepper.removeListener("break", breakListener);
         self._paused = false;

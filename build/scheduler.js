@@ -238,6 +238,46 @@ Scheduler.prototype.clear = function () {
     this.queue.clear();
 };
 
+Scheduler.prototype.createRepeater = function (createFunc, delay) {
+
+    var _repeat = true;
+    var _scheduler = this;
+    var _delay = delay;
+
+    function repeatFunc() {
+        if (!_repeat) {
+            return;
+        }
+        var task = createFunc();
+        task.once("done", function () {
+            if (_repeat) {
+                setTimeout(repeatFunc, _delay);
+            }
+        });
+        _scheduler.addTask(task);
+    }
+
+    var repeater = {
+        stop: function () {
+            _repeat = false;
+        },
+        start: function () {
+            repeatFunc();
+        }
+    };
+
+    Object.defineProperty(repeater, "delay", {
+        get: function () {
+            return _delay;
+        },
+        set: function (delay) {
+            _delay = delay;
+        }
+    });
+
+    return repeater;
+};
+
 module.exports = Scheduler;
 
 },{"basic-ds":1}]},{},[2])(2)

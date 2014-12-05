@@ -4,8 +4,10 @@
  * from the Stepper.
  */
 
+// TODO: browserify EventEmitter for use in tests
 var EventEmitter = require("events").EventEmitter;
 
+// TODO: move this to /test
 function Task(action) {
     EventEmitter.call(this);
     this._started = false;
