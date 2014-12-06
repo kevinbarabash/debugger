@@ -1,0 +1,14 @@
+{
+  "name": "esutils",
+  "homepage": "https://github.com/Constellation/esutils",
+  "version": "1.1.4",
+  "_release": "1.1.4",
+  "_resolution": {
+    "type": "version",
+    "tag": "1.1.4",
+    "commit": "c0558e13e1caff015af2085b875b88f52e0d4c33"
+  },
+  "_source": "git://github.com/Constellation/esutils.git",
+  "_target": "^1.1.4",
+  "_originalSource": "esutils"
+}
