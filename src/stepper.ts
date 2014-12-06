@@ -30,8 +30,8 @@ class Frame {
 function emptyCallback() { }
 
 class Stepper {
-    breakpoints: { [line: number]: boolean };
     breakpointsEnabled: boolean;
+    private _breakpoints: { [line: number]: boolean };
 
     stack: basic.Stack<Frame>;
 
@@ -49,7 +49,7 @@ class Stepper {
                 public breakCallback = emptyCallback,
                 public doneCallback = emptyCallback
     ) {
-        this.breakpoints = breakpoints || {};
+        this._breakpoints = breakpoints || {};
         this.breakpointsEnabled = true;
 
         this._started = false;
@@ -151,7 +151,7 @@ class Stepper {
                 break;
             }
             var action = this.stepIn();
-            if (this.breakpointsEnabled && this.breakpoints[this.line] && action !== "stepOut" && currentLine !== this.line) {
+            if (this.breakpointsEnabled && this._breakpoints[this.line] && action !== "stepOut" && currentLine !== this.line) {
                 this._paused = true;
             }
             if (this._paused) {
@@ -163,11 +163,11 @@ class Stepper {
     }
 
     setBreakpoint(line: number) {
-        this.breakpoints[line] = true;
+        this._breakpoints[line] = true;
     }
 
     clearBreakpoint(line: number) {
-        delete this.breakpoints[line];
+        delete this._breakpoints[line];
     }
 
     get started() {

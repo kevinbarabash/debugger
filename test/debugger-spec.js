@@ -203,34 +203,44 @@ describe("Debugger", function () {
         });
 
         it("should stop calling the old 'draw'", function (done) {
+            var fillCount = 0;
+
             var code1 = getFunctionBody(function () {
                 draw = function () {
                     fill(255,0,0);
-                    rect(100,200,50,50);
                 };
             });
 
             var code2 = getFunctionBody(function () {
                 draw = function () {
-                    fill(0,0,255);
-                    rect(300,200,100,100);
+                    rect(100,200,50,50);
                 };
             });
 
             debugr.load(code1);
             debugr.start();
-            debugr.stop();
 
-            debugr.load(code2);
-            debugr.start();
-            debugr.stop();
+            setTimeout(function () {
+                fillCount = context.fill.callCount;
+                debugr.stop();
 
-            done();
-            //setTimeout(function ())
+                expect(context.fill.callCount).to.be.greaterThan(3);
+
+                debugr.load(code2);
+                debugr.start();
+
+                setTimeout(function () {
+                    debugr.stop();
+
+                    // we don't expect fill to be call any more
+                    expect(context.fill.callCount).to.be(fillCount);
+                    done();
+                }, 100);
+            }, 100);
         });
     });
 
-    describe("Event Handlers (mouseClicked)", function () {
+    describe("Event Handlers", function () {
         it("should run 'mouseClicked' if defined when the mouse is clicked", function (done) {
             var code = getFunctionBody(function () {
                 mouseClicked = function () {
@@ -242,13 +252,76 @@ describe("Debugger", function () {
             debugr.load(code);
             debugr.start();
 
+            context.mouseClicked();
             setTimeout(function () {
+                expect(context.x).to.be(5);
+                expect(context.y).to.be(10);
+                done();
+            }, 50);
+        });
+
+        it("should replace 'mouseClicked' with a new event handler", function (done) {
+            var code1 = getFunctionBody(function () {
+                mouseClicked = function () {
+                    x = 5;
+                };
+            });
+
+            var code2 = getFunctionBody(function () {
+                mouseClicked = function () {
+                    y = 10;
+                };
+            });
+
+            debugr.load(code1);
+            debugr.start();
+
+            context.mouseClicked();
+            setTimeout(function () {
+                expect(context.x).to.be(5);
+                expect(context.y).to.be(0);
+
+                context.x = 0;  // reset x
+
+                debugr.load(code2);
+                debugr.start();
+
                 context.mouseClicked();
+
                 setTimeout(function () {
-                    expect(context.x).to.be(5);
+                    expect(context.x).to.be(0);
                     expect(context.y).to.be(10);
+
                     done();
                 }, 50);
+            }, 50);
+        });
+
+        it("should clear 'mouseClicked' if the new program doesn't have one", function (done) {
+            var code1 = getFunctionBody(function () {
+                mouseClicked = function () {
+                    x = 5;
+                };
+            });
+
+            var code2 = getFunctionBody(function () {
+                x = 0;
+            });
+
+            debugr.load(code1);
+            debugr.start();
+
+            context.mouseClicked();
+            setTimeout(function () {
+                expect(context.x).to.be(5);
+                expect(context.y).to.be(0);
+
+                debugr.load(code2);
+                debugr.start();
+
+                expect(context.mouseClicked).to.be(undefined);
+
+                done();
             }, 50);
         });
     });

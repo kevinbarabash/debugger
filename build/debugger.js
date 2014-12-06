@@ -327,7 +327,7 @@ var Stepper = (function () {
         if (doneCallback === void 0) { doneCallback = emptyCallback; }
         this.breakCallback = breakCallback;
         this.doneCallback = doneCallback;
-        this.breakpoints = breakpoints || {};
+        this._breakpoints = breakpoints || {};
         this.breakpointsEnabled = true;
         this._started = false;
         this._paused = false;
@@ -422,7 +422,7 @@ var Stepper = (function () {
                 break;
             }
             var action = this.stepIn();
-            if (this.breakpointsEnabled && this.breakpoints[this.line] && action !== "stepOut" && currentLine !== this.line) {
+            if (this.breakpointsEnabled && this._breakpoints[this.line] && action !== "stepOut" && currentLine !== this.line) {
                 this._paused = true;
             }
             if (this._paused) {
@@ -433,10 +433,10 @@ var Stepper = (function () {
         }
     };
     Stepper.prototype.setBreakpoint = function (line) {
-        this.breakpoints[line] = true;
+        this._breakpoints[line] = true;
     };
     Stepper.prototype.clearBreakpoint = function (line) {
-        delete this.breakpoints[line];
+        delete this._breakpoints[line];
     };
     Object.defineProperty(Stepper.prototype, "started", {
         get: function () {
