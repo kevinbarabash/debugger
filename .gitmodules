@@ -4,3 +4,6 @@
 [submodule "external/scheduler"]
 	path = external/scheduler
 	url = https://github.com/kevinb7/scheduler.git
+[submodule "external/iframe-overlay"]
+	path = external/iframe-overlay
+	url = https://github.com/kevinb7/iframe-overlay.git
