@@ -309,13 +309,6 @@ module.exports = ProcessingDelegate;
 
 },{}],4:[function(require,module,exports){
 var basic = require("../node_modules/basic-ds/lib/basic");
-var Action = (function () {
-    function Action(type, line) {
-        this.type = type;
-        this.line = line;
-    }
-    return Action;
-})();
 var Frame = (function () {
     function Frame(gen, line) {
         this.gen = gen;

@@ -2,15 +2,21 @@
 
 import basic = require("../node_modules/basic-ds/lib/basic");
 
-class Action {
-    constructor(public type: string, public line: number) { }
+interface Value {
+    gen: any;
+    line: number;
+    stepAgain?: boolean;
+    scope?: Object;
+    name?: string;
+}
+
+interface Generator {
+    next: (value?: any) => { done: boolean; value: Value };
+    obj?: any;  // used to the store the resulting instance when a constructor is called
 }
 
 class Frame {
-    gen: {
-        next: (value?: any) => { done: boolean; value: any };
-        obj?: any;  // used to the store the resulting instance when a constructor is called
-    };
+    gen: Generator;
     line: number;
     name: string;
     scope: Object;
