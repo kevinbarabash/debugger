@@ -211,6 +211,13 @@ function transform(code, context) {
 
                     // if "new" then build a call to "__instantiate__"
                     if (node.type === "NewExpression") {
+                        // put the constructor name as the 2nd param
+                        if (node.callee.type === "Identifier") {
+                            node.arguments.unshift(builder.createLiteral(node.callee.name));
+                        } else {
+                            node.arguments.unshift(builder.createLiteral(null));
+                        }
+                        // put the constructor itself as the 1st param
                         node.arguments.unshift(node.callee);
                         gen = builder.createCallExpression("__instantiate__", node.arguments);
                     }

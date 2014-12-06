@@ -9,6 +9,8 @@
 
 /// <reference path="./debugger-delegate.ts"/>
 
+var emptyFunction = function () { };
+
 class ProcessingDelegate implements DebuggerDelegate {
     repeater: { stop: () => void; start: () => void; delay: number };
 
@@ -27,13 +29,13 @@ class ProcessingDelegate implements DebuggerDelegate {
         }, this);
 
         // reset draw
-        debugr.context.draw = undefined;
+        debugr.context.draw = emptyFunction;
     }
 
     debuggerFinishedMain(debugr) {
         var draw = debugr.context.draw;
 
-        if (draw) {
+        if (draw !== emptyFunction) {
             this.repeater = debugr.scheduler.createRepeater(function () {
                 return debugr._createStepper(draw());
             }, 1000 / 60);

@@ -10,9 +10,29 @@ var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var ProcessingDelegate = require("../lib/processing-delegate");
 
-function Debugger(context, breakCallback, doneCallback) {
+var emptyFunction = function() { };
+
+function Debugger(context, breakCallback, doneCallback, newCallback) {
     this.context = context || {};
-    this.context.__instantiate__ = __instantiate__;
+
+    this.breakCallback = breakCallback || emptyFunction;
+    this.doneCallback = doneCallback || emptyFunction;
+    newCallback = newCallback || emptyFunction;
+
+    this.context.__instantiate__ = function (classFn, className) {
+        var obj = Object.create(classFn.prototype);
+        var args = Array.prototype.slice.call(arguments, 2);
+        var gen = classFn.apply(obj, args);
+
+        newCallback(classFn, className, obj, args);
+
+        if (gen) {
+            gen.obj = obj;
+            return gen;
+        } else {
+            return obj;
+        }
+    };
 
     this.scheduler = new Scheduler();
 
@@ -21,9 +41,6 @@ function Debugger(context, breakCallback, doneCallback) {
     this._paused = false;               // read-only, needs a getter
 
     this.delegate = new ProcessingDelegate(context);
-
-    this.breakCallback = breakCallback || function () {};
-    this.doneCallback = doneCallback || function () {};
 }
 
 Debugger.isBrowserSupported = function () {

@@ -325,5 +325,51 @@ describe("Debugger", function () {
             }, 50);
         });
     });
+
+    describe("Delegates", function () {
+        // TODO: create a test that exercises the newCallback
+        // TODO: re-organize delegate callbacks into a single delegate object on Debugger
+        it("should pass", function (done) {
+            var debugr;
+
+            function getImage(name) {
+                return name;
+            }
+
+            var context = {
+                //PJSOutput: PJSOutput,
+                getImage: getImage,
+                tiles: []
+            };
+
+            var code = getFunctionBody(function () {
+                var Tile = function(pic) {
+                    this.pic = pic;
+                };
+
+                Tile.prototype.drawFaceUp = function() {
+                    image(this.pic, 10, 10);
+                };
+
+                var tiles = [];
+                tiles.push(new Tile(getImage("creatures/Winston")));
+                //tiles.push(PJSOutput.applyInstance(Tile,'Tile')(getImage("creatures/Winston")));
+
+                var draw = function() {
+                    tiles[0].drawFaceUp();
+                };
+            });
+
+            debugr = new Debugger(context);
+            //debugr.context = context;
+            debugr.load(code);
+            debugr.start();
+
+            setTimeout(function () {
+                expect(context.tiles[0].pic).to.be("creatures/Winston");
+                done();
+            }, 100);
+        });
+    });
 });
 

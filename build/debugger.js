@@ -268,6 +268,8 @@ var basic;
 module.exports = basic;
 
 },{}],3:[function(require,module,exports){
+var emptyFunction = function () {
+};
 var ProcessingDelegate = (function () {
     function ProcessingDelegate() {
         this.repeater = null;
@@ -279,11 +281,11 @@ var ProcessingDelegate = (function () {
         ProcessingDelegate.events.forEach(function (event) {
             debugr.context[event] = undefined;
         }, this);
-        debugr.context.draw = undefined;
+        debugr.context.draw = emptyFunction;
     };
     ProcessingDelegate.prototype.debuggerFinishedMain = function (debugr) {
         var draw = debugr.context.draw;
-        if (draw) {
+        if (draw !== emptyFunction) {
             this.repeater = debugr.scheduler.createRepeater(function () {
                 return debugr._createStepper(draw());
             }, 1000 / 60);
@@ -666,9 +668,29 @@ var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 var ProcessingDelegate = require("../lib/processing-delegate");
 
-function Debugger(context, breakCallback, doneCallback) {
+var emptyFunction = function() { };
+
+function Debugger(context, breakCallback, doneCallback, newCallback) {
     this.context = context || {};
-    this.context.__instantiate__ = __instantiate__;
+
+    this.breakCallback = breakCallback || emptyFunction;
+    this.doneCallback = doneCallback || emptyFunction;
+    newCallback = newCallback || emptyFunction;
+
+    this.context.__instantiate__ = function (classFn, className) {
+        var obj = Object.create(classFn.prototype);
+        var args = Array.prototype.slice.call(arguments, 2);
+        var gen = classFn.apply(obj, args);
+
+        newCallback(classFn, className, obj, args);
+
+        if (gen) {
+            gen.obj = obj;
+            return gen;
+        } else {
+            return obj;
+        }
+    };
 
     this.scheduler = new Scheduler();
 
@@ -677,9 +699,6 @@ function Debugger(context, breakCallback, doneCallback) {
     this._paused = false;               // read-only, needs a getter
 
     this.delegate = new ProcessingDelegate(context);
-
-    this.breakCallback = breakCallback || function () {};
-    this.doneCallback = doneCallback || function () {};
 }
 
 Debugger.isBrowserSupported = function () {
@@ -1058,6 +1077,13 @@ function transform(code, context) {
 
                     // if "new" then build a call to "__instantiate__"
                     if (node.type === "NewExpression") {
+                        // put the constructor name as the 2nd param
+                        if (node.callee.type === "Identifier") {
+                            node.arguments.unshift(builder.createLiteral(node.callee.name));
+                        } else {
+                            node.arguments.unshift(builder.createLiteral(null));
+                        }
+                        // put the constructor itself as the 1st param
                         node.arguments.unshift(node.callee);
                         gen = builder.createCallExpression("__instantiate__", node.arguments);
                     }
