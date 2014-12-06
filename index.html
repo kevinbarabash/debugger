@@ -32,6 +32,16 @@
     detail... stay tuned.
 </p>
 <p>
+    It supports the following features:
+    <ul>
+        <li>breakpoints (click to the left of the line number)</li>
+        <li>stepping in/over/out</li>
+        <li>callstack listing</li>
+        <li>local variables</li>
+        <li>proper timing for events that occur while paused ^_^</li>
+    </ul>
+</p>
+<p>
     Source is availble on <a href="https://github.com/kevinb7/stepper">github</a>.
 </p>
 <p>
@@ -41,7 +51,10 @@
     The demo uses <a href="http://processingjs.org/reference/">processing.js</a>
     as a library.  The are many things that don't work yet, but the biggest one
     is that you can't pass user defined functions as callbacks to built-in functions...
-    yet.  Please file any issues on <a href="https://github.com/kevinb7/stepper/issues">github</a>.
+    yet (right now the "draw" function is being special cased).
+</p>
+<p>
+    Please file any issues on <a href="https://github.com/kevinb7/stepper/issues">github</a>.
 </p>
 </body>
 </html>
