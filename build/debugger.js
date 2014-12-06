@@ -48,10 +48,12 @@ var Scheduler = (function () {
                 return;
             }
             var task = createFunc();
+            var done = task.doneCallback;
             task.doneCallback = function () {
                 if (_repeat) {
                     setTimeout(repeatFunc, _delay);
                 }
+                done();
             };
             _scheduler.addTask(task);
         }
