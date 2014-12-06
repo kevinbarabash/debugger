@@ -59,3 +59,5 @@ poster.listen("clearBreakpoint", function (line) {
 });
 
 iframeOverlay.createRelay(canvas);
+
+poster.post("ready");

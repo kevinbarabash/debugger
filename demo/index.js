@@ -124,3 +124,11 @@ function updateLocals(scope) {
     }
     $variableList.append(genPropsList(scope));
 }
+
+poster.listen("ready", function () {
+    console.log("ready");
+    overlay.resume();
+    var code = session.getValue();
+    poster.post("load", code);
+    poster.post("start");
+});

@@ -3,9 +3,45 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title>Stepper</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 1.25em;
+        }
+        p, a, li {
+            font-weight: 100;
+            line-height: 1.25em;
+            width: 40em;
+        }
+    </style>
 </head>
 <body>
 <h1>Stepper</h1>
-<a href="demo/index.html">Live demo</a>
+<p>
+    Stepper is a JavaScript library for debgging JavaScript.  This may be
+    used to present a simplified and/or consistent debugging interface to novice
+    programmers who are just learning to use a debugger.  It might also be used
+    in the future to implement things like event recording and playback which
+    current browser debuggers don't support.
+</p>
+<p>
+    It uses ES6 Generators to which allow flow control to exit a function and
+    then re-enter it at the same place that it left using the <b>yield</b> keyword.
+    For more information see <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function*">function* [MDN]</a>.
+    I plan on writing some blog posts that describe the inner workings in more
+    detail... stay tuned.
+</p>
+<p>
+    Source is availble on <a href="https://github.com/kevinb7/stepper">github</a>.
+</p>
+<p>
+    <a href="demo/index.html">Live demo</a>
+</p>
+<p>
+    The demo uses <a href="http://processingjs.org/reference/">processing.js</a>
+    as a library.  The are many things that don't work yet, but the biggest one
+    is that you can't pass user defined functions as callbacks to built-in functions...
+    yet.  Please file any issues on <a href="https://github.com/kevinb7/stepper/issues">github</a>.
+</p>
 </body>
 </html>
