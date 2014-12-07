@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/kevinb7/js-step.git"
+    "url": "https://github.com/kevinb7/stepper.git"
   },
   "author": "Kevin Barabash <kevinb7@gmail.com>",
   "license": "MIT",

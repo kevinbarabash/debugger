@@ -8,10 +8,9 @@
   <script src="../node_modules/gehry/dist/gehry.js"></script>
   <script src="../node_modules/poster/dist/poster.js"></script>
   <script src="../external/iframe-overlay/dist/iframe-overlay.js"></script>
-  <script src="../external/object-browser/bower_components/observe-js/src/observe.js"></script>
-  <script src="../external/object-browser/object-browser.js"></script>
-  <script src="outer.js" async></script>
-  <link rel="stylesheet" href="../external/object-browser/object-browser.css"/>
+  <script src="../external/object-browser/src/object-browser.js"></script>
+  <script src="index.js" async></script>
+  <link rel="stylesheet" href="../external/object-browser/src/object-browser.css"/>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
@@ -24,55 +23,55 @@
     <div id="editor">background(255);
 noStroke();
 
+var a = {};
+var b = {};
+a.b = b;
+b.a = a;
+
 var randomColor = function () {
-  var r;
-  r = random(255);
-  var g = random(255);
-  var b = random(255);
-  fill(r,g,b);
+    var r;
+    r = random(255);
+    var g = random(255);
+    var b = random(255);
+    fill(r,g,b);
 };
 
 for (var i = 0; i < 3; i++) {
-  randomColor();
-  ellipse(random(400),random(400),75,75);
+    randomColor();
+    ellipse(random(400),random(400),75,75);
 }
 
-//draw = function () {
-//    randomColor();
-//    var p = new PVector(random(400), random(400));
-//    ellipse(p.x, p.y, 75, 75);
-//    p.x += 10;
-//    p.y += 20;
-//    var x = p.x;
-//    var y = p.y;
-//    ellipse(x, y, 75, 75);
-//};
+draw = function () {
+    randomColor();
+    var p = new PVector(random(100), random(100));
+    ellipse(p.x, p.y, 25, 25);
+};
 
 mouseClicked = function () {
-  randomColor();
-  ellipse(mouseX, mouseY, 75, 75);
+    randomColor();
+    ellipse(mouseX, mouseY, 75, 75);
 };
 
 keyPressed = function () {
-  console.log("keyPressed, keyCode = " + keyCode + ", key = " + key);
+    console.log("keyPressed, keyCode = " + keyCode + ", key = " + key);
 };
 
 keyReleased = function () {
-  console.log("keyReleased, keyCode = " + keyCode + ", key = " + key);
+    console.log("keyReleased, keyCode = " + keyCode + ", key = " + key);
 };
 
 keyTyped = function () {
-console.log("__keyTyped__");
+    console.log("__keyTyped__");
 };
 
-    </div>
+</div>
   </div>
 
   <div id="side">
     <div class="header">
       <span class="tab">canvas: 01</span>
     </div>
-    <iframe width="400" height="400" src="inner.html"></iframe>
+    <iframe width="400" height="400" src="output.html"></iframe>
 
     <div class="header">
       <span class="tab">Debugger</span>
