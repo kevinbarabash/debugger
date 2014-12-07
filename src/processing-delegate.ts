@@ -7,7 +7,7 @@
  * been defined as well as set up any event handlers.
  */
 
-/// <reference path="./debugger-delegate.ts"/>
+/// <reference path="debugger-delegate.d.ts"/>
 
 var emptyFunction = function () { };
 

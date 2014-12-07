@@ -1,8 +1,11 @@
 /*global recast, esprima, escodegen, injector */
 
-import basic = require("../node_modules/basic-ds/lib/basic");
+/// <reference path="generators.d.ts"/>
 
-interface Value {
+import basic = require("../node_modules/basic-ds/lib/basic");
+import Task = require("../external/scheduler/lib/task");
+
+interface YieldValue {
     gen: any;
     line: number;
     stepAgain?: boolean;
@@ -10,13 +13,8 @@ interface Value {
     name?: string;
 }
 
-interface Generator {
-    next: (value?: any) => { done: boolean; value: Value };
-    obj?: any;  // used to the store the resulting instance when a constructor is called
-}
-
 class Frame {
-    gen: Generator;
+    gen: GeneratorObject<YieldValue>;
     line: number;
     name: string;
     scope: Object;
@@ -29,7 +27,7 @@ class Frame {
 
 function emptyCallback() { }
 
-class Stepper {
+class Stepper implements Task {
     breakpointsEnabled: boolean;
     private _breakpoints: { [line: number]: boolean };
 
@@ -133,7 +131,7 @@ class Stepper {
         }
     }
 
-    start(paused) {
+    start(paused?: boolean) {
         this._started = true;
         this._paused = !!paused;
         this._run();
@@ -230,7 +228,7 @@ class Stepper {
 
     private _popAndStoreReturnValue(value) {
         var frame = this.stack.pop();
-        this._retVal = frame.gen.obj || value;
+        this._retVal = frame.gen["obj"] || value;
     }
 }
 

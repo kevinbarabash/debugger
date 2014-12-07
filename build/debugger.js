@@ -268,6 +268,149 @@ var basic;
 module.exports = basic;
 
 },{}],3:[function(require,module,exports){
+var Stepper = require("./stepper");
+var Scheduler = require("../external/scheduler/lib/scheduler");
+var transform = require("./transform");
+var ProcessingDelegate = require("./processing-delegate");
+var emptyFunction = function () {
+};
+var Debugger = (function () {
+    function Debugger(context, breakCallback, doneCallback, newCallback) {
+        this.context = context || {};
+        this.breakCallback = breakCallback || emptyFunction;
+        this.doneCallback = doneCallback || emptyFunction;
+        newCallback = newCallback || emptyFunction;
+        this.context.__instantiate__ = function (classFn, className) {
+            var obj = Object.create(classFn.prototype);
+            var args = Array.prototype.slice.call(arguments, 2);
+            var gen = classFn.apply(obj, args);
+            newCallback(classFn, className, obj, args);
+            if (gen) {
+                gen.obj = obj;
+                return gen;
+            }
+            else {
+                return obj;
+            }
+        };
+        this.scheduler = new Scheduler();
+        this.breakpoints = {};
+        this.breakpointsEnabled = true;
+        this._paused = false;
+        this.delegate = new ProcessingDelegate();
+    }
+    Debugger.isBrowserSupported = function () {
+        try {
+            var code = "\n" + "var generator = (function* () {\n" + "  yield* (function* () {\n" + "    yield 5; yield 6;\n" + "  }());\n" + "}());\n" + "\n" + "var item = generator.next();\n" + "var passed = item.value === 5 && item.done === false;\n" + "item = generator.next();\n" + "passed &= item.value === 6 && item.done === false;\n" + "item = generator.next();\n" + "passed &= item.value === undefined && item.done === true;\n" + "return passed;";
+            return Function(code)();
+        }
+        catch (e) {
+            return false;
+        }
+    };
+    Debugger.prototype.load = function (code) {
+        var debugCode = transform(code, this.context);
+        var debugFunction = new Function(debugCode);
+        this.mainGenerator = debugFunction();
+    };
+    Debugger.prototype.start = function (paused) {
+        this.scheduler.clear();
+        this.delegate.debuggerWillStart(this);
+        var stepper = this._createStepper(this.mainGenerator(this.context), true);
+        this.scheduler.addTask(stepper);
+        stepper.start(paused);
+    };
+    Debugger.prototype.queueGenerator = function (gen) {
+        if (!this.done) {
+            var stepper = this._createStepper(gen());
+            this.scheduler.addTask(stepper);
+        }
+    };
+    Debugger.prototype.resume = function () {
+        if (this._paused) {
+            this._paused = false;
+            this._currentStepper().resume();
+        }
+    };
+    Debugger.prototype.stepIn = function () {
+        if (this._paused) {
+            this._currentStepper().stepIn();
+        }
+    };
+    Debugger.prototype.stepOver = function () {
+        if (this._paused) {
+            this._currentStepper().stepOver();
+        }
+    };
+    Debugger.prototype.stepOut = function () {
+        if (this._paused) {
+            this._currentStepper().stepOut();
+        }
+    };
+    Debugger.prototype.paused = function () {
+        return this._paused;
+    };
+    Debugger.prototype.stop = function () {
+        this.done = true;
+    };
+    Debugger.prototype.currentStack = function () {
+        var stepper = this._currentStepper();
+        if (stepper !== null) {
+            return stepper.stack.items.map(function (frame) {
+                return {
+                    name: frame.name,
+                    line: frame.line
+                };
+            });
+        }
+        else {
+            return [];
+        }
+    };
+    Debugger.prototype.currentScope = function () {
+        var stepper = this._currentStepper();
+        if (stepper) {
+            var scope = stepper.stack.peek().scope;
+            if (scope) {
+                return scope;
+            }
+        }
+        return null;
+    };
+    Debugger.prototype.currentLine = function () {
+        if (this._paused) {
+            return this._currentStepper().line;
+        }
+    };
+    Debugger.prototype.setBreakpoint = function (line) {
+        this.breakpoints[line] = true;
+    };
+    Debugger.prototype.clearBreakpoint = function (line) {
+        delete this.breakpoints[line];
+    };
+    Debugger.prototype._currentStepper = function () {
+        return this.scheduler.currentTask();
+    };
+    Debugger.prototype._createStepper = function (genObj, isMain) {
+        var self = this;
+        var stepper = new Stepper(genObj, this.breakpoints, function () {
+            self._paused = true;
+            self.breakCallback();
+        }, function () {
+            self._paused = false;
+            self.doneCallback();
+            if (isMain) {
+                self.delegate.debuggerFinishedMain(self);
+            }
+        });
+        stepper.breakpointsEnabled = this.breakpointsEnabled;
+        return stepper;
+    };
+    return Debugger;
+})();
+module.exports = Debugger;
+
+},{"../external/scheduler/lib/scheduler":1,"./processing-delegate":4,"./stepper":5,"./transform":6}],4:[function(require,module,exports){
 var emptyFunction = function () {
 };
 var ProcessingDelegate = (function () {
@@ -311,7 +454,7 @@ function _isGeneratorFunction(value) {
 }
 module.exports = ProcessingDelegate;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var basic = require("../node_modules/basic-ds/lib/basic");
 var Frame = (function () {
     function Frame(gen, line) {
@@ -504,7 +647,7 @@ var Stepper = (function () {
     };
     Stepper.prototype._popAndStoreReturnValue = function (value) {
         var frame = this.stack.pop();
-        this._retVal = frame.gen.obj || value;
+        this._retVal = frame.gen["obj"] || value;
     };
     return Stepper;
 })();
@@ -513,360 +656,10 @@ var _isGenerator = function (obj) {
 };
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/basic":5}],5:[function(require,module,exports){
-module.exports=require(2)
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],6:[function(require,module,exports){
-/* build Parser API style AST nodes and trees */
-
-var createExpressionStatement = function (expression) {
-    return {
-        type: "ExpressionStatement",
-        expression: expression
-    };
-};
-
-var createBlockStatement = function (body) {
-    return {
-        type: "BlockStatement",
-        body: body
-    }
-};
-
-var createCallExpression = function (name, arguments) {
-    return {
-        type: "CallExpression",
-        callee: createIdentifier(name),
-        arguments: arguments
-    };
-};
-
-var createYieldExpression = function (argument) {
-    return {
-        type: "YieldExpression",
-        argument: argument
-    };
-};
-
-var createObjectExpression = function (obj) {
-    var properties = Object.keys(obj).map(function (key) {
-        var value = obj[key];
-        return createProperty(key, value);
-    });
-
-    return {
-        type: "ObjectExpression",
-        properties: properties
-    };
-};
-
-var createProperty = function (key, value) {
-    var expression;
-    if (value instanceof Object) {
-        if (value.type === "CallExpression" || value.type === "NewExpression") {
-            expression = value;
-        } else {
-            expression = createObjectExpression(value);
-        }
-    } else if (value === undefined) {
-        expression = createIdentifier("undefined");
-    } else {
-        expression = createLiteral(value);
-    }
-
-    return {
-        type: "Property",
-        key: createIdentifier(key),
-        value: expression,
-        kind: "init"
-    }
-};
-
-var createIdentifier = function (name) {
-    return {
-        type: "Identifier",
-        name: name
-    };
-};
-
-var createLiteral = function (value) {
-    if (value === undefined) {
-        throw "literal value undefined";
-    }
-    return {
-        type: "Literal",
-        value: value
-    }
-};
-
-var createWithStatement = function (obj, body) {
-    return {
-        type: "WithStatement",
-        object: obj,
-        body: body
-    };
-};
-
-var createAssignmentExpression = function (name, value) {
-    return {
-        type: "AssignmentExpression",
-        operator: "=",
-        left: createIdentifier(name),
-        right: value
-    }
-};
-
-var createVariableDeclarator = function (name, value) {
-    return {
-        type: "VariableDeclarator",
-        id: createIdentifier(name),
-        init: value
-    };
-};
-
-// a declaration is a subclass of statement
-var createVariableDeclaration = function (declarations) {
-    return {
-        type: "VariableDeclaration",
-        declarations: declarations,
-        kind: "var"
-    };
-};
-
-var replaceNode = function (parent, name, replacementNode) {
-    if (name.indexOf("arguments") === 0) {
-        var index = name.match(/\[([0-1]+)\]/)[1];
-        parent.arguments[index] = replacementNode;
-    } else {
-        parent[name] = replacementNode;
-    }
-};
-
-exports.createExpressionStatement = createExpressionStatement;
-exports.createBlockStatement = createBlockStatement;
-exports.createCallExpression = createCallExpression;
-exports.createYieldExpression = createYieldExpression;
-exports.createObjectExpression = createObjectExpression;
-exports.createProperty = createProperty;
-exports.createIdentifier = createIdentifier;
-exports.createLiteral = createLiteral;
-exports.createWithStatement = createWithStatement;
-exports.createAssignmentExpression = createAssignmentExpression;
-exports.createVariableDeclaration = createVariableDeclaration;
-exports.createVariableDeclarator = createVariableDeclarator;
-exports.replaceNode = replaceNode;
-
-},{}],7:[function(require,module,exports){
-/**
- * The debugger has the following responsibilites:
- * - create debug code and generators from source code
- * - create and schedule steppers
- * - maintain breakpoints and inform steppers of breakpoints
- */
-
-var Stepper = require("../lib/stepper");
-var Scheduler = require("../external/scheduler/lib/scheduler");
-var transform = require("./transform");
-var ProcessingDelegate = require("../lib/processing-delegate");
-
-var emptyFunction = function() { };
-
-function Debugger(context, breakCallback, doneCallback, newCallback) {
-    this.context = context || {};
-
-    this.breakCallback = breakCallback || emptyFunction;
-    this.doneCallback = doneCallback || emptyFunction;
-    newCallback = newCallback || emptyFunction;
-
-    this.context.__instantiate__ = function (classFn, className) {
-        var obj = Object.create(classFn.prototype);
-        var args = Array.prototype.slice.call(arguments, 2);
-        var gen = classFn.apply(obj, args);
-
-        newCallback(classFn, className, obj, args);
-
-        if (gen) {
-            gen.obj = obj;
-            return gen;
-        } else {
-            return obj;
-        }
-    };
-
-    this.scheduler = new Scheduler();
-
-    this.breakpoints = {};
-    this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
-    this._paused = false;               // read-only, needs a getter
-
-    this.delegate = new ProcessingDelegate(context);
-}
-
-Debugger.isBrowserSupported = function () {
-    try {
-        var code = "\n" +
-            "var generator = (function* () {\n" +
-            "  yield* (function* () {\n" +
-            "    yield 5; yield 6;\n" +
-            "  }());\n" +
-            "}());\n" +
-            "\n" +
-            "var item = generator.next();\n" +
-            "var passed = item.value === 5 && item.done === false;\n" +
-            "item = generator.next();\n" +
-            "passed &= item.value === 6 && item.done === false;\n" +
-            "item = generator.next();\n" +
-            "passed &= item.value === undefined && item.done === true;\n" +
-            "return passed;";
-        return Function(code)()
-    } catch(e) {
-        return false;
-    }
-};
-
-Debugger.prototype.load = function (code) {
-    var debugCode = transform(code, this.context);
-    var debugFunction = new Function(debugCode);
-    this.mainGenerator = debugFunction();
-};
-
-Debugger.prototype.start = function (paused) {
-    this.scheduler.clear();
-    this.delegate.debuggerWillStart(this);
-
-    var stepper = this._createStepper(this.mainGenerator(this.context), true);
-
-    this.scheduler.addTask(stepper);
-    stepper.start(paused);  // paused = true -> start paused on the first line
-};
-
-Debugger.prototype.queueGenerator = function (gen) {
-    if (!this.done) {
-        var stepper = this._createStepper(gen());
-        this.scheduler.addTask(stepper);
-    }
-};
-
-// TODO: implement a method to "pause" at the start of the next stepper
-
-Debugger.prototype.resume = function () {
-    if (this._paused) {
-        this._paused = false;
-        this._currentStepper().resume();
-    }
-};
-
-Debugger.prototype.stepIn = function () {
-    if (this._paused) {
-        this._currentStepper().stepIn();
-    }
-};
-
-Debugger.prototype.stepOver = function () {
-    if (this._paused) {
-        this._currentStepper().stepOver();
-    }
-};
-
-Debugger.prototype.stepOut = function () {
-    if (this._paused) {
-        this._currentStepper().stepOut();
-    }
-};
-
-Debugger.prototype.paused = function () {
-    return this._paused;
-};
-
-// used by tests right now to stop execution
-Debugger.prototype.stop = function () {
-    this.done = true;
-};
-
-Debugger.prototype.currentStack = function () {
-    var stepper = this._currentStepper();
-    if (stepper !== null) {
-        return stepper.stack.items.map(function (frame) {
-            return {
-                name: frame.name,
-                line: frame.line
-            };
-        });
-    } else {
-        return [];
-    }
-};
-
-Debugger.prototype.currentScope = function () {
-    var stepper = this._currentStepper();
-    if (stepper) {
-        var scope = stepper.stack.peek().scope;
-        if (scope) {
-            return scope;
-        }
-    }
-    return null;
-};
-
-Debugger.prototype.currentLine = function () {
-    if (this._paused) {
-        return this._currentStepper().line;
-    }
-};
-
-Debugger.prototype.setBreakpoint = function (line) {
-    this.breakpoints[line] = true;
-};
-
-Debugger.prototype.clearBreakpoint = function (line) {
-    delete this.breakpoints[line];
-};
-
-/* PRIVATE */
-
-Debugger.prototype._currentStepper = function () {
-    return this.scheduler.currentTask();
-};
-
-Debugger.prototype._createStepper = function (genObj, isMain) {
-    var self = this;
-    var stepper = new Stepper(
-        genObj,
-        this.breakpoints,
-        function () {   // break
-            self._paused = true;
-            self.breakCallback();
-        },
-        function () {   // done
-            self._paused = false;
-            self.doneCallback();
-            if (isMain) {
-                self.delegate.debuggerFinishedMain(self);
-            }
-        });
-
-    stepper.breakpointsEnabled = this.breakpointsEnabled;
-    return stepper;
-};
-
-function __instantiate__ (Class) {
-    var obj = Object.create(Class.prototype);
-    var args = Array.prototype.slice.call(arguments, 1);
-    var gen = Class.apply(obj, args);
-
-    if (gen) {
-        gen.obj = obj;
-        return gen;
-    } else {
-        return obj;
-    }
-}
-
-module.exports = Debugger;
-
-},{"../external/scheduler/lib/scheduler":1,"../lib/processing-delegate":3,"../lib/stepper":4,"./transform":8}],8:[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/basic":7}],6:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
-var builder = require("./ast-builder");
+var builder = require("./../src/ast-builder");
 var basic = require("basic-ds");
 
 function getScopeVariables (node, parent, context) {
@@ -1107,5 +900,147 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./ast-builder":6,"basic-ds":5}]},{},[7])(7)
+},{"./../src/ast-builder":8,"basic-ds":7}],7:[function(require,module,exports){
+module.exports=require(2)
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],8:[function(require,module,exports){
+/* build Parser API style AST nodes and trees */
+
+var createExpressionStatement = function (expression) {
+    return {
+        type: "ExpressionStatement",
+        expression: expression
+    };
+};
+
+var createBlockStatement = function (body) {
+    return {
+        type: "BlockStatement",
+        body: body
+    }
+};
+
+var createCallExpression = function (name, arguments) {
+    return {
+        type: "CallExpression",
+        callee: createIdentifier(name),
+        arguments: arguments
+    };
+};
+
+var createYieldExpression = function (argument) {
+    return {
+        type: "YieldExpression",
+        argument: argument
+    };
+};
+
+var createObjectExpression = function (obj) {
+    var properties = Object.keys(obj).map(function (key) {
+        var value = obj[key];
+        return createProperty(key, value);
+    });
+
+    return {
+        type: "ObjectExpression",
+        properties: properties
+    };
+};
+
+var createProperty = function (key, value) {
+    var expression;
+    if (value instanceof Object) {
+        if (value.type === "CallExpression" || value.type === "NewExpression") {
+            expression = value;
+        } else {
+            expression = createObjectExpression(value);
+        }
+    } else if (value === undefined) {
+        expression = createIdentifier("undefined");
+    } else {
+        expression = createLiteral(value);
+    }
+
+    return {
+        type: "Property",
+        key: createIdentifier(key),
+        value: expression,
+        kind: "init"
+    }
+};
+
+var createIdentifier = function (name) {
+    return {
+        type: "Identifier",
+        name: name
+    };
+};
+
+var createLiteral = function (value) {
+    if (value === undefined) {
+        throw "literal value undefined";
+    }
+    return {
+        type: "Literal",
+        value: value
+    }
+};
+
+var createWithStatement = function (obj, body) {
+    return {
+        type: "WithStatement",
+        object: obj,
+        body: body
+    };
+};
+
+var createAssignmentExpression = function (name, value) {
+    return {
+        type: "AssignmentExpression",
+        operator: "=",
+        left: createIdentifier(name),
+        right: value
+    }
+};
+
+var createVariableDeclarator = function (name, value) {
+    return {
+        type: "VariableDeclarator",
+        id: createIdentifier(name),
+        init: value
+    };
+};
+
+// a declaration is a subclass of statement
+var createVariableDeclaration = function (declarations) {
+    return {
+        type: "VariableDeclaration",
+        declarations: declarations,
+        kind: "var"
+    };
+};
+
+var replaceNode = function (parent, name, replacementNode) {
+    if (name.indexOf("arguments") === 0) {
+        var index = name.match(/\[([0-1]+)\]/)[1];
+        parent.arguments[index] = replacementNode;
+    } else {
+        parent[name] = replacementNode;
+    }
+};
+
+exports.createExpressionStatement = createExpressionStatement;
+exports.createBlockStatement = createBlockStatement;
+exports.createCallExpression = createCallExpression;
+exports.createYieldExpression = createYieldExpression;
+exports.createObjectExpression = createObjectExpression;
+exports.createProperty = createProperty;
+exports.createIdentifier = createIdentifier;
+exports.createLiteral = createLiteral;
+exports.createWithStatement = createWithStatement;
+exports.createAssignmentExpression = createAssignmentExpression;
+exports.createVariableDeclaration = createVariableDeclaration;
+exports.createVariableDeclarator = createVariableDeclarator;
+exports.replaceNode = replaceNode;
+
+},{}]},{},[3])(3)
 });

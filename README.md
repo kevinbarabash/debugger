@@ -40,3 +40,4 @@ chromestatus.com page, it's in development for Safari.
 - improve the demo app
     - preserve breakpoints on reload
     - preserve code changes on reload
+- implement a method to "pause" at the start of the next stepper (maybe)
