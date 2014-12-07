@@ -8,7 +8,6 @@
   <script src="../libs/gehry/gehry.js"></script>
   <script src="../libs/poster/poster.js"></script>
   <script src="../libs/iframe-overlay/iframe-overlay.js"></script>
-  <script src="../libs/observe-js/src/observe.js"></script>
   <script src="../libs/object-browser/object-browser.js"></script>
   <script src="index.js" async></script>
   <link rel="stylesheet" href="../libs/object-browser/object-browser.css"/>
@@ -23,6 +22,11 @@
     </div>
     <div id="editor">background(255);
 noStroke();
+
+var a = {};
+var b = {};
+a.b = b;
+b.a = a;
 
 var randomColor = function () {
     var r;
@@ -59,6 +63,7 @@ keyReleased = function () {
 keyTyped = function () {
     console.log("__keyTyped__");
 };
+
 </div>
   </div>
 

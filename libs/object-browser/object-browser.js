@@ -65,17 +65,21 @@ function genPropsList(obj, hidden) {
                     .text(": ")
                     .prepend($triangle, createLabel(key))
                     .append(genPreview(obj[key], true))
-                    .append(genPropsList(obj[key], true))
             );
-            $triangle.click(function () {
-                var $ul = $(this).parent().find('> ul');
-                $ul.toggle();
-                if ($ul.is(':visible')) {
-                    $(this).text('\u25BC');
-                } else {
-                    $(this).text('\u25B6');
-                }
-            });
+            (function (val) {
+                $triangle.click(function () {
+                    if ($(this).parent().find('> ul').length === 0) {
+                        $(this).parent().append(genPropsList(val, true));
+                    }
+                    var $ul = $(this).parent().find('> ul');
+                    $ul.toggle();
+                    if ($ul.is(':visible')) {
+                        $(this).text('\u25BC');
+                    } else {
+                        $(this).text('\u25B6');
+                    }
+                });
+            })(obj[key]);
         } else {
             $root.append(
                 $("<li></li>")
@@ -93,84 +97,6 @@ function genPropsList(obj, hidden) {
                 .append(genPreview(obj.length))
         );
     }
-
-    var observer = new ObjectObserver(obj);
-    observer.open(function (added, removed, changed, getOldValueFn) {
-        // add new properties
-        Object.keys(added).forEach(function (key) {
-            if (obj instanceof Array) {
-                $root.children().last().remove();
-            }
-            if (typeof(obj[key]) === "object") {
-                var $triangle = createSpan("\u25B6", "triangle");
-                $root.append(
-                    $("<li></li>")
-                        .css({ position: "relative" })
-                        .text(": ")
-                        .prepend($triangle, createLabel(key))
-                        .append(genPreview(obj[key], true))
-                        .append(genPropsList(obj[key], true))
-                );
-                $triangle.click(function () {
-                    var $ul = $(this).parent().find('> ul');
-                    $ul.toggle();
-                    if ($ul.is(':visible')) {
-                        $(this).text('\u25BC');
-                    } else {
-                        $(this).text('\u25B6');
-                    }
-                });
-            } else {
-                $root.append(
-                    $("<li></li>")
-                        .text(": ")
-                        .prepend(createLabel(key))
-                        .append(genPreview(obj[key], true))
-                );
-            }
-            if (obj instanceof Array) {
-                $root.append(
-                    $("<li></li>")
-                        .text(": ")
-                        .prepend(createSpan("length", "read-only"))
-                        .append(genPreview(obj.length))
-                );
-            }
-        });
-
-        // remove deleted properties
-        Object.keys(removed).forEach(function (key) {
-            $root.find("> li > span:contains(" + key + ")").parent().remove();
-        });
-
-        // update modified properties
-        Object.keys(changed).forEach(function (key) {
-            $root.find("> li > :nth-child(1)").each(function () {
-                if ($(this).text() === key) {
-                    var $parent = $(this).parent();
-                    $parent.children().last().remove();
-                    $parent.append(genPreview(obj[key], true));
-
-                    if (typeof(obj[key]) === "object") {
-                        var $triangle = createSpan("\u25B6", "triangle");
-                        $parent.css({ position: "relative" })
-                            .prepend($triangle)
-                            .append(genPropsList(obj[key], true))
-
-                        $triangle.click(function () {
-                            var $ul = $(this).parent().find('> ul');
-                            $ul.toggle();
-                            if ($ul.is(':visible')) {
-                                $(this).text('\u25BC');
-                            } else {
-                                $(this).text('\u25B6');
-                            }
-                        });
-                    }
-                }
-            });
-        });
-    });
 
     return $root;
 }
