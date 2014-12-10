@@ -329,22 +329,22 @@ var Debugger = (function () {
     Debugger.prototype.resume = function () {
         if (this._paused) {
             this._paused = false;
-            this._currentStepper().resume();
+            this._currentStepper.resume();
         }
     };
     Debugger.prototype.stepIn = function () {
         if (this._paused) {
-            this._currentStepper().stepIn();
+            this._currentStepper.stepIn();
         }
     };
     Debugger.prototype.stepOver = function () {
         if (this._paused) {
-            this._currentStepper().stepOver();
+            this._currentStepper.stepOver();
         }
     };
     Debugger.prototype.stepOut = function () {
         if (this._paused) {
-            this._currentStepper().stepOut();
+            this._currentStepper.stepOut();
         }
     };
     Debugger.prototype.paused = function () {
@@ -354,7 +354,7 @@ var Debugger = (function () {
         this.done = true;
     };
     Debugger.prototype.currentStack = function () {
-        var stepper = this._currentStepper();
+        var stepper = this._currentStepper;
         if (stepper !== null) {
             return stepper.stack.items.map(function (frame) {
                 return {
@@ -368,7 +368,7 @@ var Debugger = (function () {
         }
     };
     Debugger.prototype.currentScope = function () {
-        var stepper = this._currentStepper();
+        var stepper = this._currentStepper;
         if (stepper) {
             var scope = stepper.stack.peek().scope;
             if (scope) {
@@ -379,7 +379,7 @@ var Debugger = (function () {
     };
     Debugger.prototype.currentLine = function () {
         if (this._paused) {
-            return this._currentStepper().line;
+            return this._currentStepper.line;
         }
     };
     Debugger.prototype.setBreakpoint = function (line) {
@@ -388,9 +388,13 @@ var Debugger = (function () {
     Debugger.prototype.clearBreakpoint = function (line) {
         delete this.breakpoints[line];
     };
-    Debugger.prototype._currentStepper = function () {
-        return this.scheduler.currentTask();
-    };
+    Object.defineProperty(Debugger.prototype, "_currentStepper", {
+        get: function () {
+            return this.scheduler.currentTask();
+        },
+        enumerable: true,
+        configurable: true
+    });
     Debugger.prototype._createStepper = function (genObj, isMain) {
         var self = this;
         var stepper = new Stepper(genObj, this.breakpoints, function () {

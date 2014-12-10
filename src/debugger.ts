@@ -107,28 +107,29 @@ class Debugger {
     resume() {
         if (this._paused) {
             this._paused = false;
-            this._currentStepper().resume();
+            this._currentStepper.resume();
         }
     }
 
     stepIn() {
         if (this._paused) {
-            this._currentStepper().stepIn();
+            this._currentStepper.stepIn();
         }
     }
 
     stepOver() {
         if (this._paused) {
-            this._currentStepper().stepOver();
+            this._currentStepper.stepOver();
         }
     }
 
     stepOut() {
         if (this._paused) {
-            this._currentStepper().stepOut();
+            this._currentStepper.stepOut();
         }
     }
 
+    // TODO: change this to a getter
     paused() {
         return this._paused;
     }
@@ -138,8 +139,9 @@ class Debugger {
         this.done = true;
     }
 
+    // TODO: change this to a getter
     currentStack() {
-        var stepper = this._currentStepper();
+        var stepper = this._currentStepper;
         if (stepper !== null) {
             return stepper.stack.items.map(function (frame) {
                 return {
@@ -152,8 +154,9 @@ class Debugger {
         }
     }
 
+    // TODO: change this to a getter
     currentScope() {
-        var stepper = this._currentStepper();
+        var stepper = this._currentStepper;
         if (stepper) {
             var scope = stepper.stack.peek().scope;
             if (scope) {
@@ -163,9 +166,10 @@ class Debugger {
         return null;
     }
 
+    // TODO: change this to a getter
     currentLine() {
         if (this._paused) {
-            return this._currentStepper().line;
+            return this._currentStepper.line;
         }
     }
 
@@ -177,7 +181,8 @@ class Debugger {
         delete this.breakpoints[line];
     }
 
-    private _currentStepper() {
+    // TODO: change this to a getter
+    private get _currentStepper() {
         return <Stepper>this.scheduler.currentTask();
     }
 
