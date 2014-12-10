@@ -6,41 +6,40 @@
  */
 
 /// <reference path="generators.d.ts"/>
+/// <reference path="debugger-delegate.d.ts"/>
 
 import Stepper = require("./stepper");
 import Scheduler = require("../external/scheduler/lib/scheduler");
 import transform = require("./transform");
-import ProcessingDelegate = require("./processing-delegate");
 
-var emptyFunction = function() { };
+class DefaultDelegate implements DebuggerDelegate {
+    willStart(debugr: any) {}
+    finishedMainFunction(debugr: any) {}
+    finishedEventLoopFunction() {}
+    hitBreakpoint() {}
+    objectInstantiated(classFn: Function, className: string, obj: Object, args: any[]) {}
+}
 
 class Debugger {
     context: any;
-    breakCallback: () => void;
-    doneCallback: () => void;
+    delegate: DebuggerDelegate;
     scheduler: Scheduler;
     breakpoints: { [line:number]: boolean };
     breakpointsEnabled: boolean;
-    delegate: DebuggerDelegate;
     mainGenerator: Function;
 
     private _paused: boolean;
     private done: boolean;
 
-    // TODO: change the signuture to constructor(context, delegate)
-    constructor(context, breakCallback, doneCallback, newCallback) {
-        this.context = context || {};
-
-        this.breakCallback = breakCallback || emptyFunction;
-        this.doneCallback = doneCallback || emptyFunction;
-        newCallback = newCallback || emptyFunction;
-
-        this.context.__instantiate__ = function (classFn, className) {
+    constructor(context = {}, delegate = new DefaultDelegate()) {
+        this.context = context;
+        this.delegate = delegate;
+        this.context.__instantiate__ = (classFn, className) => {
             var obj = Object.create(classFn.prototype);
             var args = Array.prototype.slice.call(arguments, 2);
             var gen = classFn.apply(obj, args);
 
-            newCallback(classFn, className, obj, args);
+            this.delegate.objectInstantiated(classFn, className, obj, args);
 
             if (gen) {
                 gen.obj = obj;
@@ -55,8 +54,6 @@ class Debugger {
         this.breakpoints = {};
         this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
         this._paused = false;               // read-only, needs a getter
-
-        this.delegate = new ProcessingDelegate();
     }
 
     static isBrowserSupported() {
@@ -89,7 +86,7 @@ class Debugger {
 
     start(paused) {
         this.scheduler.clear();
-        this.delegate.debuggerWillStart(this);
+        this.delegate.willStart(this);
 
         var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
@@ -129,18 +126,16 @@ class Debugger {
         }
     }
 
-    // TODO: change this to a getter
-    paused() {
-        return this._paused;
-    }
-
     // used by tests right now to stop execution
     stop() {
         this.done = true;
     }
 
-    // TODO: change this to a getter
-    currentStack() {
+    get paused() {
+        return this._paused;
+    }
+
+    get currentStack() {
         var stepper = this._currentStepper;
         if (stepper !== null) {
             return stepper.stack.items.map(function (frame) {
@@ -154,8 +149,7 @@ class Debugger {
         }
     }
 
-    // TODO: change this to a getter
-    currentScope() {
+    get currentScope() {
         var stepper = this._currentStepper;
         if (stepper) {
             var scope = stepper.stack.peek().scope;
@@ -166,8 +160,7 @@ class Debugger {
         return null;
     }
 
-    // TODO: change this to a getter
-    currentLine() {
+    get currentLine() {
         if (this._paused) {
             return this._currentStepper.line;
         }
@@ -181,25 +174,23 @@ class Debugger {
         delete this.breakpoints[line];
     }
 
-    // TODO: change this to a getter
     private get _currentStepper() {
         return <Stepper>this.scheduler.currentTask();
     }
 
     private _createStepper(genObj: GeneratorObject<any>, isMain?: boolean) {
-        var self = this;
         var stepper = new Stepper(
             genObj,
             this.breakpoints,
-            function () {   // break
-                self._paused = true;
-                self.breakCallback();
+            () => {
+                this._paused = true;
+                this.delegate.hitBreakpoint();
             },
-            function () {   // done
-                self._paused = false;
-                self.doneCallback();
+            () => {
+                this._paused = false;
+                this.delegate.finishedEventLoopFunction();
                 if (isMain) {
-                    self.delegate.debuggerFinishedMain(self);
+                    this.delegate.finishedMainFunction(this);
                 }
             });
 

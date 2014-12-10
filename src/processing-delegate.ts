@@ -18,7 +18,7 @@ class ProcessingDelegate implements DebuggerDelegate {
         this.repeater = null;
     }
 
-    debuggerWillStart(debugr) {
+    willStart(debugr) {
         if (this.repeater) {
             this.repeater.stop();
         }
@@ -32,7 +32,7 @@ class ProcessingDelegate implements DebuggerDelegate {
         debugr.context.draw = emptyFunction;
     }
 
-    debuggerFinishedMain(debugr) {
+    finishedMainFunction(debugr) {
         var draw = debugr.context.draw;
 
         if (draw !== emptyFunction) {
@@ -54,6 +54,12 @@ class ProcessingDelegate implements DebuggerDelegate {
             }
         }, this);
     }
+
+    finishedEventLoopFunction() {}
+
+    hitBreakpoint() {}
+
+    objectInstantiated() {}
 
     static events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
 }

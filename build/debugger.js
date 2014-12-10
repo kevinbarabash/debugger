@@ -271,20 +271,33 @@ module.exports = basic;
 var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
-var ProcessingDelegate = require("./processing-delegate");
-var emptyFunction = function () {
-};
+var DefaultDelegate = (function () {
+    function DefaultDelegate() {
+    }
+    DefaultDelegate.prototype.willStart = function (debugr) {
+    };
+    DefaultDelegate.prototype.finishedMainFunction = function (debugr) {
+    };
+    DefaultDelegate.prototype.finishedEventLoopFunction = function () {
+    };
+    DefaultDelegate.prototype.hitBreakpoint = function () {
+    };
+    DefaultDelegate.prototype.objectInstantiated = function (classFn, className, obj, args) {
+    };
+    return DefaultDelegate;
+})();
 var Debugger = (function () {
-    function Debugger(context, breakCallback, doneCallback, newCallback) {
-        this.context = context || {};
-        this.breakCallback = breakCallback || emptyFunction;
-        this.doneCallback = doneCallback || emptyFunction;
-        newCallback = newCallback || emptyFunction;
+    function Debugger(context, delegate) {
+        var _this = this;
+        if (context === void 0) { context = {}; }
+        if (delegate === void 0) { delegate = new DefaultDelegate(); }
+        this.context = context;
+        this.delegate = delegate;
         this.context.__instantiate__ = function (classFn, className) {
             var obj = Object.create(classFn.prototype);
             var args = Array.prototype.slice.call(arguments, 2);
             var gen = classFn.apply(obj, args);
-            newCallback(classFn, className, obj, args);
+            _this.delegate.objectInstantiated(classFn, className, obj, args);
             if (gen) {
                 gen.obj = obj;
                 return gen;
@@ -297,7 +310,6 @@ var Debugger = (function () {
         this.breakpoints = {};
         this.breakpointsEnabled = true;
         this._paused = false;
-        this.delegate = new ProcessingDelegate();
     }
     Debugger.isBrowserSupported = function () {
         try {
@@ -315,7 +327,7 @@ var Debugger = (function () {
     };
     Debugger.prototype.start = function (paused) {
         this.scheduler.clear();
-        this.delegate.debuggerWillStart(this);
+        this.delegate.willStart(this);
         var stepper = this._createStepper(this.mainGenerator(this.context), true);
         this.scheduler.addTask(stepper);
         stepper.start(paused);
@@ -347,41 +359,57 @@ var Debugger = (function () {
             this._currentStepper.stepOut();
         }
     };
-    Debugger.prototype.paused = function () {
-        return this._paused;
-    };
     Debugger.prototype.stop = function () {
         this.done = true;
     };
-    Debugger.prototype.currentStack = function () {
-        var stepper = this._currentStepper;
-        if (stepper !== null) {
-            return stepper.stack.items.map(function (frame) {
-                return {
-                    name: frame.name,
-                    line: frame.line
-                };
-            });
-        }
-        else {
-            return [];
-        }
-    };
-    Debugger.prototype.currentScope = function () {
-        var stepper = this._currentStepper;
-        if (stepper) {
-            var scope = stepper.stack.peek().scope;
-            if (scope) {
-                return scope;
+    Object.defineProperty(Debugger.prototype, "paused", {
+        get: function () {
+            return this._paused;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Debugger.prototype, "currentStack", {
+        get: function () {
+            var stepper = this._currentStepper;
+            if (stepper !== null) {
+                return stepper.stack.items.map(function (frame) {
+                    return {
+                        name: frame.name,
+                        line: frame.line
+                    };
+                });
             }
-        }
-        return null;
-    };
-    Debugger.prototype.currentLine = function () {
-        if (this._paused) {
-            return this._currentStepper.line;
-        }
-    };
+            else {
+                return [];
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Debugger.prototype, "currentScope", {
+        get: function () {
+            var stepper = this._currentStepper;
+            if (stepper) {
+                var scope = stepper.stack.peek().scope;
+                if (scope) {
+                    return scope;
+                }
+            }
+            return null;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Debugger.prototype, "currentLine", {
+        get: function () {
+            if (this._paused) {
+                return this._currentStepper.line;
+            }
+        },
+        enumerable: true,
+        configurable: true
+    });
     Debugger.prototype.setBreakpoint = function (line) {
         this.breakpoints[line] = true;
     };
@@ -396,15 +424,15 @@ var Debugger = (function () {
         configurable: true
     });
     Debugger.prototype._createStepper = function (genObj, isMain) {
-        var self = this;
+        var _this = this;
         var stepper = new Stepper(genObj, this.breakpoints, function () {
-            self._paused = true;
-            self.breakCallback();
+            _this._paused = true;
+            _this.delegate.hitBreakpoint();
         }, function () {
-            self._paused = false;
-            self.doneCallback();
+            _this._paused = false;
+            _this.delegate.finishedEventLoopFunction();
             if (isMain) {
-                self.delegate.debuggerFinishedMain(self);
+                _this.delegate.finishedMainFunction(_this);
             }
         });
         stepper.breakpointsEnabled = this.breakpointsEnabled;
@@ -414,51 +442,7 @@ var Debugger = (function () {
 })();
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":1,"./processing-delegate":4,"./stepper":5,"./transform":6}],4:[function(require,module,exports){
-var emptyFunction = function () {
-};
-var ProcessingDelegate = (function () {
-    function ProcessingDelegate() {
-        this.repeater = null;
-    }
-    ProcessingDelegate.prototype.debuggerWillStart = function (debugr) {
-        if (this.repeater) {
-            this.repeater.stop();
-        }
-        ProcessingDelegate.events.forEach(function (event) {
-            debugr.context[event] = undefined;
-        }, this);
-        debugr.context.draw = emptyFunction;
-    };
-    ProcessingDelegate.prototype.debuggerFinishedMain = function (debugr) {
-        var draw = debugr.context.draw;
-        if (draw !== emptyFunction) {
-            this.repeater = debugr.scheduler.createRepeater(function () {
-                return debugr._createStepper(draw());
-            }, 1000 / 60);
-            this.repeater.start();
-        }
-        ProcessingDelegate.events.forEach(function (name) {
-            var eventHandler = debugr.context[name];
-            if (_isGeneratorFunction(eventHandler)) {
-                if (name === "keyTyped") {
-                    debugr.context.keyCode = 0;
-                }
-                debugr.context[name] = function () {
-                    debugr.queueGenerator(eventHandler);
-                };
-            }
-        }, this);
-    };
-    ProcessingDelegate.events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
-    return ProcessingDelegate;
-})();
-function _isGeneratorFunction(value) {
-    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
-}
-module.exports = ProcessingDelegate;
-
-},{}],5:[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":1,"./stepper":4,"./transform":5}],4:[function(require,module,exports){
 var basic = require("../node_modules/basic-ds/lib/basic");
 var Frame = (function () {
     function Frame(gen, line) {
@@ -660,7 +644,7 @@ var _isGenerator = function (obj) {
 };
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/basic":7}],6:[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/basic":6}],5:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var builder = require("./../src/ast-builder");
@@ -904,9 +888,9 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./../src/ast-builder":8,"basic-ds":7}],7:[function(require,module,exports){
+},{"./../src/ast-builder":7,"basic-ds":6}],6:[function(require,module,exports){
 module.exports=require(2)
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],8:[function(require,module,exports){
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],7:[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {

@@ -8,15 +8,16 @@ processing.size(400,400);
 processing.resetMatrix();
 
 var poster = new Poster(window.parent);
-var debugr = new Debugger(
-    processing,     // context
-    function () {   // breakCallback
-        var scope = gehry.deconstruct(debugr.currentScope());
-        poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
-    },
-    function () {   // doneCallback
-        poster.post("done");
-    });
+var delegate = new ProcessingDelegate();
+delegate.hitBreakpoint = function () {   // breakCallback
+    var scope = gehry.deconstruct(debugr.currentScope);
+    poster.post("break", debugr.currentLine, debugr.currentStack, scope);
+};
+delegate.finishedEventLoopFunction = function () {   // doneCallback
+    poster.post("done");
+};
+
+var debugr = new Debugger(processing, delegate);
 
 // TODO: remote procedure calling
 // TODO: remote object proxying
@@ -34,20 +35,20 @@ poster.listen("resume", function () {
 
 poster.listen("stepIn", function () {
     debugr.stepIn();
-    var scope = gehry.deconstruct(debugr.currentScope());
-    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
+    var scope = gehry.deconstruct(debugr.currentScope);
+    poster.post("break", debugr.currentLine, debugr.currentStack, scope);
 });
 
 poster.listen("stepOver", function () {
     debugr.stepOver();
-    var scope = gehry.deconstruct(debugr.currentScope());
-    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
+    var scope = gehry.deconstruct(debugr.currentScope);
+    poster.post("break", debugr.currentLine, debugr.currentStack, scope);
 });
 
 poster.listen("stepOut", function () {
     debugr.stepOut();
-    var scope = gehry.deconstruct(debugr.currentScope());
-    poster.post("break", debugr.currentLine(), debugr.currentStack(), scope);
+    var scope = gehry.deconstruct(debugr.currentScope);
+    poster.post("break", debugr.currentLine, debugr.currentStack, scope);
 });
 
 poster.listen("setBreakpoint", function (line) {

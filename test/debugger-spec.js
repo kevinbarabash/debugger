@@ -2,7 +2,7 @@
 
 describe("Debugger", function () {
 
-    var debugr, context;
+    var debugr, context, delegate;
 
     beforeEach(function () {
         context = {
@@ -14,7 +14,9 @@ describe("Debugger", function () {
             rect: sinon.stub()
         };
 
-        debugr = new Debugger(context);
+        delegate = new ProcessingDelegate();
+
+        debugr = new Debugger(context, delegate);
     });
 
     afterEach(function () {
@@ -95,7 +97,7 @@ describe("Debugger", function () {
             debugr.setBreakpoint(1);
             debugr.start();
 
-            expect(debugr.paused()).to.be(true);
+            expect(debugr.paused).to.be(true);
         });
 
         it("should not be paused after it finishes running", function () {
@@ -107,7 +109,7 @@ describe("Debugger", function () {
             debugr.load(code);
             debugr.start();
 
-            expect(debugr.paused()).to.be(false);
+            expect(debugr.paused).to.be(false);
         });
     });
 

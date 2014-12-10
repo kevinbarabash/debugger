@@ -6,4 +6,5 @@ mkdir -p build &&
 ./node_modules/.bin/browserify ./lib/debugger.js --outfile ./build/debugger.js --standalone Debugger &&
 
 # TODO: remove the need for these separate files (used by tests)
-./node_modules/.bin/browserify ./lib/stepper.js --outfile ./build/stepper.js --standalone Stepper
+./node_modules/.bin/browserify ./lib/stepper.js --outfile ./build/stepper.js --standalone Stepper &&
+./node_modules/.bin/browserify ./lib/processing-delegate.js --outfile ./build/processing-delegate.js --standalone ProcessingDelegate
