@@ -6,7 +6,7 @@ describe("Stepper", function () {
     var fill, rect, print;
 
     function stepperWithCode(code, breakpoints, breakCallback, doneCallback) {
-        var debugr = new Debugger(context);
+        var debugr = new ProcessingDebugger(context);
         debugr.load(code);
         //var debugCode = transform(code, context);
         //var debugFunction = new Function(debugCode);

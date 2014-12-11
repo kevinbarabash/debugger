@@ -8,16 +8,16 @@ processing.size(400,400);
 processing.resetMatrix();
 
 var poster = new Poster(window.parent);
-var delegate = new ProcessingDelegate();
-delegate.hitBreakpoint = function () {   // breakCallback
-    var scope = gehry.deconstruct(debugr.currentScope);
-    poster.post("break", debugr.currentLine, debugr.currentStack, scope);
-};
-delegate.finishedEventLoopFunction = function () {   // doneCallback
-    poster.post("done");
-};
-
-var debugr = new Debugger(processing, delegate);
+var debugr = new ProcessingDebugger(
+    processing,
+    function () {
+        var scope = gehry.deconstruct(debugr.currentScope);
+        poster.post("break", debugr.currentLine, debugr.currentStack, scope);
+    },
+    function () {
+        poster.post("done");
+    }
+);
 
 // TODO: remote procedure calling
 // TODO: remote object proxying

@@ -1,4 +1,4 @@
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Debugger=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.ProcessingDebugger=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var basic = require("../node_modules/basic-ds/lib/basic");
 var Scheduler = (function () {
     function Scheduler() {
@@ -434,7 +434,67 @@ var Debugger = (function () {
 })();
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":1,"./stepper":4,"./transform":5}],4:[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":1,"./stepper":5,"./transform":6}],4:[function(require,module,exports){
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+var Debugger = require("./debugger");
+function emptyFunction() {
+}
+var ProcessingDebugger = (function (_super) {
+    __extends(ProcessingDebugger, _super);
+    function ProcessingDebugger(context, onBreakpoint, onFunctionDone) {
+        _super.call(this, context, onBreakpoint, onFunctionDone);
+        this._repeater = null;
+    }
+    ProcessingDebugger.prototype.onMainStart = function () {
+        var _this = this;
+        if (this._repeater) {
+            this._repeater.stop();
+        }
+        ProcessingDebugger.events.forEach(function (event) { return _this.context[event] = undefined; });
+        this.context.draw = emptyFunction;
+    };
+    ProcessingDebugger.prototype.onMainDone = function () {
+        var _this = this;
+        var draw = this.context.draw;
+        if (draw !== emptyFunction) {
+            this._repeater = this.scheduler.createRepeater(function () { return _this._createStepper(draw()); }, 1000 / 60);
+            this._repeater.start();
+        }
+        ProcessingDebugger.events.forEach(function (name) {
+            var eventHandler = _this.context[name];
+            if (_isGeneratorFunction(eventHandler)) {
+                if (name === "keyTyped") {
+                    _this.context.keyCode = 0;
+                }
+                _this.context[name] = function () {
+                    _this.queueGenerator(eventHandler);
+                };
+            }
+        });
+    };
+    ProcessingDebugger.events = [
+        "mouseClicked",
+        "mouseDragged",
+        "mousePressed",
+        "mouseMoved",
+        "mouseReleased",
+        "keyPressed",
+        "keyReleased",
+        "keyTyped"
+    ];
+    return ProcessingDebugger;
+})(Debugger);
+function _isGeneratorFunction(value) {
+    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
+}
+module.exports = ProcessingDebugger;
+
+},{"./debugger":3}],5:[function(require,module,exports){
 var basic = require("../node_modules/basic-ds/lib/basic");
 var Frame = (function () {
     function Frame(gen, line) {
@@ -636,7 +696,7 @@ var _isGenerator = function (obj) {
 };
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/basic":6}],5:[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/basic":7}],6:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var builder = require("./../src/ast-builder");
@@ -880,9 +940,9 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./../src/ast-builder":7,"basic-ds":6}],6:[function(require,module,exports){
+},{"./../src/ast-builder":8,"basic-ds":7}],7:[function(require,module,exports){
 module.exports=require(2)
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],7:[function(require,module,exports){
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":2}],8:[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {
@@ -1022,5 +1082,5 @@ exports.createVariableDeclaration = createVariableDeclaration;
 exports.createVariableDeclarator = createVariableDeclarator;
 exports.replaceNode = replaceNode;
 
-},{}]},{},[3])(3)
+},{}]},{},[4])(4)
 });

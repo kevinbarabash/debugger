@@ -6,40 +6,32 @@
  */
 
 /// <reference path="generators.d.ts"/>
-/// <reference path="debugger-delegate.d.ts"/>
 
 import Stepper = require("./stepper");
 import Scheduler = require("../external/scheduler/lib/scheduler");
 import transform = require("./transform");
 
-class DefaultDelegate implements DebuggerDelegate {
-    willStart(debugr: any) {}
-    finishedMainFunction(debugr: any) {}
-    finishedEventLoopFunction() {}
-    hitBreakpoint() {}
-    objectInstantiated(classFn: Function, className: string, obj: Object, args: any[]) {}
-}
-
 class Debugger {
     context: any;
-    delegate: DebuggerDelegate;
     scheduler: Scheduler;
     breakpoints: { [line:number]: boolean };
     breakpointsEnabled: boolean;
     mainGenerator: Function;
 
+    onBreakpoint: () => void;
+    onFunctionDone: () => void;
+
     private _paused: boolean;
     private done: boolean;
 
-    constructor(context = {}, delegate = new DefaultDelegate()) {
+    constructor(context: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
         this.context = context;
-        this.delegate = delegate;
         this.context.__instantiate__ = (classFn, className) => {
             var obj = Object.create(classFn.prototype);
             var args = Array.prototype.slice.call(arguments, 2);
             var gen = classFn.apply(obj, args);
 
-            this.delegate.objectInstantiated(classFn, className, obj, args);
+            this.onNewObject(classFn, className, obj, args);
 
             if (gen) {
                 gen.obj = obj;
@@ -48,6 +40,9 @@ class Debugger {
                 return obj;
             }
         };
+
+        this.onBreakpoint = onBreakpoint || function () {};
+        this.onFunctionDone = onFunctionDone || function () {};
 
         this.scheduler = new Scheduler();
 
@@ -86,7 +81,7 @@ class Debugger {
 
     start(paused) {
         this.scheduler.clear();
-        this.delegate.willStart(this);
+        this.onMainStart();
 
         var stepper = this._createStepper(this.mainGenerator(this.context), true);
 
@@ -178,24 +173,40 @@ class Debugger {
         return <Stepper>this.scheduler.currentTask();
     }
 
-    private _createStepper(genObj: GeneratorObject<any>, isMain?: boolean) {
+    // TODO: make this protected in the future
+    _createStepper(genObj: GeneratorObject<any>, isMain?: boolean) {
         var stepper = new Stepper(
             genObj,
             this.breakpoints,
             () => {
                 this._paused = true;
-                this.delegate.hitBreakpoint();
+                this.onBreakpoint();
             },
             () => {
                 this._paused = false;
-                this.delegate.finishedEventLoopFunction();
+                this.onFunctionDone();
                 if (isMain) {
-                    this.delegate.finishedMainFunction(this);
+                    this.onMainDone();
                 }
             });
 
         stepper.breakpointsEnabled = this.breakpointsEnabled;
         return stepper;
+    }
+
+    // event callbacks
+    // override to customize behaviour
+
+    onMainStart() {
+
+    }
+
+    onMainDone() {
+
+    }
+
+    onNewObject(classFn: Function, className: string, obj: Object, args: any[]) {
+
     }
 }
 

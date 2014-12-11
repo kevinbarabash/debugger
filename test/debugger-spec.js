@@ -2,7 +2,7 @@
 
 describe("Debugger", function () {
 
-    var debugr, context, delegate;
+    var debugr, context;
 
     beforeEach(function () {
         context = {
@@ -14,9 +14,7 @@ describe("Debugger", function () {
             rect: sinon.stub()
         };
 
-        delegate = new ProcessingDelegate();
-
-        debugr = new Debugger(context, delegate);
+        debugr = new ProcessingDebugger(context);
     });
 
     afterEach(function () {
@@ -328,10 +326,8 @@ describe("Debugger", function () {
         });
     });
 
-    describe("Delegates", function () {
-        // TODO: create a test that exercises the newCallback
-        // TODO: re-organize delegate callbacks into a single delegate object on Debugger
-        it("should pass", function (done) {
+    describe("Callbacks", function () {
+        it("should pass constructor, constructor name, constructed object, and args to onNewObject callback", function () {
             var debugr;
 
             function getImage(name) {
@@ -355,22 +351,24 @@ describe("Debugger", function () {
 
                 var tiles = [];
                 tiles.push(new Tile(getImage("creatures/Winston")));
-                //tiles.push(PJSOutput.applyInstance(Tile,'Tile')(getImage("creatures/Winston")));
 
                 var draw = function() {
                     tiles[0].drawFaceUp();
                 };
             });
 
-            debugr = new Debugger(context);
-            //debugr.context = context;
+            debugr = new ProcessingDebugger(context);
+            debugr.onNewObject = sinon.stub();
             debugr.load(code);
             debugr.start();
 
-            setTimeout(function () {
-                expect(context.tiles[0].pic).to.be("creatures/Winston");
-                done();
-            }, 100);
+            expect(context.tiles[0].pic).to.be("creatures/Winston");
+            expect(debugr.onNewObject.called).to.be(true);
+
+            var args = debugr.onNewObject.getCall(0).args;
+            expect(args[1]).to.be("Tile");
+            expect(args[2].pic).to.be("creatures/Winston");
+            expect(args[3][0]).to.be("creatures/Winston");
         });
     });
 });
