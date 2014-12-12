@@ -40,7 +40,7 @@ poster.listen("done", function () {
     overlay.resume();
 });
 
-$("#startButton").click(function () {
+$("#startButton").click(function (e) {
     overlay.resume();
     var code = session.getValue();
     poster.post("load", code);
@@ -62,6 +62,10 @@ $("#stepOverButton").click(function () {
 
 $("#stepOutButton").click(function () {
     poster.post("stepOut");
+});
+
+$("#startButton,#continueButton,#stepOverButton,#stepInButton,#stepOutButton").on("mousedown", function (e) {
+    e.preventDefault();
 });
 
 // set/clear breakpoints by clicking in the gutter
