@@ -161,6 +161,12 @@ class Debugger {
         }
     }
 
+    get line() {
+        if (this._paused) {
+            return this._currentStepper.line;
+        }
+    }
+
     setBreakpoint(line: number) {
         this.breakpoints[line] = true;
     }
