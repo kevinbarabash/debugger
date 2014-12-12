@@ -1,6 +1,6 @@
 /*global recast, esprima, escodegen, injector */
 
-var builder = require("./../src/ast-builder");
+var builder = require("./ast-builder");
 var basic = require("basic-ds");
 
 function getScopeVariables (node, parent, context) {

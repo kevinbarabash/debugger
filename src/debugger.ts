@@ -9,7 +9,7 @@
 
 import Stepper = require("./stepper");
 import Scheduler = require("../external/scheduler/lib/scheduler");
-import transform = require("./transform");
+import transform = require("../src/transform");
 
 class Debugger {
     context: any;
