@@ -1,12 +1,12 @@
 // setup editor
 var editor = ace.edit("editor");
 var session = editor.getSession();
+var browser = new ObjectBrowser(document.querySelector("#variableList"));
 
 editor.setTheme("ace/theme/chrome");
 editor.setHighlightActiveLine(false);
 
 session.setMode("ace/mode/javascript");
-
 
 // iframe communication
 var iframe = $("iframe").get(0);
@@ -40,7 +40,7 @@ poster.listen("done", function () {
     overlay.resume();
 });
 
-$("#startButton").click(function () {
+$("#startButton").click(function (e) {
     overlay.resume();
     var code = session.getValue();
     poster.post("load", code);
@@ -62,6 +62,10 @@ $("#stepOverButton").click(function () {
 
 $("#stepOutButton").click(function () {
     poster.post("stepOut");
+});
+
+$("#startButton,#continueButton,#stepOverButton,#stepInButton,#stepOutButton").on("mousedown", function (e) {
+    e.preventDefault();
 });
 
 // set/clear breakpoints by clicking in the gutter
@@ -116,18 +120,10 @@ function updateCallStack(stackValues) {
 }
 
 function updateLocals(scope) {
-    var $variableList = $("#variableList");
-
-    $variableList.empty();
-    if (!scope) {
-        return;
-    }
-    $variableList.append(genPropsList(scope));
+    browser.object = scope;
 }
 
 poster.listen("ready", function () {
-    console.log("ready");
-    overlay.resume();
     var code = session.getValue();
     poster.post("load", code);
     poster.post("start");

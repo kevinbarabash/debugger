@@ -18,6 +18,10 @@
     color: #999;
 }
 
+.object-browser .null {
+    color: #999;
+}
+
 .object-browser .triangle {
     position:absolute;
     width:1.5em;
