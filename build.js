@@ -9,7 +9,8 @@ var args = [
     "--module", "commonjs",
     "--outDir", "lib",
     "src/processing-debugger.ts",
-    "--watch"
+    "--watch",
+    "--declaration"
 ];
 
 var tsc = spawn("./node_modules/.bin/tsc", args);

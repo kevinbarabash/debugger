@@ -1,33 +1,14 @@
 /*global recast, esprima, escodegen, injector */
 
 /// <reference path="generators.d.ts"/>
+/// <reference path="frame.d.ts"/>
 
 import basic = require("../node_modules/basic-ds/lib/basic");
 import Task = require("../external/scheduler/lib/task");
 
-interface YieldValue {
-    gen: any;
-    line: number;
-    stepAgain?: boolean;
-    scope?: Object;
-    name?: string;
-}
-
-class Frame {
-    gen: GeneratorObject<YieldValue>;
-    line: number;
-    name: string;
-    scope: Object;
-
-    constructor(gen, line) {
-        this.gen = gen;
-        this.line = line;
-    }
-}
-
-function emptyCallback() { }
-
 class Stepper implements Task {
+    breakCallback: () => void;
+    doneCallback: () => void;
     breakpointsEnabled: boolean;
     private _breakpoints: { [line: number]: boolean };
 
@@ -44,9 +25,11 @@ class Stepper implements Task {
 
     constructor(genObj,
                 breakpoints: { [line: number]: boolean },
-                public breakCallback = emptyCallback,
-                public doneCallback = emptyCallback
+                breakCallback: () => void,
+                doneCallback: () => void
     ) {
+        this.breakCallback = breakCallback || function () {};
+        this.doneCallback = doneCallback || function () {};
         this._breakpoints = breakpoints || {};
         this.breakpointsEnabled = true;
 
@@ -55,7 +38,10 @@ class Stepper implements Task {
         this._stopped = false;
 
         this.stack = new basic.Stack<Frame>();
-        this.stack.push(new Frame(genObj, -1));
+        this.stack.push({
+            gen:genObj,
+            line: -1
+        });
 
         this.stack.poppedLastItem = () => {
             this._stopped = true;
@@ -70,7 +56,10 @@ class Stepper implements Task {
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
                 if (_isGenerator(result.value.gen)) {
-                    this.stack.push(new Frame(result.value.gen, this.line));
+                    this.stack.push({
+                        gen: result.value.gen,
+                        line: this.line
+                    });
                     this.stepIn();
                     return "stepIn";
                 } else {
@@ -209,7 +198,10 @@ class Stepper implements Task {
     }
 
     private _runScope(gen) {
-        this.stack.push(new Frame(gen, this.line));
+        this.stack.push({
+            gen: gen,
+            line: this.line
+        });
 
         var result = this._step();
         while (!result.done) {
