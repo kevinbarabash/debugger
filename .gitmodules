@@ -7,3 +7,6 @@
 [submodule "external/iframe-overlay"]
 	path = external/iframe-overlay
 	url = https://github.com/kevinb7/iframe-overlay.git
+[submodule "external/processing-js"]
+	path = external/processing-js
+	url = git://github.com/kevinb7/processing-js.git

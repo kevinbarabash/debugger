@@ -15,7 +15,6 @@
     "tests"
   ],
   "dependencies": {
-    "processing": "~1.4.8",
     "ace": "~1.1.8"
   }
 }
