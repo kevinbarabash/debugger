@@ -1,13 +1,13 @@
 /// <reference path="../src/generators.d.ts" />
 /// <reference path="../src/frame.d.ts" />
-import basic = require("../node_modules/basic-ds/lib/basic");
+import Stack = require("../node_modules/basic-ds/lib/Stack");
 import Task = require("../external/scheduler/lib/task");
 declare class Stepper implements Task {
     breakCallback: () => void;
     doneCallback: () => void;
     breakpointsEnabled: boolean;
     private _breakpoints;
-    stack: basic.Stack<Frame>;
+    stack: Stack<Frame>;
     private _started;
     private _paused;
     private _stopped;

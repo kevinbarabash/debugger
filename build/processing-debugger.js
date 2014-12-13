@@ -59,10 +59,10 @@ function _isGeneratorFunction(value) {
 module.exports = ProcessingDebugger;
 
 },{"./debugger":"/Users/kevin/live-editor/external/stepper/lib/debugger.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/lib/scheduler.js":[function(require,module,exports){
-var basic = require("../node_modules/basic-ds/lib/basic");
+var LinkedList = require("../node_modules/basic-ds/lib/LinkedList");
 var Scheduler = (function () {
     function Scheduler() {
-        this.queue = new basic.LinkedList();
+        this.queue = new LinkedList();
     }
     Scheduler.prototype.addTask = function (task) {
         var _this = this;
@@ -139,193 +139,153 @@ var Scheduler = (function () {
 })();
 module.exports = Scheduler;
 
-},{"../node_modules/basic-ds/lib/basic":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":[function(require,module,exports){
-var basic;
-(function (basic) {
-    var ListNode = (function () {
-        function ListNode(value) {
-            this.value = value;
-            this.next = null;
-            this.prev = null;
+},{"../node_modules/basic-ds/lib/LinkedList":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
+var ListNode = require("./ListNode");
+var LinkedList = (function () {
+    function LinkedList() {
+        this.first = null;
+        this.last = null;
+    }
+    LinkedList.prototype.push_back = function (value) {
+        var node = new ListNode(value);
+        if (this.first === null && this.last === null) {
+            this.first = node;
+            this.last = node;
         }
-        ListNode.prototype.destroy = function () {
-            this.value = null;
-            this.prev = null;
-            this.next = null;
-        };
-        return ListNode;
-    })();
-    basic.ListNode = ListNode;
-    var LinkedList = (function () {
-        function LinkedList() {
-            this.first = null;
-            this.last = null;
+        else {
+            node.prev = this.last;
+            this.last.next = node;
+            this.last = node;
         }
-        LinkedList.prototype.push_back = function (value) {
-            var node = new ListNode(value);
-            if (this.first === null && this.last === null) {
-                this.first = node;
-                this.last = node;
+    };
+    LinkedList.prototype.push_front = function (value) {
+        var node = new ListNode(value);
+        if (this.first === null && this.last === null) {
+            this.first = node;
+            this.last = node;
+        }
+        else {
+            node.next = this.first;
+            this.first.prev = node;
+            this.first = node;
+        }
+    };
+    LinkedList.prototype.pop_back = function () {
+        if (this.last) {
+            var value = this.last.value;
+            if (this.last.prev) {
+                var last = this.last;
+                this.last = last.prev;
+                this.last.next = null;
+                last.destroy();
             }
             else {
-                node.prev = this.last;
-                this.last.next = node;
-                this.last = node;
+                this.last = null;
+                this.first = null;
             }
-        };
-        LinkedList.prototype.push_front = function (value) {
-            var node = new ListNode(value);
-            if (this.first === null && this.last === null) {
-                this.first = node;
-                this.last = node;
-            }
-            else {
-                node.next = this.first;
-                this.first.prev = node;
-                this.first = node;
-            }
-        };
-        LinkedList.prototype.pop_back = function () {
-            if (this.last) {
-                var value = this.last.value;
-                if (this.last.prev) {
-                    var last = this.last;
-                    this.last = last.prev;
-                    this.last.next = null;
-                    last.destroy();
-                }
-                else {
-                    this.last = null;
-                    this.first = null;
-                }
-                return value;
-            }
-            else {
-                return null;
-            }
-        };
-        LinkedList.prototype.pop_front = function () {
-            if (this.first) {
-                var value = this.first.value;
-                if (this.first.next) {
-                    var first = this.first;
-                    this.first = first.next;
-                    this.first.prev = null;
-                    first.destroy();
-                }
-                else {
-                    this.first = null;
-                    this.last = null;
-                }
-                return value;
-            }
-            else {
-                return null;
-            }
-        };
-        LinkedList.prototype.clear = function () {
-            this.first = this.last = null;
-        };
-        LinkedList.prototype.insertBeforeNode = function (refNode, value) {
-            if (refNode === this.first) {
-                this.push_front(value);
-            }
-            else {
-                var node = new ListNode(value);
-                node.prev = refNode.prev;
-                node.next = refNode;
-                refNode.prev.next = node;
-                refNode.prev = node;
-            }
-        };
-        LinkedList.prototype.forEachNode = function (callback, _this) {
-            var node = this.first;
-            var index = 0;
-            while (node !== null) {
-                callback.call(_this, node, index);
-                node = node.next;
-                index++;
-            }
-        };
-        LinkedList.prototype.forEach = function (callback, _this) {
-            this.forEachNode(function (node, index) { return callback.call(_this, node.value, index); }, _this);
-        };
-        LinkedList.prototype.nodeAtIndex = function (index) {
-            var i = 0;
-            var node = this.first;
-            while (node !== null) {
-                if (index === i) {
-                    return node;
-                }
-                i++;
-                node = node.next;
-            }
+            return value;
+        }
+        else {
             return null;
-        };
-        LinkedList.prototype.valueAtIndex = function (index) {
-            var node = this.nodeAtIndex(index);
-            return node ? node.value : undefined;
-        };
-        LinkedList.prototype.toArray = function () {
-            var array = [];
-            var node = this.first;
-            while (node !== null) {
-                array.push(node.value);
-                node = node.next;
-            }
-            return array;
-        };
-        LinkedList.fromArray = function (array) {
-            var list = new LinkedList();
-            array.forEach(function (value) {
-                list.push_back(value);
-            });
-            return list;
-        };
-        return LinkedList;
-    })();
-    basic.LinkedList = LinkedList;
-})(basic || (basic = {}));
-var basic;
-(function (basic) {
-    var Stack = (function () {
-        function Stack() {
-            this.items = [];
-            this.poppedLastItem = function (item) {
-            };
         }
-        Stack.prototype.push = function (item) {
-            this.items.push(item);
-        };
-        Stack.prototype.pop = function () {
-            var item = this.items.pop();
-            if (this.isEmpty) {
-                this.poppedLastItem(item);
+    };
+    LinkedList.prototype.pop_front = function () {
+        if (this.first) {
+            var value = this.first.value;
+            if (this.first.next) {
+                var first = this.first;
+                this.first = first.next;
+                this.first.prev = null;
+                first.destroy();
             }
-            return item;
-        };
-        Stack.prototype.peek = function () {
-            return this.items[this.items.length - 1];
-        };
-        Object.defineProperty(Stack.prototype, "size", {
-            get: function () {
-                return this.items.length;
-            },
-            enumerable: true,
-            configurable: true
+            else {
+                this.first = null;
+                this.last = null;
+            }
+            return value;
+        }
+        else {
+            return null;
+        }
+    };
+    LinkedList.prototype.clear = function () {
+        this.first = this.last = null;
+    };
+    LinkedList.prototype.insertBeforeNode = function (refNode, value) {
+        if (refNode === this.first) {
+            this.push_front(value);
+        }
+        else {
+            var node = new ListNode(value);
+            node.prev = refNode.prev;
+            node.next = refNode;
+            refNode.prev.next = node;
+            refNode.prev = node;
+        }
+    };
+    LinkedList.prototype.forEachNode = function (callback, _this) {
+        var node = this.first;
+        var index = 0;
+        while (node !== null) {
+            callback.call(_this, node, index);
+            node = node.next;
+            index++;
+        }
+    };
+    LinkedList.prototype.forEach = function (callback, _this) {
+        this.forEachNode(function (node, index) { return callback.call(_this, node.value, index); }, _this);
+    };
+    LinkedList.prototype.nodeAtIndex = function (index) {
+        var i = 0;
+        var node = this.first;
+        while (node !== null) {
+            if (index === i) {
+                return node;
+            }
+            i++;
+            node = node.next;
+        }
+        return null;
+    };
+    LinkedList.prototype.valueAtIndex = function (index) {
+        var node = this.nodeAtIndex(index);
+        return node ? node.value : undefined;
+    };
+    LinkedList.prototype.toArray = function () {
+        var array = [];
+        var node = this.first;
+        while (node !== null) {
+            array.push(node.value);
+            node = node.next;
+        }
+        return array;
+    };
+    LinkedList.fromArray = function (array) {
+        var list = new LinkedList();
+        array.forEach(function (value) {
+            list.push_back(value);
         });
-        Object.defineProperty(Stack.prototype, "isEmpty", {
-            get: function () {
-                return this.items.length === 0;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        return Stack;
-    })();
-    basic.Stack = Stack;
-})(basic || (basic = {}));
-module.exports = basic;
+        return list;
+    };
+    return LinkedList;
+})();
+module.exports = LinkedList;
+
+},{"./ListNode":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
+var ListNode = (function () {
+    function ListNode(value) {
+        this.value = value;
+        this.next = null;
+        this.prev = null;
+    }
+    ListNode.prototype.destroy = function () {
+        this.value = null;
+        this.prev = null;
+        this.next = null;
+    };
+    return ListNode;
+})();
+module.exports = ListNode;
 
 },{}],"/Users/kevin/live-editor/external/stepper/lib/debugger.js":[function(require,module,exports){
 var Stepper = require("./stepper");
@@ -504,7 +464,7 @@ var Debugger = (function () {
 module.exports = Debugger;
 
 },{"../external/scheduler/lib/scheduler":"/Users/kevin/live-editor/external/stepper/external/scheduler/lib/scheduler.js","../src/transform":"/Users/kevin/live-editor/external/stepper/src/transform.js","./stepper":"/Users/kevin/live-editor/external/stepper/lib/stepper.js"}],"/Users/kevin/live-editor/external/stepper/lib/stepper.js":[function(require,module,exports){
-var basic = require("../node_modules/basic-ds/lib/basic");
+var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Stepper = (function () {
     function Stepper(genObj, breakpoints, breakCallback, doneCallback) {
         var _this = this;
@@ -517,7 +477,7 @@ var Stepper = (function () {
         this._started = false;
         this._paused = false;
         this._stopped = false;
-        this.stack = new basic.Stack();
+        this.stack = new Stack();
         this.stack.push({
             gen: genObj,
             line: -1
@@ -705,9 +665,53 @@ var _isGenerator = function (obj) {
 };
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/basic":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/basic.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/basic.js":[function(require,module,exports){
-module.exports=require("/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js")
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/basic.js"}],"/Users/kevin/live-editor/external/stepper/src/ast-builder.js":[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/Stack":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
+module.exports=require("/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js")
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
+module.exports=require("/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js")
+},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/Stack.js":[function(require,module,exports){
+var Stack = (function () {
+    function Stack() {
+        this.items = [];
+        this.poppedLastItem = function (item) {
+        };
+    }
+    Stack.prototype.push = function (item) {
+        this.items.push(item);
+    };
+    Stack.prototype.pop = function () {
+        var item = this.items.pop();
+        if (this.isEmpty) {
+            this.poppedLastItem(item);
+        }
+        return item;
+    };
+    Stack.prototype.peek = function () {
+        return this.items[this.items.length - 1];
+    };
+    Object.defineProperty(Stack.prototype, "size", {
+        get: function () {
+            return this.items.length;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Stack.prototype, "isEmpty", {
+        get: function () {
+            return this.items.length === 0;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return Stack;
+})();
+module.exports = Stack;
+
+},{}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/basic.js":[function(require,module,exports){
+exports.LinkedList = require("./LinkedList");
+exports.Stack = require("./Stack");
+
+},{"./LinkedList":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/LinkedList.js","./Stack":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor/external/stepper/src/ast-builder.js":[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {

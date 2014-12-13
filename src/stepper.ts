@@ -3,7 +3,7 @@
 /// <reference path="generators.d.ts"/>
 /// <reference path="frame.d.ts"/>
 
-import basic = require("../node_modules/basic-ds/lib/basic");
+import Stack = require("../node_modules/basic-ds/lib/Stack");
 import Task = require("../external/scheduler/lib/task");
 
 class Stepper implements Task {
@@ -12,7 +12,7 @@ class Stepper implements Task {
     breakpointsEnabled: boolean;
     private _breakpoints: { [line: number]: boolean };
 
-    stack: basic.Stack<Frame>;
+    stack: Stack<Frame>;
 
     // state variables
     private _started: boolean;
@@ -37,7 +37,7 @@ class Stepper implements Task {
         this._paused = false;
         this._stopped = false;
 
-        this.stack = new basic.Stack<Frame>();
+        this.stack = new Stack<Frame>();
         this.stack.push({
             gen:genObj,
             line: -1
