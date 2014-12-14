@@ -16,10 +16,8 @@
     "url": "https://github.com/kevinb7/js-step/issues"
   },
   "homepage": "https://github.com/kevinb7/js-step",
-  "dependencies": {},
   "devDependencies": {
     "basic-ds": "git://github.com/kevinb7/basic-ds.git",
-    "escodegen": "^1.4.1",
     "escope": "^1.0.1",
     "esprima": "^1.2.2",
     "estraverse": "^1.9.0",

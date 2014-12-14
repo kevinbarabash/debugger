@@ -10,3 +10,6 @@
 [submodule "external/processing-js"]
 	path = external/processing-js
 	url = git://github.com/kevinb7/processing-js.git
+[submodule "external/escodegen"]
+	path = external/escodegen
+	url = git://github.com/kevinb7/escodegen.git

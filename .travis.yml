@@ -7,6 +7,4 @@ before_install:
 before_script:
   - npm install -g bower
   - bower install
-  - sed 's/parenthesize(result, Precedence.Yield, precedence)/parenthesize(result, Precedence.Yield, Infinity)/g' bower_components/escodegen/escodegen.browser.js > temp.js
-  - mv temp.js bower_components/escodegen/escodegen.browser.js
 script: npm test
