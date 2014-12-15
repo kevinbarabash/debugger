@@ -50,11 +50,6 @@ describe("Debugger", function () {
             expect(context.fill.callCount).to.be(2);
         });
 
-        it.skip("should be done after running", function () {
-            debugr.start();
-            expect(debugr.stopped).to.be(true);
-        });
-
         it("should set variables in the context", function () {
             debugr.start();
             expect(context.x).to.equal(5);
@@ -793,6 +788,53 @@ describe("Debugger", function () {
 
             expect(context.x).to.be(5);
         });
+
+        it("should support inheritance using Object.create", function () {
+            var code = getFunctionBody(function () {
+                function Foo() {
+                    this.x = 5;
+                }
+
+                function Bar() {
+                    Foo.call(this);
+                    this.y = 10;
+                }
+
+                Bar.prototype = Object.create(Foo.prototype);
+
+                var bar = new Bar();
+                x = bar.x;
+                y = bar.y;
+            });
+
+            debugr.load(code);
+            debugr.start();
+
+            expect(context.x).to.be(5);
+            expect(context.y).to.be(10);
+        });
+
+        // TODO: change how the code is transformed to handle this case
+        it.skip("should objects with a next method", function () {
+            var code = getFunctionBody(function () {
+                var Iterator = function() {
+                    this.value = 0;
+                };
+                Iterator.prototype.next = function () {
+                    return this.value++;
+                };
+                var iter = new Iterator();
+                iter.next();
+                iter.next();
+                iter.next();
+                x = iter.next();
+            });
+
+            debugr.load(code);
+            debugr.start();
+
+            expect(context.x).to.be(3);
+        });
     });
 
     describe("Breakpoints", function () {
@@ -1475,20 +1517,36 @@ describe("Debugger", function () {
         });
     });
 
-    // TODO: write tests that verify callbacks get called
-    describe.skip("lifecyle", function () {
-        it("should call 'doneCallback' when complete", function (done) {
-            //var code = getFunctionBody(function () {
-            //    fill(255,0,0);
-            //    rect(100,200,50,50);
-            //});
-            //
-            //var breakpoints = {};
-            //
-            //debugr.load(code);
-            //
-            //debugr.start();
+    describe("lifecyle", function () {
+        it("should call 'onFunctionDone' when complete", function (done) {
+            var code = getFunctionBody(function (done) {
+                fill(255,0,0);
+                rect(100,200,50,50);
+            });
+
+            debugr.onFunctionDone = function () {
+                done();
+            };
+            debugr.load(code);
+            debugr.start();
         });
+
+        it("should call 'onBreakpoint' when a breakpoint is hit", function (done) {
+            var code = getFunctionBody(function (done) {
+                fill(255,0,0);
+                rect(100,200,50,50);
+            });
+
+            debugr.breakpoints = {
+                "1": true
+            };
+            debugr.onBreakpoint = function () {
+                debugr.resume();
+                done();
+            };
+            debugr.load(code);
+            debugr.start();
+        })
     });
 
     describe("Basic Functionality", function () {
