@@ -16,7 +16,8 @@ class ProcessingDebugger extends Debugger {
         }
 
         // reset all event handlers
-        ProcessingDebugger.events.forEach(event => this.context[event] = undefined);
+        // TODO: write a test for this
+        ProcessingDebugger.events.forEach(event => this.context[event] = emptyFunction);
 
         // reset draw
         this.context.draw = emptyFunction;

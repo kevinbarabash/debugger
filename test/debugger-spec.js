@@ -1781,6 +1781,8 @@ describe("Debugger", function () {
             debugr.load(code1);
             debugr.start();
 
+            var emptyFunction = "functionemptyFunction(){}";
+
             context.mouseClicked();
             setTimeout(function () {
                 expect(context.x).to.be(5);
@@ -1789,7 +1791,7 @@ describe("Debugger", function () {
                 debugr.load(code2);
                 debugr.start();
 
-                expect(context.mouseClicked).to.be(undefined);
+                expect(context.mouseClicked.toString().replace(/\s/g,"")).to.be(emptyFunction);
 
                 done();
             }, 50);
