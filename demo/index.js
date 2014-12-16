@@ -43,6 +43,13 @@ poster.listen("done", function () {
 $("#startButton").click(function (e) {
     overlay.resume();
     var code = session.getValue();
+
+    var breakpoints = {};
+    editor.session.getBreakpoints().forEach(function (value, index) {
+        breakpoints[index + 1] = true;
+    });
+    
+    poster.post("setBreakpoints", breakpoints);
     poster.post("load", code);
     poster.post("start");
 });
@@ -91,6 +98,41 @@ editor.on("guttermousedown", function(e){
     }
 
     e.stop();
+});
+
+// Based on:
+// https://github.com/ajaxorg/cloud9/blob/master/plugins-client/ext.debugger/breakpoints.js#L170
+session.on("change", function(e) {
+    if (!session.$breakpoints.length) {
+        return;
+    }
+
+    var delta = e.data;
+    var range = delta.range;
+    if (range.end.row == range.start.row) {
+        return;
+    }
+
+    var len, firstRow;
+    len = range.end.row - range.start.row;
+
+    if (delta.action == "insertText") {
+        firstRow = range.start.column ? range.start.row + 1 : range.start.row;
+    } else {
+        firstRow = range.start.row;
+    }
+
+    if (delta.action === "insertText" || delta.action === "insertLines") {
+        var args = new Array(len);
+        args.unshift(firstRow, 0);
+        Array.prototype.splice.apply(session.$breakpoints, args);
+    } else {
+        if (range.start.column === 0 && range.end.column === 0) {
+            session.$breakpoints.splice(firstRow, len);
+        } else {
+            session.$breakpoints.splice(firstRow + 1, len);
+        }
+    }
 });
 
 function updateView(line) {

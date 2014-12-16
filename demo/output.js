@@ -59,6 +59,10 @@ poster.listen("clearBreakpoint", function (line) {
     debugr.clearBreakpoint(line);
 });
 
+poster.listen("setBreakpoints", function (breakpoints) {
+    debugr.breakpoints = breakpoints; 
+});
+
 iframeOverlay.createRelay(canvas);
 
 poster.post("ready");
