@@ -329,12 +329,13 @@ var Debugger = (function () {
     Debugger.prototype.load = function (code) {
         var debugCode = transform(code, this.context);
         var debugFunction = new Function(debugCode);
-        this.mainGenerator = debugFunction();
+        this.mainGeneratorFunction = debugFunction();
     };
     Debugger.prototype.start = function (paused) {
         this.scheduler.clear();
         this.onMainStart();
-        var stepper = this._createStepper(this.mainGenerator(this.context), true);
+        var mainGeneratorObject = this.mainGeneratorFunction(this.context);
+        var stepper = this._createStepper(mainGeneratorObject, true);
         this.scheduler.addTask(stepper);
         stepper.start(paused);
     };
@@ -379,7 +380,7 @@ var Debugger = (function () {
         get: function () {
             var stepper = this._currentStepper;
             if (stepper !== null) {
-                return stepper.stack.items.map(function (frame) {
+                return stepper.stack.toArray().map(function (frame) {
                     return {
                         name: frame.name,
                         line: frame.line
@@ -689,6 +690,9 @@ var Stack = (function () {
     Stack.prototype.peek = function () {
         return this.items[this.items.length - 1];
     };
+    Stack.prototype.toArray = function () {
+        return this.items.map(function (item) { return item; });
+    };
     Object.defineProperty(Stack.prototype, "size", {
         get: function () {
             return this.items.length;
@@ -885,8 +889,9 @@ function getScopeVariables (node, parent, context) {
 
 // insert yield { line: <line_number> } in between each line
 function insertYields (bodyList) {
-    bodyList.forEachNode(function (node) {
-        var loc = node.value.loc;
+    bodyList.forEachNode(function (node) {  // this is a linked list node
+        // TODO: separate vars for list nodes and ast nodes
+        var loc = node.value.loc;   
         var yieldExpression = builder.createExpressionStatement(
             builder.createYieldExpression(
                 builder.createObjectExpression({ line: loc.start.line })
@@ -1077,8 +1082,10 @@ function transform(code, context) {
                     }
 
                     // create a yieldExpress to wrap the call
+                    var loc = node.loc;
                     return builder.createYieldExpression(
-                        builder.createObjectExpression({ gen: gen })
+                        // TODO: this is the current line, but we should actually be passing next node's line
+                        builder.createObjectExpression({ gen: gen, line: loc.start.line })
                     );
                 } else {
                     throw "we don't handle '" + node.callee.type + "' callees";

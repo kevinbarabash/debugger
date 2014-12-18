@@ -8,7 +8,7 @@ declare class Debugger {
         [x: number]: boolean;
     };
     breakpointsEnabled: boolean;
-    mainGenerator: Function;
+    mainGeneratorFunction: GeneratorFunction<any>;
     onBreakpoint: () => void;
     onFunctionDone: () => void;
     private _paused;

@@ -16,7 +16,7 @@ class Debugger {
     scheduler: Scheduler;
     breakpoints: { [line:number]: boolean };
     breakpointsEnabled: boolean;
-    mainGenerator: Function;
+    mainGeneratorFunction: GeneratorFunction<any>;
 
     onBreakpoint: () => void;
     onFunctionDone: () => void;
@@ -75,15 +75,18 @@ class Debugger {
 
     load(code: string) {
         var debugCode = transform(code, this.context);
+        // TODO: add a debug flag to these console messages
+        //console.log(debugCode);
         var debugFunction = new Function(debugCode);
-        this.mainGenerator = debugFunction();
+        this.mainGeneratorFunction = debugFunction();
     }
 
     start(paused) {
         this.scheduler.clear();
         this.onMainStart();
 
-        var stepper = this._createStepper(this.mainGenerator(this.context), true);
+        var mainGeneratorObject = this.mainGeneratorFunction(this.context);
+        var stepper = this._createStepper(mainGeneratorObject, true);
 
         this.scheduler.addTask(stepper);
         stepper.start(paused);  // paused = true -> start paused on the first line
@@ -133,7 +136,8 @@ class Debugger {
     get currentStack() {
         var stepper = this._currentStepper;
         if (stepper !== null) {
-            return stepper.stack.items.map(function (frame) {
+            
+            return stepper.stack.toArray().map(frame => {
                 return {
                     name: frame.name,
                     line: frame.line

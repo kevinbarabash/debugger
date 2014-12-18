@@ -1283,8 +1283,78 @@ describe("Debugger", function () {
             });
         });
 
-        describe.skip("for loops", function () {
-            // TODO: write some tests where functions are called in the for loop declaration
+        describe("for loops", function () {
+            // TODO: yield on init, test, and update parts of the ForExpression
+            it.skip("should step over each part of the ForStatement separately", function () {
+                var code = getFunctionBody(function () {
+                    for (var i = 0; i < 2; i++) {
+                        x = i + 1;
+                    }
+                });
+                
+                debugr.load(code);
+                debugr.start(true);
+
+                expect(debugr.line).to.be(1);   // var i = 0
+                debugr.stepOver();
+                expect(debugr.line).to.be(1);   // i < 2
+                debugr.stepOver();
+                expect(debugr.line).to.be(1);   // i++
+                debugr.stepOver();
+                expect(debugr.line).to.be(2);   // x = i + 1
+                debugr.stepOver();
+                expect(debugr.line).to.be(1);   // i < 2
+                debugr.stepOver();
+                expect(debugr.line).to.be(1);   // i++
+                debugr.stepOver();
+                expect(debugr.line).to.be(2);   // x = i + 1
+                debugr.stepOver();
+                
+                expect(context.x).to.be(2);
+            });
+
+            it("should step through function calls appear in the ForStatement", function () {
+                var code = getFunctionBody(function () {
+                    var init = function () {
+                        return 0;
+                    };
+                    var cmp = function (i) {
+                        return i < 2;
+                    };
+                    var inc = function (i) {
+                        return i + 1;
+                    };
+                    for (var i = init(); cmp(i); i = inc(i)) {
+                        x = i + 1;
+                    }
+                });
+
+                debugr.load(code);
+                debugr.start(true);
+                
+                expect(debugr.line).to.be(1);
+                debugr.stepOver();
+                expect(debugr.line).to.be(4);
+                debugr.stepOver();
+                expect(debugr.line).to.be(7);
+                debugr.stepOver();
+                expect(debugr.line).to.be(10);  // var i = init();
+                debugr.stepOver();
+                expect(debugr.line).to.be(10);  // cmp(i);
+                debugr.stepOver();
+                expect(debugr.line).to.be(10);  // i = inc(i);
+                debugr.stepOver();
+                expect(debugr.line).to.be(11);  // x = i + 1;
+                debugr.stepOver();
+                expect(context.x).to.be(1);
+                expect(debugr.line).to.be(10);  // cmp(i);
+                debugr.stepOver();
+                expect(debugr.line).to.be(10);  // i = inc(i);
+                debugr.stepOver();
+                expect(debugr.line).to.be(11);  // x = i + 1;
+                debugr.stepOver();
+                expect(context.x).to.be(2);
+            });
         });
     });
 

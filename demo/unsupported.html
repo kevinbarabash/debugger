@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Sorry, stepper won't work on this browser</title>
+    <style>
+        p {
+            width:30em;
+        }
+    </style>
+</head>
+<body>
+<h1>Sorry, stepper won't work on this browser</h1>
+<h2>Why not?</h2>
+<p>
+    This debugger uses <a href="http://davidwalsh.name/es6-generators">ES6 Generators</a>
+    which <a href="http://kangax.github.io/compat-table/es6/#generators">aren't widely 
+    supported in browsers yet.</a>
+</p>
+<h2>Supported Browsers</h2>
+<ul>
+    <li>Chrome 39+</li>
+    <li>Firefox 26+</li>
+</ul>
+<h2>When can I use my favorite browser?</h2>
+<p>
+    Soon, I hope.  I'm working on making things work on older browsers using a
+    tool called <a href="https://github.com/facebook/regenerator">regenerator</a>
+    which converts generators to something that can be run using plain old ES5.
+</p>
+</body>
+</html>

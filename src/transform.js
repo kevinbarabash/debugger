@@ -31,8 +31,9 @@ function getScopeVariables (node, parent, context) {
 
 // insert yield { line: <line_number> } in between each line
 function insertYields (bodyList) {
-    bodyList.forEachNode(function (node) {
-        var loc = node.value.loc;
+    bodyList.forEachNode(function (node) {  // this is a linked list node
+        // TODO: separate vars for list nodes and ast nodes
+        var loc = node.value.loc;   
         var yieldExpression = builder.createExpressionStatement(
             builder.createYieldExpression(
                 builder.createObjectExpression({ line: loc.start.line })
@@ -223,8 +224,11 @@ function transform(code, context) {
                     }
 
                     // create a yieldExpress to wrap the call
+                    var loc = node.loc;
                     return builder.createYieldExpression(
-                        builder.createObjectExpression({ gen: gen })
+                        // TODO: this is the current line, but we should actually be passing next node's line
+                        // TODO: handle this in when the ForStatement is parsed where we have more information
+                        builder.createObjectExpression({ gen: gen, line: loc.start.line })
                     );
                 } else {
                     throw "we don't handle '" + node.callee.type + "' callees";
