@@ -211,7 +211,22 @@ function transform(code, context) {
                 //    // TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
                 //    create__scope__(node, bodyList, scope);
                 //} else {
-                    node.body = bodyList.toArray();
+                
+                // TODO: figure how to handle scope variables in Program
+                //if (node.type !== "Program") {
+                if (bodyList.first !== null) {
+                    var firstStatement = bodyList.first.value;
+                    firstStatement.expression.argument.properties.push({
+                        type: "Property",
+                        key: builder.createIdentifier("scope"),
+                        value: builder.createIdentifier("__scope__"),
+                        kind: "init"
+                    });
+                }
+                   
+                //}
+                   
+                node.body = bodyList.toArray();
                 //}
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
@@ -263,7 +278,7 @@ function transform(code, context) {
         expression: false
     };
 
-    //console.log(escodegen.generate(genFunc));
+    console.log(escodegen.generate(genFunc));
     regenerator.transform(genFunc);
 
     var body = genFunc.body.body;
@@ -304,35 +319,75 @@ function transform(code, context) {
         throw "unable to inject 'with' statement";
     }
 
-    // ast's root points to a subtree within genFunc
-    //estraverse.traverse(genFunc, {
-    //    leave: function (node, parent) {
-    //        if (node.type === "ReturnStatement") {
-    //            if (node.argument.type === "CallExpression") {
-    //                var callee = node.argument.callee;
-    //                var firstArg = node.argument.arguments[0];
-    //                
-    //                if (callee.object.name === "regeneratorRuntime" &&
-    //                    callee.property.name === "wrap") {
-    //
-    //                    if (firstArg.id.name !== "genFunc$") {
-    //                        var blockStmt = firstArg.body;
-    //                        //
-    //                        var withStmt = builder.createWithStatement(
-    //                            builder.createIdentifier("__scope__"),
-    //                            builder.createBlockStatement(blockStmt.body)
-    //                        );
-    //                        //
-    //                        blockStmt.body = [withStmt];
-    //                    }
-    //                    console.log(node);
-    //                }
-    //            }
-    //        }
-    //    }
-    //});
+    //ast's root points to a subtree within genFunc
+    estraverse.traverse(genFunc, {
+        enter: function (node, parent) {
+            node._parent = parent;
+        },
+        leave: function (node, parent) {
+            if (node.type === "ReturnStatement") {
+                if (node.argument.type === "CallExpression") {
+                    var callee = node.argument.callee;
+                    var firstArg = node.argument.arguments[0];
+                    
+                    if (callee.object.name === "regeneratorRuntime" &&
+                        callee.property.name === "wrap") {
+                        
+                        var properties = node._parent._parent.params.map(function (param) {
+                            return {
+                                type: "Property",
+                                key: builder.createIdentifier(param.name),
+                                value: builder.createIdentifier(param.name),
+                                kind: "init"
+                            }  
+                        });
+
+                        if (node._parent.body[0].declarations) {
+                            node._parent.body[0].declarations.forEach(function (decl) {
+                                properties.push({
+                                    type: "Property",
+                                    key: builder.createIdentifier(decl.id.name),
+                                    value: builder.createIdentifier("undefined"),
+                                    kind: "init"
+                                })
+                            });
+                        }
+
+                        // filter out variables defined in the context from the local vars
+                        // but only for the root scope
+                        if (firstArg.id.name === "genFunc$") {
+                            properties = properties.filter(function (prop) {
+                                return !context.hasOwnProperty(prop.key.name);
+                            });
+                        }
+
+                        var objectExpression = {
+                            type: "ObjectExpression",
+                            properties: properties
+                        };
+
+                        node._parent.body.unshift(
+                            builder.createVariableDeclaration([
+                                builder.createVariableDeclarator("__scope__", objectExpression)
+                            ])
+                        );
+                        
+                        var blockStmt = firstArg.body;
+                        var withStmt = builder.createWithStatement(
+                            builder.createIdentifier("__scope__"),
+                            builder.createBlockStatement(blockStmt.body)
+                        );
+                        blockStmt.body = [withStmt];
+                    }
+                    console.log(node);
+                    //}
+                }
+            }
+            delete node._parent;
+        }
+    });
     
-    //console.log(escodegen.generate(genFunc));
+    console.log(escodegen.generate(genFunc));
     
     return new Function(escodegen.generate(genFunc) + "\n" + "return genFunc;");
     

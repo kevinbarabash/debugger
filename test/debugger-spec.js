@@ -1061,6 +1061,31 @@ describe("Debugger", function () {
             expect(context.x).to.be(5);
             expect(context.y).to.be(10);
         });
+        
+        it("should work handle simple cases", function () {
+            var code = getFunctionBody(function () {
+                var foo = function (y) {
+                    var x = y + 1;
+                    return x;
+                };
+                x = foo(5);
+            });
+
+            debugr.load(code);
+            debugr.start(true);
+
+            debugr.stepOver();
+            debugr.stepIn();
+            var scope = debugr.currentScope;
+            expect(scope.y).to.be(5);
+            expect(scope.x).to.be(undefined);
+
+            debugr.stepOver();
+            expect(scope.x).to.be(6);
+
+            debugr.resume();
+            expect(context.x).to.be(6);
+        });
     });
 
     // all function calls are treated as ambiguous by _createDebugGenerator
