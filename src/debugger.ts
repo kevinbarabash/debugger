@@ -9,7 +9,7 @@
 
 import Stepper = require("./stepper");
 import Scheduler = require("../external/scheduler/lib/scheduler");
-import transform = require("../src/transform");
+import transform = require("../src/es5-transform");
 
 class Debugger {
     context: any;
@@ -74,10 +74,8 @@ class Debugger {
     }
 
     load(code: string) {
-        var debugCode = transform(code, this.context);
-        // TODO: add a debug flag to these console messages
-        //console.log(debugCode);
-        var debugFunction = new Function(debugCode);
+        var debugFunction = transform(code, this.context);
+        //console.log(debugFunction);
         this.mainGeneratorFunction = debugFunction();
     }
 
