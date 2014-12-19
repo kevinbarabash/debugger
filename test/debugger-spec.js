@@ -1,5 +1,7 @@
 /*global describe, it, beforeEach, afterEach */
 
+// TODO: add tests for functions defined inside functions
+
 describe("Debugger", function () {
 
     var debugr, context;
@@ -9,6 +11,7 @@ describe("Debugger", function () {
         fill = sinon.stub();
         rect = sinon.stub();
         print = sinon.stub();
+        image = sinon.stub();
 
         context = {
             fill: fill,
@@ -21,7 +24,8 @@ describe("Debugger", function () {
             Vector: function (x,y) {
                 this.x = x;
                 this.y = y;
-            }
+            },
+            image: image
         };
 
         debugr = new ProcessingDebugger(context);

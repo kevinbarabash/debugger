@@ -6,6 +6,7 @@ var processing = new Processing(canvas);
 // init canvas
 processing.size(400,400);
 processing.resetMatrix();
+processing.usingDebugger = true;
 
 var poster = new Poster(window.parent);
 var debugr = new ProcessingDebugger(

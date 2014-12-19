@@ -74,60 +74,6 @@ function insertYields (bodyList) {
     });
 }
 
-function create__scope__ (node, bodyList, scope) {
-    var properties = scope.map(function (variable) {
-        var isParam = variable.defs.some(function (def) {
-            return def.type === "Parameter";
-        });
-        var name = variable.name;
-
-        // if the variable is a parameter initialize its
-        // value with the value of the parameter
-        var value = isParam ? builder.createIdentifier(name) : builder.createIdentifier("undefined");
-        return {
-            type: "Property",
-            key: builder.createIdentifier(name),
-            value: value,
-            kind: "init"
-        }
-    });
-
-    // modify the first yield statement to include the scope
-    // as part of the value
-    var firstStatement = bodyList.first.value;
-    firstStatement.expression.argument.properties.push({
-        type: "Property",
-        key: builder.createIdentifier("scope"),
-        value: builder.createIdentifier("__scope__"),
-        kind: "init"
-    });
-
-    // wrap the body with a with statement
-    //var withStatement = builder.createWithStatement(
-    //    builder.createIdentifier("__scope__"),
-    //    builder.createBlockStatement(bodyList.toArray())
-    //);
-    var objectExpression = {
-        type: "ObjectExpression",
-        properties: properties
-    };
-
-    // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
-    //node.body = [
-    //    builder.createVariableDeclaration([
-    //        builder.createVariableDeclarator("__scope__", objectExpression)
-    //    ]),
-    //    withStatement
-    //];
-    
-    node.body = bodyList.toArray();
-    
-    node.body.unshift(
-        builder.createVariableDeclaration([
-            builder.createVariableDeclarator("__scope__", objectExpression)
-        ])
-    );
-}
 
 function stringForId(node) {
     var name = "";
@@ -204,16 +150,8 @@ function transform(code, context) {
                     }
                 }
 
-                // if there are any variables defined in this scope
-                // create a __scope__ dictionary containing their values
-                // and include in the first yield
-                //if (scope && scope.length > 0 && bodyList.first) {
-                //    // TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
-                //    create__scope__(node, bodyList, scope);
-                //} else {
-                
-                // TODO: figure how to handle scope variables in Program
-                //if (node.type !== "Program") {
+                // if the function isn't empty create a "scope" property
+                // to the first yield statement
                 if (bodyList.first !== null) {
                     var firstStatement = bodyList.first.value;
                     firstStatement.expression.argument.properties.push({
@@ -223,11 +161,8 @@ function transform(code, context) {
                         kind: "init"
                     });
                 }
-                   
-                //}
-                   
+
                 node.body = bodyList.toArray();
-                //}
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {

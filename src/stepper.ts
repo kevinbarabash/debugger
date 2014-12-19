@@ -225,7 +225,8 @@ class Stepper implements Task {
 }
 
 var _isGenerator = function (obj) {
-    return obj instanceof Object && obj.toString() === "[object Generator]"
+    // note: the regenerator runtime provides proper prototypes
+    return obj && typeof(obj.next) === "function";
 };
 
 export = Stepper;
