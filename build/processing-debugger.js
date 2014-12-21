@@ -323,6 +323,7 @@ var Debugger = (function () {
                     return obj;
                 }
             };
+            this._context.__usingDebugger = true;
         },
         enumerable: true,
         configurable: true

@@ -1095,6 +1095,10 @@ describe("Debugger", function () {
             expect(newContext.v.x).to.be(5);
             expect(newContext.v.y).to.be(10);
         });
+        
+        it("should inject a __usingDebugger variable into the context", function () {
+            expect(context.__usingDebugger).to.be(true);
+        });
     });
 
     // all function calls are treated as ambiguous by _createDebugGenerator

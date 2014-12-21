@@ -53,6 +53,7 @@ class Debugger {
                 return obj;
             }
         };
+        this._context.__usingDebugger = true;
     }
     
     get context() {
