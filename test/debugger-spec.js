@@ -24,7 +24,8 @@ describe("Debugger", function () {
             }
         };
 
-        debugr = new ProcessingDebugger(context);
+        debugr = new ProcessingDebugger();
+        debugr.context = context;
     });
 
     describe("start", function () {
@@ -1061,6 +1062,39 @@ describe("Debugger", function () {
             expect(context.x).to.be(5);
             expect(context.y).to.be(10);
         });
+        
+        it("should support changing the context after running", function () {
+            var code1 = getFunctionBody(function () {
+                var x = 5;
+                var y = 10;
+            });
+
+            debugr.load(code1);
+            debugr.start();
+
+            expect(context.x).to.be(5);
+            expect(context.y).to.be(10);
+
+            var code2 = getFunctionBody(function () {
+                var Vector = function (x,y) {
+                    this.x = x;
+                    this.y = y;
+                    console.log("end of new Vector");
+                };
+                v = new Vector(5,10);
+            });
+            
+            var newContext = {
+                v: undefined
+            };
+
+            debugr.context = newContext;
+            debugr.load(code2);
+            debugr.start();
+            
+            expect(newContext.v.x).to.be(5);
+            expect(newContext.v.y).to.be(10);
+        });
     });
 
     // all function calls are treated as ambiguous by _createDebugGenerator
@@ -1213,6 +1247,27 @@ describe("Debugger", function () {
             debugr.start();
 
             expect(context.x).to.be(5);
+        });
+        
+        it("should be able to access variables from the closure", function () {
+            var code = getFunctionBody(function () {
+                var a = "hello";
+                var foo = function () {
+                    var a = "goodbye";
+                    return function () {
+                        return a;
+                    }
+                };
+                
+                y = foo()();
+                x = a;
+            });
+
+            debugr.load(code);
+            debugr.start();
+            
+            expect(context.x).to.be("hello");
+            expect(context.y).to.be("goodbye");
         });
     });
 

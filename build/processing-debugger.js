@@ -58,7 +58,7 @@ function _isGeneratorFunction(value) {
 }
 module.exports = ProcessingDebugger;
 
-},{"./debugger":"/Users/kevin/live-editor/external/stepper/lib/debugger.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/lib/scheduler.js":[function(require,module,exports){
+},{"./debugger":"/Users/kevin/live-editor-stepper/external/stepper/lib/debugger.js"}],"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/lib/scheduler.js":[function(require,module,exports){
 var LinkedList = require("../node_modules/basic-ds/lib/LinkedList");
 var Scheduler = (function () {
     function Scheduler() {
@@ -139,7 +139,7 @@ var Scheduler = (function () {
 })();
 module.exports = Scheduler;
 
-},{"../node_modules/basic-ds/lib/LinkedList":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/LinkedList":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
 var ListNode = require("./ListNode");
 var LinkedList = (function () {
     function LinkedList() {
@@ -271,7 +271,7 @@ var LinkedList = (function () {
 })();
 module.exports = LinkedList;
 
-},{"./ListNode":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
+},{"./ListNode":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
 var ListNode = (function () {
     function ListNode(value) {
         this.value = value;
@@ -287,27 +287,13 @@ var ListNode = (function () {
 })();
 module.exports = ListNode;
 
-},{}],"/Users/kevin/live-editor/external/stepper/lib/debugger.js":[function(require,module,exports){
+},{}],"/Users/kevin/live-editor-stepper/external/stepper/lib/debugger.js":[function(require,module,exports){
 var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("../src/transform");
 var Debugger = (function () {
     function Debugger(context, onBreakpoint, onFunctionDone) {
-        var _this = this;
-        this.context = context;
-        this.context.__instantiate__ = function (classFn, className) {
-            var obj = Object.create(classFn.prototype);
-            var args = Array.prototype.slice.call(arguments, 2);
-            var gen = classFn.apply(obj, args);
-            _this.onNewObject(classFn, className, obj, args);
-            if (gen) {
-                gen.obj = obj;
-                return gen;
-            }
-            else {
-                return obj;
-            }
-        };
+        this.context = context || {};
         this.onBreakpoint = onBreakpoint || function () {
         };
         this.onFunctionDone = onFunctionDone || function () {
@@ -317,6 +303,30 @@ var Debugger = (function () {
         this.breakpointsEnabled = true;
         this._paused = false;
     }
+    Object.defineProperty(Debugger.prototype, "context", {
+        get: function () {
+            return this._context;
+        },
+        set: function (context) {
+            var _this = this;
+            this._context = context;
+            this._context.__instantiate__ = function (classFn, className) {
+                var obj = Object.create(classFn.prototype);
+                var args = Array.prototype.slice.call(arguments, 2);
+                var gen = classFn.apply(obj, args);
+                _this.onNewObject(classFn, className, obj, args);
+                if (gen) {
+                    gen.obj = obj;
+                    return gen;
+                }
+                else {
+                    return obj;
+                }
+            };
+        },
+        enumerable: true,
+        configurable: true
+    });
     Debugger.isBrowserSupported = function () {
         try {
             var code = "\n" + "var generator = (function* () {\n" + "  yield* (function* () {\n" + "    yield 5; yield 6;\n" + "  }());\n" + "}());\n" + "\n" + "var item = generator.next();\n" + "var passed = item.value === 5 && item.done === false;\n" + "item = generator.next();\n" + "passed &= item.value === 6 && item.done === false;\n" + "item = generator.next();\n" + "passed &= item.value === undefined && item.done === true;\n" + "return passed;";
@@ -464,7 +474,7 @@ var Debugger = (function () {
 })();
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":"/Users/kevin/live-editor/external/stepper/external/scheduler/lib/scheduler.js","../src/transform":"/Users/kevin/live-editor/external/stepper/src/transform.js","./stepper":"/Users/kevin/live-editor/external/stepper/lib/stepper.js"}],"/Users/kevin/live-editor/external/stepper/lib/stepper.js":[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/lib/scheduler.js","../src/transform":"/Users/kevin/live-editor-stepper/external/stepper/src/transform.js","./stepper":"/Users/kevin/live-editor-stepper/external/stepper/lib/stepper.js"}],"/Users/kevin/live-editor-stepper/external/stepper/lib/stepper.js":[function(require,module,exports){
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Stepper = (function () {
     function Stepper(genObj, breakpoints, breakCallback, doneCallback) {
@@ -666,11 +676,11 @@ var _isGenerator = function (obj) {
 };
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/Stack":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
-module.exports=require("/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js")
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
-module.exports=require("/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js")
-},{"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":"/Users/kevin/live-editor/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/Stack.js":[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/Stack":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
+module.exports=require("/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js")
+},{"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
+module.exports=require("/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js")
+},{"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/Stack.js":[function(require,module,exports){
 var Stack = (function () {
     function Stack() {
         this.items = [];
@@ -711,11 +721,11 @@ var Stack = (function () {
 })();
 module.exports = Stack;
 
-},{}],"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/basic.js":[function(require,module,exports){
+},{}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/basic.js":[function(require,module,exports){
 exports.LinkedList = require("./LinkedList");
 exports.Stack = require("./Stack");
 
-},{"./LinkedList":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/LinkedList.js","./Stack":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor/external/stepper/src/ast-builder.js":[function(require,module,exports){
+},{"./LinkedList":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/LinkedList.js","./Stack":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor-stepper/external/stepper/src/ast-builder.js":[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {
@@ -855,7 +865,7 @@ exports.createVariableDeclaration = createVariableDeclaration;
 exports.createVariableDeclarator = createVariableDeclarator;
 exports.replaceNode = replaceNode;
 
-},{}],"/Users/kevin/live-editor/external/stepper/src/transform.js":[function(require,module,exports){
+},{}],"/Users/kevin/live-editor-stepper/external/stepper/src/transform.js":[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var builder = require("./ast-builder");
@@ -1085,6 +1095,7 @@ function transform(code, context) {
                     var loc = node.loc;
                     return builder.createYieldExpression(
                         // TODO: this is the current line, but we should actually be passing next node's line
+                        // TODO: handle this in when the ForStatement is parsed where we have more information
                         builder.createObjectExpression({ gen: gen, line: loc.start.line })
                     );
                 } else {
@@ -1102,5 +1113,5 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./ast-builder":"/Users/kevin/live-editor/external/stepper/src/ast-builder.js","basic-ds":"/Users/kevin/live-editor/external/stepper/node_modules/basic-ds/lib/basic.js"}]},{},["./lib/processing-debugger.js"])("./lib/processing-debugger.js")
+},{"./ast-builder":"/Users/kevin/live-editor-stepper/external/stepper/src/ast-builder.js","basic-ds":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/basic.js"}]},{},["./lib/processing-debugger.js"])("./lib/processing-debugger.js")
 });

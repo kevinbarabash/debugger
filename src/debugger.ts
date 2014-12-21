@@ -12,7 +12,7 @@ import Scheduler = require("../external/scheduler/lib/scheduler");
 import transform = require("../src/transform");
 
 class Debugger {
-    context: any;
+    private _context: any;
     scheduler: Scheduler;
     breakpoints: { [line:number]: boolean };
     breakpointsEnabled: boolean;
@@ -24,9 +24,22 @@ class Debugger {
     private _paused: boolean;
     private done: boolean;
 
-    constructor(context: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
-        this.context = context;
-        this.context.__instantiate__ = (classFn, className) => {
+    constructor(context?: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
+        this.context = context || {};
+
+        this.onBreakpoint = onBreakpoint || function () {};
+        this.onFunctionDone = onFunctionDone || function () {};
+
+        this.scheduler = new Scheduler();
+
+        this.breakpoints = {};
+        this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
+        this._paused = false;               // read-only, needs a getter
+    }
+
+    set context(context: any) {
+        this._context = context;
+        this._context.__instantiate__ = (classFn, className) => {
             var obj = Object.create(classFn.prototype);
             var args = Array.prototype.slice.call(arguments, 2);
             var gen = classFn.apply(obj, args);
@@ -40,15 +53,10 @@ class Debugger {
                 return obj;
             }
         };
-
-        this.onBreakpoint = onBreakpoint || function () {};
-        this.onFunctionDone = onFunctionDone || function () {};
-
-        this.scheduler = new Scheduler();
-
-        this.breakpoints = {};
-        this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
-        this._paused = false;               // read-only, needs a getter
+    }
+    
+    get context() {
+        return this._context;
     }
 
     static isBrowserSupported() {
