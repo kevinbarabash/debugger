@@ -2,7 +2,7 @@
 import Stepper = require("./stepper");
 import Scheduler = require("../external/scheduler/lib/scheduler");
 declare class Debugger {
-    context: any;
+    private _context;
     scheduler: Scheduler;
     breakpoints: {
         [x: number]: boolean;
@@ -13,7 +13,8 @@ declare class Debugger {
     onFunctionDone: () => void;
     private _paused;
     private done;
-    constructor(context: Object, onBreakpoint?: () => void, onFunctionDone?: () => void);
+    constructor(context?: Object, onBreakpoint?: () => void, onFunctionDone?: () => void);
+    context: any;
     static isBrowserSupported(): any;
     load(code: string): void;
     start(paused: any): void;

@@ -1,3 +1,9 @@
 var tsbuild = require("tsbuild");
 
-tsbuild("processing-debugger.ts", "./src", "./lib", "./build", "ProcessingDebugger");
+tsbuild({
+    filename: "processing-debugger.ts",
+    srcDir: "./src", 
+    libDir: "./lib",
+    distDir: "./build",
+    standalone: "ProcessingDebugger"
+});
