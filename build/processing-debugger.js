@@ -1,4 +1,4 @@
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.ProcessingDebugger=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"./lib/processing-debugger.js":[function(require,module,exports){
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.ProcessingDebugger=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -58,7 +58,7 @@ function _isGeneratorFunction(value) {
 }
 module.exports = ProcessingDebugger;
 
-},{"./debugger":"/Users/kevin/live-editor-stepper/external/stepper/lib/debugger.js"}],"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/lib/scheduler.js":[function(require,module,exports){
+},{"./debugger":5}],2:[function(require,module,exports){
 var LinkedList = require("../node_modules/basic-ds/lib/LinkedList");
 var Scheduler = (function () {
     function Scheduler() {
@@ -139,7 +139,7 @@ var Scheduler = (function () {
 })();
 module.exports = Scheduler;
 
-},{"../node_modules/basic-ds/lib/LinkedList":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/LinkedList":3}],3:[function(require,module,exports){
 var ListNode = require("./ListNode");
 var LinkedList = (function () {
     function LinkedList() {
@@ -271,7 +271,7 @@ var LinkedList = (function () {
 })();
 module.exports = LinkedList;
 
-},{"./ListNode":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
+},{"./ListNode":4}],4:[function(require,module,exports){
 var ListNode = (function () {
     function ListNode(value) {
         this.value = value;
@@ -287,7 +287,7 @@ var ListNode = (function () {
 })();
 module.exports = ListNode;
 
-},{}],"/Users/kevin/live-editor-stepper/external/stepper/lib/debugger.js":[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("../src/transform");
@@ -475,7 +475,7 @@ var Debugger = (function () {
 })();
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/lib/scheduler.js","../src/transform":"/Users/kevin/live-editor-stepper/external/stepper/src/transform.js","./stepper":"/Users/kevin/live-editor-stepper/external/stepper/lib/stepper.js"}],"/Users/kevin/live-editor-stepper/external/stepper/lib/stepper.js":[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":2,"../src/transform":12,"./stepper":6}],6:[function(require,module,exports){
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Stepper = (function () {
     function Stepper(genObj, breakpoints, breakCallback, doneCallback) {
@@ -677,11 +677,11 @@ var _isGenerator = function (obj) {
 };
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/Stack":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/LinkedList.js":[function(require,module,exports){
-module.exports=require("/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js")
-},{"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js"}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/ListNode.js":[function(require,module,exports){
-module.exports=require("/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js")
-},{"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":"/Users/kevin/live-editor-stepper/external/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js"}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/Stack.js":[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/Stack":9}],7:[function(require,module,exports){
+module.exports=require(3)
+},{"./ListNode":8,"/Users/kevin/stepper/external/scheduler/node_modules/basic-ds/lib/LinkedList.js":3}],8:[function(require,module,exports){
+module.exports=require(4)
+},{"/Users/kevin/stepper/external/scheduler/node_modules/basic-ds/lib/ListNode.js":4}],9:[function(require,module,exports){
 var Stack = (function () {
     function Stack() {
         this.items = [];
@@ -722,11 +722,11 @@ var Stack = (function () {
 })();
 module.exports = Stack;
 
-},{}],"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/basic.js":[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 exports.LinkedList = require("./LinkedList");
 exports.Stack = require("./Stack");
 
-},{"./LinkedList":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/LinkedList.js","./Stack":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/Stack.js"}],"/Users/kevin/live-editor-stepper/external/stepper/src/ast-builder.js":[function(require,module,exports){
+},{"./LinkedList":7,"./Stack":9}],11:[function(require,module,exports){
 /* build Parser API style AST nodes and trees */
 
 var createExpressionStatement = function (expression) {
@@ -866,7 +866,7 @@ exports.createVariableDeclaration = createVariableDeclaration;
 exports.createVariableDeclarator = createVariableDeclarator;
 exports.replaceNode = replaceNode;
 
-},{}],"/Users/kevin/live-editor-stepper/external/stepper/src/transform.js":[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*global recast, esprima, escodegen, injector */
 
 var builder = require("./ast-builder");
@@ -1114,5 +1114,5 @@ function transform(code, context) {
 
 module.exports = transform;
 
-},{"./ast-builder":"/Users/kevin/live-editor-stepper/external/stepper/src/ast-builder.js","basic-ds":"/Users/kevin/live-editor-stepper/external/stepper/node_modules/basic-ds/lib/basic.js"}]},{},["./lib/processing-debugger.js"])("./lib/processing-debugger.js")
+},{"./ast-builder":11,"basic-ds":10}]},{},[1])(1)
 });
