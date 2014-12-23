@@ -1,9 +1,10 @@
-/*global recast, esprima, escodegen, injector */
-
-var regenerator = require("regenerator");
-var esprima = require("esprima-fb");
-var builder = require("./ast-builder");
 var basic = require("basic-ds");
+var builder = require("./ast-builder"); // TODO: replace with recast
+var escodegen = require("escodegen");
+var escope = require("escope");
+var esprima = require("esprima-fb");
+var estraverse = require("estraverse");
+var regenerator = require("regenerator");
 
 function getScopeVariables (node, parent, context) {
     var variables = parent.__$escope$__.variables;
