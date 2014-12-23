@@ -9,7 +9,7 @@
 
 import Stepper = require("./stepper");
 import Scheduler = require("../external/scheduler/lib/scheduler");
-import transform = require("../src/es5-transform");
+import transform = require("../src/transform");
 
 class Debugger {
     private _context: any;
@@ -23,7 +23,9 @@ class Debugger {
 
     private _paused: boolean;
     private done: boolean;
+    private _language: string;
 
+    // TODO: convert to single "options" param
     constructor(context?: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
         this.context = context || {};
 
@@ -35,6 +37,8 @@ class Debugger {
         this.breakpoints = {};
         this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
         this._paused = false;               // read-only, needs a getter
+        
+        this._language = "es6";
     }
 
     set context(context: any) {
@@ -83,7 +87,7 @@ class Debugger {
     }
 
     load(code: string) {
-        var debugFunction = transform(code, this.context);
+        var debugFunction = transform(code, this.context, { language: this._language });
         //console.log(debugFunction);
         this.mainGeneratorFunction = debugFunction();
     }
@@ -205,7 +209,9 @@ class Debugger {
                 if (isMain) {
                     this.onMainDone();
                 }
-            });
+            },
+            this._language
+        );
 
         stepper.breakpointsEnabled = this.breakpointsEnabled;
         return stepper;

@@ -5,6 +5,7 @@ function emptyFunction() {}
 class ProcessingDebugger extends Debugger {
     private _repeater: { stop: () => void; start: () => void; };
 
+    // TODO: change to single options param
     constructor(context: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
         super(context, onBreakpoint, onFunctionDone);
         this._repeater = null;

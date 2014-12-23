@@ -13,6 +13,7 @@ declare class Debugger {
     onFunctionDone: () => void;
     private _paused;
     private done;
+    private _language;
     constructor(context?: Object, onBreakpoint?: () => void, onFunctionDone?: () => void);
     context: any;
     static isBrowserSupported(): any;

@@ -12,9 +12,10 @@ declare class Stepper implements Task {
     private _paused;
     private _stopped;
     private _retVal;
+    private _language;
     constructor(genObj: any, breakpoints: {
         [x: number]: boolean;
-    }, breakCallback: () => void, doneCallback: () => void);
+    }, breakCallback: () => void, doneCallback: () => void, language: string);
     stepIn(): string;
     stepOver(): string;
     stepOut(): string;
@@ -29,5 +30,6 @@ declare class Stepper implements Task {
     private _step();
     private _runScope(gen);
     private _popAndStoreReturnValue(value);
+    private _isGenerator;
 }
 export = Stepper;

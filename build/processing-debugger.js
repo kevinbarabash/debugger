@@ -290,7 +290,7 @@ module.exports = ListNode;
 },{}],5:[function(require,module,exports){
 var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
-var transform = require("../src/es5-transform");
+var transform = require("../src/transform");
 var Debugger = (function () {
     function Debugger(context, onBreakpoint, onFunctionDone) {
         this.context = context || {};
@@ -302,6 +302,7 @@ var Debugger = (function () {
         this.breakpoints = {};
         this.breakpointsEnabled = true;
         this._paused = false;
+        this._language = "es6";
     }
     Object.defineProperty(Debugger.prototype, "context", {
         get: function () {
@@ -338,7 +339,7 @@ var Debugger = (function () {
         }
     };
     Debugger.prototype.load = function (code) {
-        var debugFunction = transform(code, this.context);
+        var debugFunction = transform(code, this.context, { language: this._language });
         this.mainGeneratorFunction = debugFunction();
     };
     Debugger.prototype.start = function (paused) {
@@ -460,7 +461,7 @@ var Debugger = (function () {
             if (isMain) {
                 _this.onMainDone();
             }
-        });
+        }, this._language);
         stepper.breakpointsEnabled = this.breakpointsEnabled;
         return stepper;
     };
@@ -474,17 +475,26 @@ var Debugger = (function () {
 })();
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":2,"../src/es5-transform":115,"./stepper":6}],6:[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":2,"../src/transform":115,"./stepper":6}],6:[function(require,module,exports){
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Stepper = (function () {
-    function Stepper(genObj, breakpoints, breakCallback, doneCallback) {
+    function Stepper(genObj, breakpoints, breakCallback, doneCallback, language) {
         var _this = this;
+        this._isGenerator = function (obj) {
+            if (this._language.toLowerCase() === "es6") {
+                return obj instanceof Object && obj.toString() === "[object Generator]";
+            }
+            else {
+                return obj && typeof (obj.next) === "function";
+            }
+        };
         this.breakCallback = breakCallback || function () {
         };
         this.doneCallback = doneCallback || function () {
         };
         this._breakpoints = breakpoints || {};
         this.breakpointsEnabled = true;
+        this._language = language;
         this._started = false;
         this._paused = false;
         this._stopped = false;
@@ -503,7 +513,7 @@ var Stepper = (function () {
         var result;
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
-                if (_isGenerator(result.value.gen)) {
+                if (this._isGenerator(result.value.gen)) {
                     this.stack.push({
                         gen: result.value.gen,
                         line: this.line
@@ -529,7 +539,7 @@ var Stepper = (function () {
         var result;
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
-                if (_isGenerator(result.value.gen)) {
+                if (this._isGenerator(result.value.gen)) {
                     this._runScope(result.value.gen);
                     if (result.value.stepAgain) {
                         this.stepOver();
@@ -555,7 +565,7 @@ var Stepper = (function () {
         if (result = this._step()) {
             while (!result.done) {
                 if (result.value.hasOwnProperty('gen')) {
-                    if (_isGenerator(result.value.gen)) {
+                    if (this._isGenerator(result.value.gen)) {
                         this._runScope(result.value.gen);
                     }
                     else {
@@ -654,7 +664,7 @@ var Stepper = (function () {
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
-                if (_isGenerator(result.value.gen)) {
+                if (this._isGenerator(result.value.gen)) {
                     this._runScope(result.value.gen);
                 }
                 else {
@@ -671,9 +681,6 @@ var Stepper = (function () {
     };
     return Stepper;
 })();
-var _isGenerator = function (obj) {
-    return obj && typeof (obj.next) === "function";
-};
 module.exports = Stepper;
 
 },{"../node_modules/basic-ds/lib/Stack":9}],7:[function(require,module,exports){
@@ -33398,7 +33405,7 @@ function getNameForFunctionExpression(node) {
     return name;
 }
 
-function transform(code, context) {
+function es5_transform(code, context) {
     var ast = esprima.parse(code, { loc: true });
     var scopeManager = escope.analyze(ast);
     scopeManager.attach();
@@ -33614,12 +33621,158 @@ function transform(code, context) {
         }
     });
     
-    console.log(escodegen.generate(genFunc));
-    
     return new Function(escodegen.generate(genFunc) + "\n" + "return genFunc;");
+}
+
+function create__scope__ (node, bodyList, scope) {
+    var properties = scope.map(function (variable) {
+        var isParam = variable.defs.some(function (def) {
+            return def.type === "Parameter";
+        });
+        var name = variable.name;
+
+        // if the variable is a parameter initialize its
+        // value with the value of the parameter
+        var value = isParam ? builder.createIdentifier(name) : builder.createIdentifier("undefined");
+        return {
+            type: "Property",
+            key: builder.createIdentifier(name),
+            value: value,
+            kind: "init"
+        }
+    });
+
+    // modify the first yield statement to include the scope
+    // as part of the value
+    var firstStatement = bodyList.first.value;
+    firstStatement.expression.argument.properties.push({
+        type: "Property",
+        key: builder.createIdentifier("scope"),
+        value: builder.createIdentifier("__scope__"),
+        kind: "init"
+    });
+
+    // wrap the body with a yield statement
+    var withStatement = builder.createWithStatement(
+        builder.createIdentifier("__scope__"),
+        builder.createBlockStatement(bodyList.toArray())
+    );
+    var objectExpression = {
+        type: "ObjectExpression",
+        properties: properties
+    };
+
+    // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
+    node.body = [
+        builder.createVariableDeclaration([
+            builder.createVariableDeclarator("__scope__", objectExpression)
+        ]),
+        withStatement
+    ];
+}
+
+function es6_transform(code, context) {
+    var ast = esprima.parse(code, { loc: true });
+    var scopeManager = escope.analyze(ast);
+    scopeManager.attach();
+
+    estraverse.replace(ast, {
+        enter: function(node, parent) {
+            node._parent = parent;
+        },
+        leave: function(node, parent) {
+            if (node.type === "Program" || node.type === "BlockStatement") {
+                if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
+                    var scope = getScopeVariables(node, parent, context);
+                }
+
+                var bodyList = basic.LinkedList.fromArray(node.body);
+                insertYields(bodyList);
+
+                if (bodyList.first) {
+                    if (parent.type === "FunctionDeclaration") {
+                        bodyList.first.value.expression.argument.properties.push({
+                            type: "Property",
+                            key: builder.createIdentifier("name"),
+                            value: builder.createLiteral(stringForId(parent.id)),   // NOTE: identifier can be a member expression too!
+                            kind: "init"
+                        });
+                    } else if (parent.type === "FunctionExpression") {
+                        var name = getNameForFunctionExpression(parent);
+                        bodyList.first.value.expression.argument.properties.push({
+                            type: "Property",
+                            key: builder.createIdentifier("name"),
+                            value: builder.createLiteral(name),
+                            kind: "init"
+                        });
+                    } else if (node.type === "Program") {
+                        bodyList.first.value.expression.argument.properties.push({
+                            type: "Property",
+                            key: builder.createIdentifier("name"),
+                            value: builder.createLiteral("<PROGRAM>"),
+                            kind: "init"
+                        });
+                    }
+                }
+
+                // if there are any variables defined in this scope
+                // create a __scope__ dictionary containing their values
+                // and include in the first yield
+                if (scope && scope.length > 0 && bodyList.first) {
+                    // TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
+                    create__scope__(node, bodyList, scope);
+                } else {
+                    node.body = bodyList.toArray();
+                }
+            } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
+                node.generator = true;
+            } else if (node.type === "CallExpression" || node.type === "NewExpression") {
+                if (node.callee.type === "Identifier" || node.callee.type === "MemberExpression" || node.callee.type === "YieldExpression") {
+
+                    var gen = node;
+
+                    // if "new" then build a call to "__instantiate__"
+                    if (node.type === "NewExpression") {
+                        // put the constructor name as the 2nd param
+                        if (node.callee.type === "Identifier") {
+                            node.arguments.unshift(builder.createLiteral(node.callee.name));
+                        } else {
+                            node.arguments.unshift(builder.createLiteral(null));
+                        }
+                        // put the constructor itself as the 1st param
+                        node.arguments.unshift(node.callee);
+                        gen = builder.createCallExpression("__instantiate__", node.arguments);
+                    }
+
+                    // create a yieldExpress to wrap the call
+                    var loc = node.loc;
+                    return builder.createYieldExpression(
+                        // TODO: this is the current line, but we should actually be passing next node's line
+                        // TODO: handle this in when the ForStatement is parsed where we have more information
+                        builder.createObjectExpression({ gen: gen, line: loc.start.line })
+                    );
+                } else {
+                    throw "we don't handle '" + node.callee.type + "' callees";
+                }
+            }
+
+            delete node._parent;
+        }
+    });
+
+    var code = "return function*(context){\nwith(context){\n" +
+        escodegen.generate(ast) + "\n}\n}";
     
-    //return new Function("return function*(context){\nwith(context){\n" +
-    //        escodegen.generate(ast) + "\n}\n}");
+    console.log(code);
+    
+    return new Function(code);
+}
+
+function transform(code, context, options) {
+    if (options && options.language.toLowerCase() === "es6") {
+        return es6_transform(code, context);
+    }
+    return es5_transform(code, context);
 }
 
 module.exports = transform;

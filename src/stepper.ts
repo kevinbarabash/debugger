@@ -22,16 +22,20 @@ class Stepper implements Task {
     // stores the return value when calling functions so that it can be passed
     // to the generator next time we call .next()
     private _retVal: any;
+    
+    private _language: string;
 
     constructor(genObj,
                 breakpoints: { [line: number]: boolean },
                 breakCallback: () => void,
-                doneCallback: () => void
+                doneCallback: () => void,
+                language: string
     ) {
         this.breakCallback = breakCallback || function () {};
         this.doneCallback = doneCallback || function () {};
         this._breakpoints = breakpoints || {};
         this.breakpointsEnabled = true;
+        this._language = language;
 
         this._started = false;
         this._paused = false;
@@ -55,7 +59,7 @@ class Stepper implements Task {
         var result;
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
-                if (_isGenerator(result.value.gen)) {
+                if (this._isGenerator(result.value.gen)) {
                     this.stack.push({
                         gen: result.value.gen,
                         line: this.line
@@ -81,7 +85,7 @@ class Stepper implements Task {
         var result;
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty('gen')) {
-                if (_isGenerator(result.value.gen)) {
+                if (this._isGenerator(result.value.gen)) {
                     this._runScope(result.value.gen);
                     if (result.value.stepAgain) {
                         this.stepOver();
@@ -107,7 +111,7 @@ class Stepper implements Task {
         if (result = this._step()) {
             while (!result.done) {
                 if (result.value.hasOwnProperty('gen')) {
-                    if (_isGenerator(result.value.gen)) {
+                    if (this._isGenerator(result.value.gen)) {
                         this._runScope(result.value.gen);
                     } else {
                         this._retVal = result.value.gen;
@@ -206,7 +210,7 @@ class Stepper implements Task {
         var result = this._step();
         while (!result.done) {
             if (result.value.gen) {
-                if (_isGenerator(result.value.gen)) {
+                if (this._isGenerator(result.value.gen)) {
                     this._runScope(result.value.gen);
                 } else {
                     this._retVal = result.value.gen;
@@ -222,11 +226,15 @@ class Stepper implements Task {
         var frame = this.stack.pop();
         this._retVal = frame.gen["obj"] || value;
     }
+    
+    private _isGenerator = function (obj) {
+        if (this._language.toLowerCase() === "es6") {
+            return obj instanceof Object && obj.toString() === "[object Generator]"
+        } else {
+            // note: the regenerator runtime provides proper prototypes
+            return obj && typeof(obj.next) === "function";
+        }
+    };
 }
-
-var _isGenerator = function (obj) {
-    // note: the regenerator runtime provides proper prototypes
-    return obj && typeof(obj.next) === "function";
-};
 
 export = Stepper;
