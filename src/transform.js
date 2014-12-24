@@ -200,9 +200,11 @@ function addScopes(generatorFunction, context) {
 
                         // filter out variables defined in the context from the local vars
                         // but only for the root scope
+                        // filter out "context" to so it doesn't appear in the scope
+                        // TODO: give "context" a random name so that users don't mess with it
                         if (firstArg.id.name === "generatorFunction$") {
                             properties = properties.filter(function (prop) {
-                                return !context.hasOwnProperty(prop.key.name);
+                                return !context.hasOwnProperty(prop.key.name) && prop.key.name !== "context";
                             });
                         }
 

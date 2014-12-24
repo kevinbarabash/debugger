@@ -1091,6 +1091,22 @@ describe("Debugger", function () {
             debugr.resume();
             expect(context.x).to.be(6);
         });
+        
+        it("shouldn't include 'context' in the scope", function () {
+            var code = getFunctionBody(function () {
+                var fruit = "apple";
+                console.log("fruit = " + fruit);
+            });
+
+            debugr.load(code);
+            debugr.start(true);
+
+            debugr.stepOver();
+
+            var scope = debugr.currentScope;
+            expect(scope.fruit).to.be("apple");
+            expect(scope.context).to.be(undefined);
+        });
 
         it("should support changing the context after running", function () {
             var code1 = getFunctionBody(function () {

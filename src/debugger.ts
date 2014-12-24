@@ -38,7 +38,7 @@ class Debugger {
         this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
         this._paused = false;               // read-only, needs a getter
         
-        this._language = "es6";
+        this._language = "es5";
     }
 
     set context(context: any) {
