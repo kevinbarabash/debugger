@@ -1,36 +1,10 @@
 /*global recast, esprima, escodegen, injector */
 
-/// <reference path="generators.d.ts"/>
-/// <reference path="frame.d.ts"/>
+var Stack = require("../node_modules/basic-ds/lib/Stack");
+var Task = require("../external/scheduler/lib/task");
 
-import Stack = require("../node_modules/basic-ds/lib/Stack");
-import Task = require("../external/scheduler/lib/task");
-
-class Stepper implements Task {
-    breakCallback: () => void;
-    doneCallback: () => void;
-    breakpointsEnabled: boolean;
-    private _breakpoints: { [line: number]: boolean };
-
-    stack: Stack<Frame>;
-
-    // state variables
-    private _started: boolean;
-    private _paused: boolean;
-    private _stopped: boolean;
-
-    // stores the return value when calling functions so that it can be passed
-    // to the generator next time we call .next()
-    private _retVal: any;
-    
-    private _language: string;
-
-    constructor(genObj,
-                breakpoints: { [line: number]: boolean },
-                breakCallback: () => void,
-                doneCallback: () => void,
-                language: string
-    ) {
+class Stepper {
+    constructor(genObj, breakpoints, breakCallback, doneCallback, language) {
         this.breakCallback = breakCallback || function () {};
         this.doneCallback = doneCallback || function () {};
         this._breakpoints = breakpoints || {};
@@ -41,7 +15,7 @@ class Stepper implements Task {
         this._paused = false;
         this._stopped = false;
 
-        this.stack = new Stack<Frame>();
+        this.stack = new Stack();
         this.stack.push({
             gen:genObj,
             line: -1
@@ -124,7 +98,7 @@ class Stepper implements Task {
         }
     }
 
-    start(paused?: boolean) {
+    start(paused) {
         this._started = true;
         this._paused = !!paused;
         this._run();
@@ -135,7 +109,7 @@ class Stepper implements Task {
         this._run();
     }
 
-    private _run() {
+     _run() {
         var currentLine = this.line;
         while (true) {
             if (this.stack.isEmpty) {
@@ -153,11 +127,11 @@ class Stepper implements Task {
         }
     }
 
-    setBreakpoint(line: number) {
+    setBreakpoint(line) {
         this._breakpoints[line] = true;
     }
 
-    clearBreakpoint(line: number) {
+    clearBreakpoint(line) {
         delete this._breakpoints[line];
     }
 
@@ -177,7 +151,7 @@ class Stepper implements Task {
         }
     }
 
-    private _step() {
+    _step() {
         if (this.stack.isEmpty) {
             return;
         }
@@ -201,7 +175,7 @@ class Stepper implements Task {
         return result;
     }
 
-    private _runScope(gen) {
+    _runScope(gen) {
         this.stack.push({
             gen: gen,
             line: this.line
@@ -222,12 +196,12 @@ class Stepper implements Task {
         this._popAndStoreReturnValue(result.value);
     }
 
-    private _popAndStoreReturnValue(value) {
+    _popAndStoreReturnValue(value) {
         var frame = this.stack.pop();
         this._retVal = frame.gen["obj"] || value;
     }
     
-    private _isGenerator = function (obj) {
+    _isGenerator(obj) {
         if (this._language.toLowerCase() === "es6") {
             return obj instanceof Object && obj.toString() === "[object Generator]"
         } else {
@@ -237,4 +211,4 @@ class Stepper implements Task {
     };
 }
 
-export = Stepper;
+module.exports = Stepper;

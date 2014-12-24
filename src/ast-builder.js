@@ -14,11 +14,11 @@ var createBlockStatement = function (body) {
     }
 };
 
-var createCallExpression = function (name, arguments) {
+var createCallExpression = function (name, args) {
     return {
         type: "CallExpression",
         callee: createIdentifier(name),
-        arguments: arguments
+        arguments: args
     };
 };
 

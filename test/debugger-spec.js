@@ -588,6 +588,7 @@ describe("Debugger", function () {
                     console.log("end of new Point");
                 }
                 p = new Point(5,10);
+                console.log(p);
             });
 
             debugr.load(code);

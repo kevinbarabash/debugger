@@ -5,28 +5,14 @@
  * - maintain breakpoints and inform steppers of breakpoints
  */
 
-/// <reference path="generators.d.ts"/>
-
-import Stepper = require("./stepper");
-import Scheduler = require("../external/scheduler/lib/scheduler");
-import transform = require("../src/transform");
+var Stepper = require("./stepper");
+var Scheduler = require("../external/scheduler/lib/scheduler");
+var transform = require("./transform");
 
 class Debugger {
-    private _context: any;
-    scheduler: Scheduler;
-    breakpoints: { [line:number]: boolean };
-    breakpointsEnabled: boolean;
-    mainGeneratorFunction: GeneratorFunction<any>;
-
-    onBreakpoint: () => void;
-    onFunctionDone: () => void;
-
-    private _paused: boolean;
-    private done: boolean;
-    private _language: string;
 
     // TODO: convert to single "options" param
-    constructor(context?: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
+    constructor(context, onBreakpoint, onFunctionDone) {
         this.context = context || {};
 
         this.onBreakpoint = onBreakpoint || function () {};
@@ -41,11 +27,10 @@ class Debugger {
         this._language = "es5";
     }
 
-    set context(context: any) {
+    set context(context) {
         this._context = context;
-        this._context.__instantiate__ = (classFn, className) => {
+        this._context.__instantiate__ = (classFn, className, ...args) => {
             var obj = Object.create(classFn.prototype);
-            var args = Array.prototype.slice.call(arguments, 2);
             var gen = classFn.apply(obj, args);
 
             this.onNewObject(classFn, className, obj, args);
@@ -86,7 +71,7 @@ class Debugger {
         }
     }
 
-    load(code: string) {
+    load(code) {
         var debugFunction = transform(code, this.context, { language: this._language });
         //console.log(debugFunction);
         this.mainGeneratorFunction = debugFunction();
@@ -103,7 +88,7 @@ class Debugger {
         stepper.start(paused);  // paused = true -> start paused on the first line
     }
 
-    queueGenerator(gen: Function) {
+    queueGenerator(gen) {
         if (!this.done) {
             var stepper = this._createStepper(gen());
             this.scheduler.addTask(stepper);
@@ -182,20 +167,20 @@ class Debugger {
         }
     }
 
-    setBreakpoint(line: number) {
+    setBreakpoint(line) {
         this.breakpoints[line] = true;
     }
 
-    clearBreakpoint(line: number) {
+    clearBreakpoint(line) {
         delete this.breakpoints[line];
     }
 
-    private get _currentStepper() {
-        return <Stepper>this.scheduler.currentTask();
+    get _currentStepper() {
+        return this.scheduler.currentTask();
     }
 
     // TODO: make this protected in the future
-    _createStepper(genObj: GeneratorObject<any>, isMain?: boolean) {
+    _createStepper(genObj, isMain) {
         var stepper = new Stepper(
             genObj,
             this.breakpoints,
@@ -228,9 +213,9 @@ class Debugger {
 
     }
 
-    onNewObject(classFn: Function, className: string, obj: Object, args: any[]) {
+    onNewObject(classFn, className, obj, args) {
 
     }
 }
 
-export = Debugger;
+module.exports = Debugger;
