@@ -1,5 +1,7 @@
 /*global describe, it, beforeEach, afterEach */
 
+// TODO: add tests for functions defined inside functions
+
 describe("Debugger", function () {
 
     var debugr, context;
@@ -9,6 +11,7 @@ describe("Debugger", function () {
         fill = sinon.stub();
         rect = sinon.stub();
         print = sinon.stub();
+        image = sinon.stub();
 
         context = {
             fill: fill,
@@ -21,7 +24,8 @@ describe("Debugger", function () {
             Vector: function (x,y) {
                 this.x = x;
                 this.y = y;
-            }
+            },
+            image: image
         };
 
         debugr = new ProcessingDebugger();
@@ -1063,6 +1067,31 @@ describe("Debugger", function () {
             expect(context.y).to.be(10);
         });
         
+        it("should work handle simple cases", function () {
+            var code = getFunctionBody(function () {
+                var foo = function (y) {
+                    var x = y + 1;
+                    return x;
+                };
+                x = foo(5);
+            });
+
+            debugr.load(code);
+            debugr.start(true);
+
+            debugr.stepOver();
+            debugr.stepIn();
+            var scope = debugr.currentScope;
+            expect(scope.y).to.be(5);
+            expect(scope.x).to.be(undefined);
+
+            debugr.stepOver();
+            expect(scope.x).to.be(6);
+
+            debugr.resume();
+            expect(context.x).to.be(6);
+        });
+
         it("should support changing the context after running", function () {
             var code1 = getFunctionBody(function () {
                 var x = 5;

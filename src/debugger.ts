@@ -23,7 +23,9 @@ class Debugger {
 
     private _paused: boolean;
     private done: boolean;
+    private _language: string;
 
+    // TODO: convert to single "options" param
     constructor(context?: Object, onBreakpoint?: () => void, onFunctionDone?: () => void) {
         this.context = context || {};
 
@@ -35,6 +37,8 @@ class Debugger {
         this.breakpoints = {};
         this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
         this._paused = false;               // read-only, needs a getter
+        
+        this._language = "es6";
     }
 
     set context(context: any) {
@@ -83,10 +87,8 @@ class Debugger {
     }
 
     load(code: string) {
-        var debugCode = transform(code, this.context);
-        // TODO: add a debug flag to these console messages
-        //console.log(debugCode);
-        var debugFunction = new Function(debugCode);
+        var debugFunction = transform(code, this.context, { language: this._language });
+        //console.log(debugFunction);
         this.mainGeneratorFunction = debugFunction();
     }
 
@@ -207,7 +209,9 @@ class Debugger {
                 if (isMain) {
                     this.onMainDone();
                 }
-            });
+            },
+            this._language
+        );
 
         stepper.breakpointsEnabled = this.breakpointsEnabled;
         return stepper;

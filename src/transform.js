@@ -1,7 +1,13 @@
-/*global recast, esprima, escodegen, injector */
-
-var builder = require("./ast-builder");
 var basic = require("basic-ds");
+var builder = require("./ast-builder"); // TODO: replace with recast
+var escodegen = require("escodegen");
+var escope = require("escope");
+var esprima = require("esprima-fb");
+var estraverse = require("estraverse");
+var regenerator = require("regenerator");
+
+// TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
+// TODO: rewrite without using with, instead rewrite local vars as scope$1.varName
 
 function getScopeVariables (node, parent, context) {
     var variables = parent.__$escope$__.variables;
@@ -72,7 +78,161 @@ function insertYields (bodyList) {
     });
 }
 
-function create__scope__ (node, bodyList, scope) {
+
+function stringForId(node) {
+    var name = "";
+    if (node.type === "Identifier") {
+        name = node.name;
+    } else if (node.type === "MemberExpression") {
+        name = stringForId(node.object) + "." + node.property.name;
+    } else if (node.type === "ThisExpression") {
+        name = "this";
+    } else {
+        throw "can't call stringForId on nodes of type '" + node.type + "'";
+    }
+    return name;
+}
+
+function getNameForFunctionExpression(node) {
+    var name = "";
+    if (node._parent.type === "Property") {
+        name = node._parent.key.name;
+        if (node._parent._parent.type === "ObjectExpression") {
+            name = getNameForFunctionExpression(node._parent._parent) + "." + name;
+        }
+    } else if (node._parent.type === "AssignmentExpression") {
+        name = stringForId(node._parent.left);
+    } else if (node._parent.type === "VariableDeclarator") {
+        name = stringForId(node._parent.id);
+    } else {
+        name = "<anonymous>"; // TODO: test anonymous callbacks
+    }
+    return name;
+}
+
+/**
+ * Used by the ES5 transformer to inject a "with(context) { }" statement
+ * around the body of a function declaration that has been passed through
+ * the regenerator.
+ * 
+ * @param {esprima.Syntax.FunctionDeclaration} generatorFunction
+ */
+function injectWithContext(generatorFunction) {
+    var body = generatorFunction.body.body;
+    var success = false;
+    for (var i = 0; i < body.length; i++) {
+        var stmt = body[i];
+        if (stmt.type === "ReturnStatement") {
+            var arg = stmt.argument;
+            if (arg.type === "CallExpression") {
+                var callee = arg.callee;
+                if (callee.type === "MemberExpression") {
+                    if (callee.object.type === "Identifier" &&
+                        callee.property.type === "Identifier") {
+
+                        var objName = callee.object.name;
+                        var propName = callee.property.name;
+
+                        if (objName === "regeneratorRuntime" &&
+                            propName === "wrap") {
+
+                            var firstArg = arg.arguments[0];
+                            var blockStmt = firstArg.body;
+
+                            var withStmt = builder.createWithStatement(
+                                builder.createIdentifier("context"),
+                                builder.createBlockStatement(blockStmt.body)
+                            );
+
+                            blockStmt.body = [withStmt];
+                            success = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (!success) {
+        throw "unable to inject 'with' statement";
+    }
+}
+
+/**
+ * Add scope statements for generator functions created with 
+ * regenerator
+ * 
+ * @param generatorFunction
+ * @param context
+ */
+function addScopes(generatorFunction, context) {
+    estraverse.traverse(generatorFunction, {
+        enter: function (node, parent) {
+            node._parent = parent;
+        },
+        leave: function (node, parent) {
+            if (node.type === "ReturnStatement") {
+                if (node.argument.type === "CallExpression") {
+                    var callee = node.argument.callee;
+                    var firstArg = node.argument.arguments[0];
+
+                    if (callee.object.name === "regeneratorRuntime" &&
+                        callee.property.name === "wrap") {
+
+                        var properties = node._parent._parent.params.map(function (param) {
+                            return {
+                                type: "Property",
+                                key: builder.createIdentifier(param.name),
+                                value: builder.createIdentifier(param.name),
+                                kind: "init"
+                            }
+                        });
+
+                        if (node._parent.body[0].declarations) {
+                            node._parent.body[0].declarations.forEach(function (decl) {
+                                properties.push({
+                                    type: "Property",
+                                    key: builder.createIdentifier(decl.id.name),
+                                    value: builder.createIdentifier("undefined"),
+                                    kind: "init"
+                                })
+                            });
+                        }
+
+                        // filter out variables defined in the context from the local vars
+                        // but only for the root scope
+                        if (firstArg.id.name === "generatorFunction$") {
+                            properties = properties.filter(function (prop) {
+                                return !context.hasOwnProperty(prop.key.name);
+                            });
+                        }
+
+                        var objectExpression = {
+                            type: "ObjectExpression",
+                            properties: properties
+                        };
+
+                        node._parent.body.unshift(
+                            builder.createVariableDeclaration([
+                                builder.createVariableDeclarator("__scope__", objectExpression)
+                            ])
+                        );
+
+                        var blockStmt = firstArg.body;
+                        var withStmt = builder.createWithStatement(
+                            builder.createIdentifier("__scope__"),
+                            builder.createBlockStatement(blockStmt.body)
+                        );
+                        blockStmt.body = [withStmt];
+                    }
+                }
+            }
+            delete node._parent;
+        }
+    });
+}
+
+
+function create__scope__(node, bodyList, scope) {
     var properties = scope.map(function (variable) {
         var isParam = variable.defs.some(function (def) {
             return def.type === "Parameter";
@@ -119,38 +279,9 @@ function create__scope__ (node, bodyList, scope) {
     ];
 }
 
-function stringForId(node) {
-    var name = "";
-    if (node.type === "Identifier") {
-        name = node.name;
-    } else if (node.type === "MemberExpression") {
-        name = stringForId(node.object) + "." + node.property.name;
-    } else if (node.type === "ThisExpression") {
-        name = "this";
-    } else {
-        throw "can't call stringForId on nodes of type '" + node.type + "'";
-    }
-    return name;
-}
+function transform(code, context, options) {
+    var es6 = options && options.language.toLowerCase() === "es6";
 
-function getNameForFunctionExpression(node) {
-    var name = "";
-    if (node._parent.type === "Property") {
-        name = node._parent.key.name;
-        if (node._parent._parent.type === "ObjectExpression") {
-            name = getNameForFunctionExpression(node._parent._parent) + "." + name;
-        }
-    } else if (node._parent.type === "AssignmentExpression") {
-        name = stringForId(node._parent.left);
-    } else if (node._parent.type === "VariableDeclarator") {
-        name = stringForId(node._parent.id);
-    } else {
-        name = "<anonymous>"; // TODO: test anonymous callbacks
-    }
-    return name;
-}
-
-function transform(code, context) {
     var ast = esprima.parse(code, { loc: true });
     var scopeManager = escope.analyze(ast);
     scopeManager.attach();
@@ -194,15 +325,32 @@ function transform(code, context) {
                     }
                 }
 
-                // if there are any variables defined in this scope
-                // create a __scope__ dictionary containing their values
-                // and include in the first yield
-                if (scope && scope.length > 0 && bodyList.first) {
-                    // TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
-                    create__scope__(node, bodyList, scope);
+                if (es6) {
+                    // if there are any variables defined in this scope
+                    // create a __scope__ dictionary containing their values
+                    // and include in the first yield
+                    
+                    if (scope && scope.length > 0 && bodyList.first) {
+                        create__scope__(node, bodyList, scope);
+                    } else {
+                        node.body = bodyList.toArray();
+                    }
                 } else {
+                    // if the function isn't empty create a "scope" property
+                    // to the first yield statement
+                    if (bodyList.first !== null) {
+                        var firstStatement = bodyList.first.value;
+                        firstStatement.expression.argument.properties.push({
+                            type: "Property",
+                            key: builder.createIdentifier("scope"),
+                            value: builder.createIdentifier("__scope__"),
+                            kind: "init"
+                        });
+                    }
+                    
                     node.body = bodyList.toArray();
                 }
+                
             } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 node.generator = true;
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
@@ -239,8 +387,32 @@ function transform(code, context) {
         }
     });
 
-    return "return function*(context){\nwith(context){\n" +
+    if (es6) {
+        var debugCode = "return function*(context){\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
+
+        return new Function(debugCode);
+    } else {
+        var generatorFunction = {
+            type: "FunctionDeclaration",
+            id: builder.createIdentifier("generatorFunction"),
+            params: [ builder.createIdentifier("context") ],
+            defaults: [ ],
+            rest: null,
+            body: {
+                type: "BlockStatement",
+                body: ast.body
+            },
+            generator: true,
+            expression: false
+        };
+
+        regenerator.transform(generatorFunction);
+        injectWithContext(generatorFunction);
+        addScopes(generatorFunction, context);
+
+        return new Function(escodegen.generate(generatorFunction) + "\n" + "return generatorFunction;");
+    }
 }
 
 module.exports = transform;
