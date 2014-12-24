@@ -1,6 +1,5 @@
 var basic = require("basic-ds");
 var b = require("ast-types").builders;
-var builder = require("./ast-builder"); // TODO: replace with recast
 var escodegen = require("escodegen");
 var escope = require("escope");
 var esprima = require("esprima-fb");
@@ -21,8 +20,7 @@ function getScopeVariables (node, parent, context) {
         // don't work properly when defining methods on the
         // prototoype so filter those out as well
         var isFunctionDeclaration = variable.defs.some(function (def) {
-            return def.type      === "FunctionName" &&
-                def.node.type === "FunctionDeclaration";
+            return def.type === "FunctionName" && def.node.type === "FunctionDeclaration";
         });
         if (isFunctionDeclaration) {
             return false;
@@ -40,10 +38,12 @@ function getScopeVariables (node, parent, context) {
 function insertYields (bodyList) {
     bodyList.forEachNode(function (node) {  // this is a linked list node
         // TODO: separate vars for list nodes and ast nodes
-        var loc = node.value.loc;   
-        var yieldExpression = builder.createExpressionStatement(
-            builder.createYieldExpression(
-                builder.createObjectExpression({ line: loc.start.line })
+        var loc = node.value.loc;
+        var yieldExpression = b.expressionStatement(
+            b.yieldExpression(
+                b.objectExpression([
+                    b.property("init", b.identifier("line"), b.literal(loc.start.line))
+                ])
             )
         );
         // add an extra property to differentiate function calls
@@ -53,14 +53,14 @@ function insertYields (bodyList) {
         if (node.value.type === "ExpressionStatement") {
             if (node.value.expression.type === "YieldExpression") {
                 node.value.expression.argument.properties.push(
-                    builder.createProperty("stepAgain", true)
+                    b.property("init", b.identifier("stepAgain"), b.literal(true))
                 );
             }
             if (node.value.expression.type === "AssignmentExpression") {
                 var expr = node.value.expression.right;
                 if (expr.type === "YieldExpression") {
                     expr.argument.properties.push(
-                        builder.createProperty("stepAgain", true)
+                        b.property("init", b.identifier("stepAgain"), b.literal(true))
                     );
                 }
             }
@@ -71,7 +71,7 @@ function insertYields (bodyList) {
             var lastDecl = node.value.declarations[node.value.declarations.length - 1];
             if (lastDecl.init && lastDecl.init.type === "YieldExpression") {
                 lastDecl.init.argument.properties.push(
-                    builder.createProperty("stepAgain", true)
+                    b.property("init", b.identifier("stepAgain"), b.literal(true))
                 );
             }
         }
@@ -140,9 +140,9 @@ function injectWithContext(generatorFunction) {
                             var firstArg = arg.arguments[0];
                             var blockStmt = firstArg.body;
 
-                            var withStmt = builder.createWithStatement(
-                                builder.createIdentifier("context"),
-                                builder.createBlockStatement(blockStmt.body)
+                            var withStmt = b.withStatement(
+                                b.identifier("context"),
+                                b.blockStatement(blockStmt.body)
                             );
 
                             blockStmt.body = [withStmt];
@@ -180,22 +180,20 @@ function addScopes(generatorFunction, context) {
                         callee.property.name === "wrap") {
 
                         var properties = node._parent._parent.params.map(function (param) {
-                            return {
-                                type: "Property",
-                                key: builder.createIdentifier(param.name),
-                                value: builder.createIdentifier(param.name),
-                                kind: "init"
-                            }
+                            return b.property(
+                                "init", 
+                                b.identifier(param.name), 
+                                b.identifier(param.name)
+                            );
                         });
 
                         if (node._parent.body[0].declarations) {
                             node._parent.body[0].declarations.forEach(function (decl) {
-                                properties.push({
-                                    type: "Property",
-                                    key: builder.createIdentifier(decl.id.name),
-                                    value: builder.createIdentifier("undefined"),
-                                    kind: "init"
-                                })
+                                properties.push(b.property(
+                                    "init",
+                                    b.identifier(decl.id.name),
+                                    b.identifier("undefined")
+                                ));
                             });
                         }
 
@@ -209,21 +207,20 @@ function addScopes(generatorFunction, context) {
                             });
                         }
 
-                        var objectExpression = {
-                            type: "ObjectExpression",
-                            properties: properties
-                        };
-
                         node._parent.body.unshift(
-                            builder.createVariableDeclaration([
-                                builder.createVariableDeclarator("__scope__", objectExpression)
-                            ])
+                            b.variableDeclaration(
+                                "var",
+                                [b.variableDeclarator(
+                                    b.identifier("__scope__"), 
+                                    b.objectExpression(properties)
+                                )]
+                            )
                         );
 
                         var blockStmt = firstArg.body;
-                        var withStmt = builder.createWithStatement(
-                            builder.createIdentifier("__scope__"),
-                            builder.createBlockStatement(blockStmt.body)
+                        var withStmt = b.withStatement(
+                            b.identifier("__scope__"),
+                            b.blockStatement(blockStmt.body)
                         );
                         blockStmt.body = [withStmt];
                     }
@@ -244,41 +241,30 @@ function create__scope__(node, bodyList, scope) {
 
         // if the variable is a parameter initialize its
         // value with the value of the parameter
-        var value = isParam ? builder.createIdentifier(name) : builder.createIdentifier("undefined");
-        return {
-            type: "Property",
-            key: builder.createIdentifier(name),
-            value: value,
-            kind: "init"
-        }
+        var value = isParam ? b.identifier(name) : b.identifier("undefined");
+        return b.property("init", b.identifier(name), value);
     });
 
     // modify the first yield statement to include the scope
     // as part of the value
     var firstStatement = bodyList.first.value;
-    firstStatement.expression.argument.properties.push({
-        type: "Property",
-        key: builder.createIdentifier("scope"),
-        value: builder.createIdentifier("__scope__"),
-        kind: "init"
-    });
-
-    // wrap the body with a yield statement
-    var withStatement = builder.createWithStatement(
-        builder.createIdentifier("__scope__"),
-        builder.createBlockStatement(bodyList.toArray())
+    firstStatement.expression.argument.properties.push(
+        b.property("init", b.identifier("scope"), b.identifier("__scope__"))
     );
-    var objectExpression = {
-        type: "ObjectExpression",
-        properties: properties
-    };
-
+    
     // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
     node.body = [
-        builder.createVariableDeclaration([
-            builder.createVariableDeclarator("__scope__", objectExpression)
-        ]),
-        withStatement
+        b.variableDeclaration(
+            "var",
+            [b.variableDeclarator(
+                b.identifier("__scope__"), 
+                b.objectExpression(properties)
+            )]
+        ),
+        b.withStatement(
+            b.identifier("__scope__"),
+            b.blockStatement(bodyList.toArray())
+        )
     ];
 }
 
@@ -304,27 +290,30 @@ function transform(code, context, options) {
 
                 if (bodyList.first) {
                     if (parent.type === "FunctionDeclaration") {
-                        bodyList.first.value.expression.argument.properties.push({
-                            type: "Property",
-                            key: builder.createIdentifier("name"),
-                            value: builder.createLiteral(stringForId(parent.id)),   // NOTE: identifier can be a member expression too!
-                            kind: "init"
-                        });
+                        bodyList.first.value.expression.argument.properties.push(
+                            b.property(
+                                "init",
+                                b.identifier("name"),
+                                b.literal(stringForId(parent.id))
+                            )
+                        );
                     } else if (parent.type === "FunctionExpression") {
                         var name = getNameForFunctionExpression(parent);
-                        bodyList.first.value.expression.argument.properties.push({
-                            type: "Property",
-                            key: builder.createIdentifier("name"),
-                            value: builder.createLiteral(name),
-                            kind: "init"
-                        });
+                        bodyList.first.value.expression.argument.properties.push(
+                            b.property(
+                                "init",
+                                b.identifier("name"),
+                                b.literal(name)
+                            )
+                        );
                     } else if (node.type === "Program") {
-                        bodyList.first.value.expression.argument.properties.push({
-                            type: "Property",
-                            key: builder.createIdentifier("name"),
-                            value: builder.createLiteral("<PROGRAM>"),
-                            kind: "init"
-                        });
+                        bodyList.first.value.expression.argument.properties.push(
+                            b.property(
+                                "init",
+                                b.identifier("name"),
+                                b.literal("<PROGRAM>")
+                            )
+                        );
                     }
                 }
 
@@ -343,12 +332,9 @@ function transform(code, context, options) {
                     // to the first yield statement
                     if (bodyList.first !== null) {
                         var firstStatement = bodyList.first.value;
-                        firstStatement.expression.argument.properties.push({
-                            type: "Property",
-                            key: builder.createIdentifier("scope"),
-                            value: builder.createIdentifier("__scope__"),
-                            kind: "init"
-                        });
+                        firstStatement.expression.argument.properties.push(
+                            b.property("init", b.identifier("scope"), b.identifier("__scope__"))
+                        );
                     }
                     
                     node.body = bodyList.toArray();
@@ -365,21 +351,28 @@ function transform(code, context, options) {
                     if (node.type === "NewExpression") {
                         // put the constructor name as the 2nd param
                         if (node.callee.type === "Identifier") {
-                            node.arguments.unshift(builder.createLiteral(node.callee.name));
+                            node.arguments.unshift(b.literal(node.callee.name));
                         } else {
-                            node.arguments.unshift(builder.createLiteral(null));
+                            node.arguments.unshift(b.literal(null));
                         }
                         // put the constructor itself as the 1st param
                         node.arguments.unshift(node.callee);
-                        gen = builder.createCallExpression("__instantiate__", node.arguments);
+                        gen = b.callExpression(
+                            b.identifier("__instantiate__"), 
+                            node.arguments
+                        );
                     }
 
                     // create a yieldExpress to wrap the call
                     var loc = node.loc;
-                    return builder.createYieldExpression(
-                        // TODO: this is the current line, but we should actually be passing next node's line
-                        // TODO: handle this in when the ForStatement is parsed where we have more information
-                        builder.createObjectExpression({ gen: gen, line: loc.start.line })
+
+                    return b.yieldExpression(
+                        b.objectExpression([
+                            b.property("init", b.identifier("gen"), gen),
+                            // TODO: this is the current line, but we should actually be passing next node's line
+                            // TODO: handle this in when the ForStatement is parsed where we have more information
+                            b.property("init", b.identifier("line"), b.literal(loc.start.line))
+                        ])
                     );
                 } else {
                     throw "we don't handle '" + node.callee.type + "' callees";

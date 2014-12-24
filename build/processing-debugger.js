@@ -81,7 +81,7 @@ function _isGeneratorFunction(value) {
 
 module.exports = ProcessingDebugger;
 
-},{"./debugger":128}],2:[function(require,module,exports){
+},{"./debugger":127}],2:[function(require,module,exports){
 "use strict";
 
 var LinkedList = require("../node_modules/basic-ds/lib/LinkedList");
@@ -33083,148 +33083,6 @@ function through (write, end, opts) {
 },{}],127:[function(require,module,exports){
 "use strict";
 
-/* build Parser API style AST nodes and trees */
-
-var createExpressionStatement = function (expression) {
-  return {
-    type: "ExpressionStatement",
-    expression: expression
-  };
-};
-
-var createBlockStatement = function (body) {
-  return {
-    type: "BlockStatement",
-    body: body
-  };
-};
-
-var createCallExpression = function (name, args) {
-  return {
-    type: "CallExpression",
-    callee: createIdentifier(name),
-    arguments: args
-  };
-};
-
-var createYieldExpression = function (argument) {
-  return {
-    type: "YieldExpression",
-    argument: argument
-  };
-};
-
-var createObjectExpression = function (obj) {
-  var properties = Object.keys(obj).map(function (key) {
-    var value = obj[key];
-    return createProperty(key, value);
-  });
-
-  return {
-    type: "ObjectExpression",
-    properties: properties
-  };
-};
-
-var createProperty = function (key, value) {
-  var expression;
-  if (value instanceof Object) {
-    if (value.type === "CallExpression" || value.type === "NewExpression") {
-      expression = value;
-    } else {
-      expression = createObjectExpression(value);
-    }
-  } else if (value === undefined) {
-    expression = createIdentifier("undefined");
-  } else {
-    expression = createLiteral(value);
-  }
-
-  return {
-    type: "Property",
-    key: createIdentifier(key),
-    value: expression,
-    kind: "init"
-  };
-};
-
-var createIdentifier = function (name) {
-  return {
-    type: "Identifier",
-    name: name
-  };
-};
-
-var createLiteral = function (value) {
-  if (value === undefined) {
-    throw "literal value undefined";
-  }
-  return {
-    type: "Literal",
-    value: value
-  };
-};
-
-var createWithStatement = function (obj, body) {
-  return {
-    type: "WithStatement",
-    object: obj,
-    body: body
-  };
-};
-
-var createAssignmentExpression = function (name, value) {
-  return {
-    type: "AssignmentExpression",
-    operator: "=",
-    left: createIdentifier(name),
-    right: value
-  };
-};
-
-var createVariableDeclarator = function (name, value) {
-  return {
-    type: "VariableDeclarator",
-    id: createIdentifier(name),
-    init: value
-  };
-};
-
-// a declaration is a subclass of statement
-var createVariableDeclaration = function (declarations) {
-  return {
-    type: "VariableDeclaration",
-    declarations: declarations,
-    kind: "var"
-  };
-};
-
-var replaceNode = function (parent, name, replacementNode) {
-  if (name.indexOf("arguments") === 0) {
-    var index = name.match(/\[([0-1]+)\]/)[1];
-    parent.arguments[index] = replacementNode;
-  } else {
-    parent[name] = replacementNode;
-  }
-};
-
-exports.createExpressionStatement = createExpressionStatement;
-exports.createBlockStatement = createBlockStatement;
-exports.createCallExpression = createCallExpression;
-exports.createYieldExpression = createYieldExpression;
-exports.createObjectExpression = createObjectExpression;
-exports.createProperty = createProperty;
-exports.createIdentifier = createIdentifier;
-exports.createLiteral = createLiteral;
-exports.createWithStatement = createWithStatement;
-exports.createAssignmentExpression = createAssignmentExpression;
-exports.createVariableDeclaration = createVariableDeclaration;
-exports.createVariableDeclarator = createVariableDeclarator;
-exports.replaceNode = replaceNode;
-
-},{}],128:[function(require,module,exports){
-"use strict";
-
 var _slice = Array.prototype.slice;
 var _classProps = function (child, staticProps, instanceProps) {
   if (staticProps) Object.defineProperties(child, staticProps);
@@ -33438,7 +33296,7 @@ var Debugger = (function () {
 
 module.exports = Debugger;
 
-},{"../external/scheduler/lib/scheduler":2,"./stepper":129,"./transform":130}],129:[function(require,module,exports){
+},{"../external/scheduler/lib/scheduler":2,"./stepper":128,"./transform":129}],128:[function(require,module,exports){
 "use strict";
 
 var _classProps = function (child, staticProps, instanceProps) {
@@ -33670,12 +33528,11 @@ var Stepper = (function () {
 
 module.exports = Stepper;
 
-},{"../external/scheduler/lib/task":3,"../node_modules/basic-ds/lib/Stack":22}],130:[function(require,module,exports){
+},{"../external/scheduler/lib/task":3,"../node_modules/basic-ds/lib/Stack":22}],129:[function(require,module,exports){
 "use strict";
 
 var basic = require("basic-ds");
 var b = require("ast-types").builders;
-var builder = require("./ast-builder"); // TODO: replace with recast
 var escodegen = require("escodegen");
 var escope = require("escope");
 var esprima = require("esprima-fb");
@@ -33716,19 +33573,19 @@ function insertYields(bodyList) {
     // this is a linked list node
     // TODO: separate vars for list nodes and ast nodes
     var loc = node.value.loc;
-    var yieldExpression = builder.createExpressionStatement(builder.createYieldExpression(builder.createObjectExpression({ line: loc.start.line })));
+    var yieldExpression = b.expressionStatement(b.yieldExpression(b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.start.line))])));
     // add an extra property to differentiate function calls
     // that are followed by a statment from those that aren't
     // the former requires taking an extra _step() to get the
     // next line
     if (node.value.type === "ExpressionStatement") {
       if (node.value.expression.type === "YieldExpression") {
-        node.value.expression.argument.properties.push(builder.createProperty("stepAgain", true));
+        node.value.expression.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
       }
       if (node.value.expression.type === "AssignmentExpression") {
         var expr = node.value.expression.right;
         if (expr.type === "YieldExpression") {
-          expr.argument.properties.push(builder.createProperty("stepAgain", true));
+          expr.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
         }
       }
     }
@@ -33737,7 +33594,7 @@ function insertYields(bodyList) {
     if (node.value.type === "VariableDeclaration") {
       var lastDecl = node.value.declarations[node.value.declarations.length - 1];
       if (lastDecl.init && lastDecl.init.type === "YieldExpression") {
-        lastDecl.init.argument.properties.push(builder.createProperty("stepAgain", true));
+        lastDecl.init.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
       }
     }
     bodyList.insertBeforeNode(node, yieldExpression);
@@ -33801,7 +33658,7 @@ function injectWithContext(generatorFunction) {
               var firstArg = arg.arguments[0];
               var blockStmt = firstArg.body;
 
-              var withStmt = builder.createWithStatement(builder.createIdentifier("context"), builder.createBlockStatement(blockStmt.body));
+              var withStmt = b.withStatement(b.identifier("context"), b.blockStatement(blockStmt.body));
 
               blockStmt.body = [withStmt];
               success = true;
@@ -33836,22 +33693,12 @@ function addScopes(generatorFunction, context) {
 
           if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
             var properties = node._parent._parent.params.map(function (param) {
-              return {
-                type: "Property",
-                key: builder.createIdentifier(param.name),
-                value: builder.createIdentifier(param.name),
-                kind: "init"
-              };
+              return b.property("init", b.identifier(param.name), b.identifier(param.name));
             });
 
             if (node._parent.body[0].declarations) {
               node._parent.body[0].declarations.forEach(function (decl) {
-                properties.push({
-                  type: "Property",
-                  key: builder.createIdentifier(decl.id.name),
-                  value: builder.createIdentifier("undefined"),
-                  kind: "init"
-                });
+                properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
               });
             }
 
@@ -33865,15 +33712,10 @@ function addScopes(generatorFunction, context) {
               });
             }
 
-            var objectExpression = {
-              type: "ObjectExpression",
-              properties: properties
-            };
-
-            node._parent.body.unshift(builder.createVariableDeclaration([builder.createVariableDeclarator("__scope__", objectExpression)]));
+            node._parent.body.unshift(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]));
 
             var blockStmt = firstArg.body;
-            var withStmt = builder.createWithStatement(builder.createIdentifier("__scope__"), builder.createBlockStatement(blockStmt.body));
+            var withStmt = b.withStatement(b.identifier("__scope__"), b.blockStatement(blockStmt.body));
             blockStmt.body = [withStmt];
           }
         }
@@ -33893,34 +33735,17 @@ function create__scope__(node, bodyList, scope) {
 
     // if the variable is a parameter initialize its
     // value with the value of the parameter
-    var value = isParam ? builder.createIdentifier(name) : builder.createIdentifier("undefined");
-    return {
-      type: "Property",
-      key: builder.createIdentifier(name),
-      value: value,
-      kind: "init"
-    };
+    var value = isParam ? b.identifier(name) : b.identifier("undefined");
+    return b.property("init", b.identifier(name), value);
   });
 
   // modify the first yield statement to include the scope
   // as part of the value
   var firstStatement = bodyList.first.value;
-  firstStatement.expression.argument.properties.push({
-    type: "Property",
-    key: builder.createIdentifier("scope"),
-    value: builder.createIdentifier("__scope__"),
-    kind: "init"
-  });
-
-  // wrap the body with a yield statement
-  var withStatement = builder.createWithStatement(builder.createIdentifier("__scope__"), builder.createBlockStatement(bodyList.toArray()));
-  var objectExpression = {
-    type: "ObjectExpression",
-    properties: properties
-  };
+  firstStatement.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier("__scope__")));
 
   // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
-  node.body = [builder.createVariableDeclaration([builder.createVariableDeclarator("__scope__", objectExpression)]), withStatement];
+  node.body = [b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]), b.withStatement(b.identifier("__scope__"), b.blockStatement(bodyList.toArray()))];
 }
 
 function transform(code, context, options) {
@@ -33945,27 +33770,12 @@ function transform(code, context, options) {
 
         if (bodyList.first) {
           if (parent.type === "FunctionDeclaration") {
-            bodyList.first.value.expression.argument.properties.push({
-              type: "Property",
-              key: builder.createIdentifier("name"),
-              value: builder.createLiteral(stringForId(parent.id)), // NOTE: identifier can be a member expression too!
-              kind: "init"
-            });
+            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal(stringForId(parent.id))));
           } else if (parent.type === "FunctionExpression") {
             var name = getNameForFunctionExpression(parent);
-            bodyList.first.value.expression.argument.properties.push({
-              type: "Property",
-              key: builder.createIdentifier("name"),
-              value: builder.createLiteral(name),
-              kind: "init"
-            });
+            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal(name)));
           } else if (node.type === "Program") {
-            bodyList.first.value.expression.argument.properties.push({
-              type: "Property",
-              key: builder.createIdentifier("name"),
-              value: builder.createLiteral("<PROGRAM>"),
-              kind: "init"
-            });
+            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal("<PROGRAM>")));
           }
         }
 
@@ -33984,12 +33794,7 @@ function transform(code, context, options) {
           // to the first yield statement
           if (bodyList.first !== null) {
             var firstStatement = bodyList.first.value;
-            firstStatement.expression.argument.properties.push({
-              type: "Property",
-              key: builder.createIdentifier("scope"),
-              value: builder.createIdentifier("__scope__"),
-              kind: "init"
-            });
+            firstStatement.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier("__scope__")));
           }
 
           node.body = bodyList.toArray();
@@ -34004,21 +33809,22 @@ function transform(code, context, options) {
           if (node.type === "NewExpression") {
             // put the constructor name as the 2nd param
             if (node.callee.type === "Identifier") {
-              node.arguments.unshift(builder.createLiteral(node.callee.name));
+              node.arguments.unshift(b.literal(node.callee.name));
             } else {
-              node.arguments.unshift(builder.createLiteral(null));
+              node.arguments.unshift(b.literal(null));
             }
             // put the constructor itself as the 1st param
             node.arguments.unshift(node.callee);
-            gen = builder.createCallExpression("__instantiate__", node.arguments);
+            gen = b.callExpression(b.identifier("__instantiate__"), node.arguments);
           }
 
           // create a yieldExpress to wrap the call
           var loc = node.loc;
-          return builder.createYieldExpression(
+
+          return b.yieldExpression(b.objectExpression([b.property("init", b.identifier("gen"), gen),
           // TODO: this is the current line, but we should actually be passing next node's line
           // TODO: handle this in when the ForStatement is parsed where we have more information
-          builder.createObjectExpression({ gen: gen, line: loc.start.line }));
+          b.property("init", b.identifier("line"), b.literal(loc.start.line))]));
         } else {
           throw "we don't handle '" + node.callee.type + "' callees";
         }
@@ -34047,5 +33853,5 @@ function transform(code, context, options) {
 
 module.exports = transform;
 
-},{"./ast-builder":127,"ast-types":19,"basic-ds":23,"escodegen":50,"escope":66,"esprima-fb":67,"estraverse":68,"regenerator":75}]},{},[1])(1)
+},{"ast-types":19,"basic-ds":23,"escodegen":50,"escope":66,"esprima-fb":67,"estraverse":68,"regenerator":75}]},{},[1])(1)
 });

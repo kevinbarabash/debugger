@@ -179,7 +179,6 @@ class Debugger {
         return this.scheduler.currentTask();
     }
 
-    // TODO: make this protected in the future
     _createStepper(genObj, isMain) {
         var stepper = new Stepper(
             genObj,
