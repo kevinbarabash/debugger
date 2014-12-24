@@ -9,16 +9,16 @@ processing.resetMatrix();
 processing.usingDebugger = true;
 
 var poster = new Poster(window.parent);
-var debugr = new ProcessingDebugger(
-    processing,
-    function () {
+var debugr = new ProcessingDebugger({
+    context: processing,
+    onBreakpoint: function () {
         var scope = gehry.deconstruct(debugr.currentScope);
         poster.post("break", debugr.currentLine, debugr.currentStack, scope);
     },
-    function () {
+    onFunctionDone: function () {
         poster.post("done");
     }
-);
+});
 
 // TODO: remote procedure calling
 // TODO: remote object proxying

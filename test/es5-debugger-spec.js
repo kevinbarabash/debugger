@@ -1,8 +1,6 @@
 /*global describe, it, beforeEach, afterEach */
 
-// TODO: add tests for functions defined inside functions
-
-describe("Debugger", function () {
+describe("ES5 Debugger", function () {
 
     var debugr, context;
     var fill, rect, print;
@@ -28,7 +26,9 @@ describe("Debugger", function () {
             image: image
         };
 
-        debugr = new ProcessingDebugger();
+        debugr = new ProcessingDebugger({
+            language: "es5"
+        });
         debugr.context = context;
     });
 
@@ -2062,7 +2062,7 @@ describe("Debugger", function () {
                 };
             });
 
-            debugr = new ProcessingDebugger(context);
+            debugr = new ProcessingDebugger({ context: context });
             debugr.onNewObject = sinon.stub();
             debugr.load(code);
             debugr.start();

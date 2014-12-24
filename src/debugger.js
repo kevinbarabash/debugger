@@ -11,20 +11,18 @@ var transform = require("./transform");
 
 class Debugger {
 
-    // TODO: convert to single "options" param
-    constructor(context, onBreakpoint, onFunctionDone) {
-        this.context = context || {};
-
-        this.onBreakpoint = onBreakpoint || function () {};
-        this.onFunctionDone = onFunctionDone || function () {};
-
-        this.scheduler = new Scheduler();
-
-        this.breakpoints = {};
-        this.breakpointsEnabled = true;     // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
-        this._paused = false;               // read-only, needs a getter
+    constructor(options) {
+        this.context = options.context || {};
+        this.onBreakpoint = options.onBreakpoint || function () {};
+        this.onFunctionDone = options.onFunctionDone || function () {};
+        this.language = options.language || "es5";
         
-        this._language = "es5";
+        this.scheduler = new Scheduler();
+        this.breakpoints = {};
+        // TODO: replace with this.enableBreakpoints()/this.disableBreakpoints()?
+        this.breakpointsEnabled = true;
+        
+        this._paused = false;
     }
 
     set context(context) {
@@ -72,7 +70,7 @@ class Debugger {
     }
 
     load(code) {
-        var debugFunction = transform(code, this.context, { language: this._language });
+        var debugFunction = transform(code, this.context, { language: this.language });
         //console.log(debugFunction);
         this.mainGeneratorFunction = debugFunction();
     }
@@ -180,22 +178,21 @@ class Debugger {
     }
 
     _createStepper(genObj, isMain) {
-        var stepper = new Stepper(
-            genObj,
-            this.breakpoints,
-            () => {
+        var stepper = new Stepper(genObj, {
+            breakpoints: this.breakpoints,
+            breakCallback: () => {
                 this._paused = true;
                 this.onBreakpoint();
             },
-            () => {
+            doneCallback: () => {
                 this._paused = false;
                 this.onFunctionDone();
                 if (isMain) {
                     this.onMainDone();
                 }
             },
-            this._language
-        );
+            language: this.language
+        });
 
         stepper.breakpointsEnabled = this.breakpointsEnabled;
         return stepper;
@@ -204,17 +201,11 @@ class Debugger {
     // event callbacks
     // override to customize behaviour
 
-    onMainStart() {
+    onMainStart() {}
 
-    }
+    onMainDone() {}
 
-    onMainDone() {
-
-    }
-
-    onNewObject(classFn, className, obj, args) {
-
-    }
+    onNewObject(classFn, className, obj, args) {}
 }
 
 module.exports = Debugger;

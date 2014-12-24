@@ -9,9 +9,8 @@ var events = [
 
 class ProcessingDebugger extends Debugger {
 
-    // TODO: change to single options param
-    constructor(context, onBreakpoint, onFunctionDone) {
-        super(context, onBreakpoint, onFunctionDone);
+    constructor(options) {
+        super(options);
         this._repeater = null;
     }
 

@@ -4,12 +4,14 @@ var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Task = require("../external/scheduler/lib/task");
 
 class Stepper {
-    constructor(genObj, breakpoints, breakCallback, doneCallback, language) {
-        this.breakCallback = breakCallback || function () {};
-        this.doneCallback = doneCallback || function () {};
-        this._breakpoints = breakpoints || {};
+    constructor(genObj, options) {
+        // TODO: align these names with the callback names on Debugger
+        this.breakCallback = options.breakCallback || function () {};
+        this.doneCallback = options.doneCallback || function () {};
+        
+        this._breakpoints = options.breakpoints || {};
         this.breakpointsEnabled = true;
-        this._language = language;
+        this._language = options.language || "es5";
 
         this._started = false;
         this._paused = false;
@@ -17,7 +19,7 @@ class Stepper {
 
         this.stack = new Stack();
         this.stack.push({
-            gen:genObj,
+            gen: genObj,
             line: -1
         });
 

@@ -20,11 +20,8 @@ function emptyFunction() {}
 var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
 
 var ProcessingDebugger = (function (Debugger) {
-  var ProcessingDebugger =
-
-  // TODO: change to single options param
-  function ProcessingDebugger(context, onBreakpoint, onFunctionDone) {
-    Debugger.call(this, context, onBreakpoint, onFunctionDone);
+  var ProcessingDebugger = function ProcessingDebugger(options) {
+    Debugger.call(this, options);
     this._repeater = null;
   };
 
@@ -33101,22 +33098,18 @@ var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 
 var Debugger = (function () {
-  var Debugger =
-
-  // TODO: convert to single "options" param
-  function Debugger(context, onBreakpoint, onFunctionDone) {
-    this.context = context || {};
-
-    this.onBreakpoint = onBreakpoint || function () {};
-    this.onFunctionDone = onFunctionDone || function () {};
+  var Debugger = function Debugger(options) {
+    this.context = options.context || {};
+    this.onBreakpoint = options.onBreakpoint || function () {};
+    this.onFunctionDone = options.onFunctionDone || function () {};
+    this.language = options.language || "es5";
 
     this.scheduler = new Scheduler();
-
     this.breakpoints = {};
-    this.breakpointsEnabled = true; // needs getter/setter, e.g. this.enableBreakpoints()/this.disableBreakpoints();
-    this._paused = false; // read-only, needs a getter
+    // TODO: replace with this.enableBreakpoints()/this.disableBreakpoints()?
+    this.breakpointsEnabled = true;
 
-    this._language = "es5";
+    this._paused = false;
   };
 
   Debugger.isBrowserSupported = function () {
@@ -33129,7 +33122,7 @@ var Debugger = (function () {
   };
 
   Debugger.prototype.load = function (code) {
-    var debugFunction = transform(code, this.context, { language: this._language });
+    var debugFunction = transform(code, this.context, { language: this.language });
     //console.log(debugFunction);
     this.mainGeneratorFunction = debugFunction();
   };
@@ -33191,16 +33184,21 @@ var Debugger = (function () {
 
   Debugger.prototype._createStepper = function (genObj, isMain) {
     var _this = this;
-    var stepper = new Stepper(genObj, this.breakpoints, function () {
-      _this._paused = true;
-      _this.onBreakpoint();
-    }, function () {
-      _this._paused = false;
-      _this.onFunctionDone();
-      if (isMain) {
-        _this.onMainDone();
-      }
-    }, this._language);
+    var stepper = new Stepper(genObj, {
+      breakpoints: this.breakpoints,
+      breakCallback: function () {
+        _this._paused = true;
+        _this.onBreakpoint();
+      },
+      doneCallback: function () {
+        _this._paused = false;
+        _this.onFunctionDone();
+        if (isMain) {
+          _this.onMainDone();
+        }
+      },
+      language: this.language
+    });
 
     stepper.breakpointsEnabled = this.breakpointsEnabled;
     return stepper;
@@ -33310,13 +33308,15 @@ var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Task = require("../external/scheduler/lib/task");
 
 var Stepper = (function () {
-  var Stepper = function Stepper(genObj, breakpoints, breakCallback, doneCallback, language) {
+  var Stepper = function Stepper(genObj, options) {
     var _this = this;
-    this.breakCallback = breakCallback || function () {};
-    this.doneCallback = doneCallback || function () {};
-    this._breakpoints = breakpoints || {};
+    // TODO: align these names with the callback names on Debugger
+    this.breakCallback = options.breakCallback || function () {};
+    this.doneCallback = options.doneCallback || function () {};
+
+    this._breakpoints = options.breakpoints || {};
     this.breakpointsEnabled = true;
-    this._language = language;
+    this._language = options.language || "es5";
 
     this._started = false;
     this._paused = false;
