@@ -2024,7 +2024,7 @@ describe("Debugger", function () {
                 debugr.load(code2);
                 debugr.start();
 
-                expect(context.mouseClicked.toString().replace(/\s/g,"")).to.be(emptyFunction);
+                expect(context.mouseClicked.toString().replace(/\s/g,"").replace(/"usestrict";/g,"")).to.be(emptyFunction);
 
                 done();
             }, 50);

@@ -1,4 +1,5 @@
 var basic = require("basic-ds");
+var b = require("ast-types").builders;
 var builder = require("./ast-builder"); // TODO: replace with recast
 var escodegen = require("escodegen");
 var escope = require("escope");
@@ -395,19 +396,13 @@ function transform(code, context, options) {
 
         return new Function(debugCode);
     } else {
-        var generatorFunction = {
-            type: "FunctionDeclaration",
-            id: builder.createIdentifier("generatorFunction"),
-            params: [ builder.createIdentifier("context") ],
-            defaults: [ ],
-            rest: null,
-            body: {
-                type: "BlockStatement",
-                body: ast.body
-            },
-            generator: true,
-            expression: false
-        };
+        var generatorFunction = b.functionDeclaration(
+            b.identifier("generatorFunction"), 
+            [b.identifier("context")], 
+            b.blockStatement(ast.body), 
+            true,   // generator 
+            false   // expression
+        );
 
         regenerator.transform(generatorFunction);
         injectWithContext(generatorFunction);
