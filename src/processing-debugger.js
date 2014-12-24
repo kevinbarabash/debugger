@@ -1,4 +1,6 @@
-var Debugger = require("./debugger");
+/*global Debugger */
+// defining Debugger as a global instead of requiring it so that we can test it
+// independently of ProcessingDebugger
 
 function emptyFunction() {}
 

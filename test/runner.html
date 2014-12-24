@@ -10,6 +10,7 @@
 <!-- runtime dependencies -->
 <script src="../node_modules/regenerator/runtime.js"></script>
 <!-- build files -->
+<script src="../build/debugger.js"></script>
 <script src="../build/processing-debugger.js"></script>
 <!-- test dependencies -->
 <script src="../node_modules/mocha/mocha.js"></script>
@@ -19,9 +20,8 @@
 <script>mocha.setup('bdd')</script>
 </body>
 </html>
-<!-- TODO: emulate the test harness from live-editor to remove this duplication -->
-<script src="es5-debugger-spec.js"></script>
-<script src="es6-debugger-spec.js"></script>
+<script src="debugger-spec.js"></script>
+<script src="processing-debugger-spec.js"></script>
 <script>
 
   window.onload = function () {
