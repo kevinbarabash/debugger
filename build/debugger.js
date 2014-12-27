@@ -33379,6 +33379,9 @@ var Stepper = (function () {
       if (result.value.name) {
         this.stack.peek().name = result.value.name;
       }
+      if (result.value.popAgain) {
+        this.stack.peek().popAgain = result.value.popAgain;
+      }
       if (result.value.line) {
         frame.line = result.value.line;
       }
@@ -33451,7 +33454,7 @@ module.exports = Stepper;
 },{"../external/scheduler/lib/task":3,"../node_modules/basic-ds/lib/Stack":22}],128:[function(require,module,exports){
 "use strict";
 
-var basic = require("basic-ds");
+var LinkedList = require("basic-ds").LinkedList;
 var b = require("ast-types").builders;
 var escodegen = require("escodegen");
 var escope = require("escope");
@@ -33685,7 +33688,7 @@ function transform(code, context, options) {
           var scope = getScopeVariables(node, parent, context);
         }
 
-        var bodyList = basic.LinkedList.fromArray(node.body);
+        var bodyList = LinkedList.fromArray(node.body);
         insertYields(bodyList);
 
         if (bodyList.first) {

@@ -13,7 +13,6 @@ var map = function *(callback, _this) {
     }
     return result;
 };
-map.hidden = true;  // don't report in the stack
 
 var reduce = function *(callback, initialValue) {
     var start = 0;
@@ -27,12 +26,11 @@ var reduce = function *(callback, initialValue) {
     var result = initialValue;
     for (var i = start; i < this.length; i++) {
         result = yield {
-            gen: callback.call(this, initialValue, this[i], i, this)
+            gen: callback.call(this, result, this[i], i, this)
         };
     }
     return result;
 };
-reduce.hidden = true;
 
 var reduceRight = function *(callback, initialValue) {
     var start = this.length - 1;
@@ -41,29 +39,30 @@ var reduceRight = function *(callback, initialValue) {
         if (this.length === 0) {
             throw new TypeError("empty array and no initial value")
         }
-        initialValue = this[0];
+        initialValue = this[this.length - 1];
     }
     var result = initialValue;
     for (var i = start; i > -1; i--) {
         result = yield {
-            gen: callback.call(this, initialValue, this[i], i, this)
+            gen: callback.call(this, result, this[i], i, this)
         };
     }
     return result;
 };
-reduceRight.hidden = true;
 
 var filter = function *(callback, _this) {
     var result = [];
     for (var i = 0; i < this.length; i++) {
         var value = this[i];
-        if (yield { gen: callback.call(this, value, i, _this) }) {
+        var cond = yield {
+            gen: callback.call(this, value, i, _this)
+        };
+        if (cond) {
             result.push(value);
         }
     }
     return result;
 };
-filter.hidden = true;
 
 var forEach = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
@@ -75,10 +74,10 @@ var forEach = function *(callback, _this) {
 
 var every = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
-        var result = yield { 
+        var cond = yield { 
             gen: callback.call(this, this[i], i, _this)
         };
-        if (!result) {
+        if (!cond) {
             return false;
         }
     }
@@ -87,10 +86,10 @@ var every = function *(callback, _this) {
 
 var some = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
-        var result = yield {
+        var cond = yield {
             gen: callback.call(this, this[i], i, _this)
         };
-        if (result) {
+        if (cond) {
             return true;
         }
     }

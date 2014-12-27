@@ -1,6 +1,25 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 
+var array = require("./array");
+
+function _isGeneratorFunction(value) {
+  return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
+}
+
+var methods = ["map", "reduce", "reduceRight", "filter", "forEach", "every", "some"];
+
+methods.forEach(function (methodName) {
+  var original = Array.prototype[methodName];
+  Array.prototype[methodName] = function () {
+    var method = _isGeneratorFunction(arguments[0]) ? array[methodName] : original;
+    return method.apply(this, arguments);
+  };
+});
+
+},{"./array":2}],2:[function(require,module,exports){
+"use strict";
+
 /**
  * Re-implementations of Array.prototype functional programming methods
  * that accept generators and are generators themselves so that they can
@@ -35,7 +54,6 @@ var map = regeneratorRuntime.mark(function _callee(callback, _this) {
     }
   }, _callee, this);
 });
-map.hidden = true; // don't report in the stack
 
 var reduce = regeneratorRuntime.mark(function _callee2(callback, initialValue) {
   var _this3 = this;
@@ -65,7 +83,7 @@ var reduce = regeneratorRuntime.mark(function _callee2(callback, initialValue) {
         }
         _context2.next = 11;
         return {
-          gen: callback.call(_this3, initialValue, _this3[i], i, _this3)
+          gen: callback.call(_this3, result, _this3[i], i, _this3)
         };
       case 11: result = _context2.sent;
       case 12: i++;
@@ -77,7 +95,6 @@ var reduce = regeneratorRuntime.mark(function _callee2(callback, initialValue) {
     }
   }, _callee2, this);
 });
-reduce.hidden = true;
 
 var reduceRight = regeneratorRuntime.mark(function _callee3(callback, initialValue) {
   var _this4 = this;
@@ -97,7 +114,7 @@ var reduceRight = regeneratorRuntime.mark(function _callee3(callback, initialVal
         }
         throw new TypeError("empty array and no initial value");
       case 5:
-        initialValue = _this4[0];
+        initialValue = _this4[_this4.length - 1];
       case 6: result = initialValue;
         i = start;
       case 8:
@@ -107,7 +124,7 @@ var reduceRight = regeneratorRuntime.mark(function _callee3(callback, initialVal
         }
         _context3.next = 11;
         return {
-          gen: callback.call(_this4, initialValue, _this4[i], i, _this4)
+          gen: callback.call(_this4, result, _this4[i], i, _this4)
         };
       case 11: result = _context3.sent;
       case 12: i--;
@@ -119,11 +136,10 @@ var reduceRight = regeneratorRuntime.mark(function _callee3(callback, initialVal
     }
   }, _callee3, this);
 });
-reduceRight.hidden = true;
 
 var filter = regeneratorRuntime.mark(function _callee4(callback, _this) {
   var _this5 = this;
-  var result, i, value;
+  var result, i, value, cond;
   return regeneratorRuntime.wrap(function _callee4$(_context4) {
     while (true) switch (_context4.prev = _context4.next) {
       case 0: result = [];
@@ -135,13 +151,13 @@ var filter = regeneratorRuntime.mark(function _callee4(callback, _this) {
         }
         value = _this5[i];
         _context4.next = 6;
-        return { gen: callback.call(_this5, value, i, _this) };
-      case 6:
-        if (!_context4.sent) {
-          _context4.next = 8;
-          break;
+        return {
+          gen: callback.call(_this5, value, i, _this)
+        };
+      case 6: cond = _context4.sent;
+        if (cond) {
+          result.push(value);
         }
-        result.push(value);
       case 8: i++;
         _context4.next = 2;
         break;
@@ -151,7 +167,6 @@ var filter = regeneratorRuntime.mark(function _callee4(callback, _this) {
     }
   }, _callee4, this);
 });
-filter.hidden = true;
 
 var forEach = regeneratorRuntime.mark(function _callee5(callback, _this) {
   var _this6 = this;
@@ -179,7 +194,7 @@ var forEach = regeneratorRuntime.mark(function _callee5(callback, _this) {
 
 var every = regeneratorRuntime.mark(function _callee6(callback, _this) {
   var _this7 = this;
-  var i, result;
+  var i, cond;
   return regeneratorRuntime.wrap(function _callee6$(_context6) {
     while (true) switch (_context6.prev = _context6.next) {
       case 0: i = 0;
@@ -192,8 +207,8 @@ var every = regeneratorRuntime.mark(function _callee6(callback, _this) {
         return {
           gen: callback.call(_this7, _this7[i], i, _this)
         };
-      case 4: result = _context6.sent;
-        if (result) {
+      case 4: cond = _context6.sent;
+        if (cond) {
           _context6.next = 7;
           break;
         }
@@ -210,7 +225,7 @@ var every = regeneratorRuntime.mark(function _callee6(callback, _this) {
 
 var some = regeneratorRuntime.mark(function _callee7(callback, _this) {
   var _this8 = this;
-  var i, result;
+  var i, cond;
   return regeneratorRuntime.wrap(function _callee7$(_context7) {
     while (true) switch (_context7.prev = _context7.next) {
       case 0: i = 0;
@@ -223,8 +238,8 @@ var some = regeneratorRuntime.mark(function _callee7(callback, _this) {
         return {
           gen: callback.call(_this8, _this8[i], i, _this)
         };
-      case 4: result = _context7.sent;
-        if (!result) {
+      case 4: cond = _context7.sent;
+        if (!cond) {
           _context7.next = 7;
           break;
         }
@@ -247,48 +262,4 @@ exports.forEach = forEach;
 exports.every = every;
 exports.some = some;
 
-},{}],2:[function(require,module,exports){
-var array = require("./array-compiled");
-
-var map = Array.prototype.map;
-var reduce = Array.prototype.reduce;
-var reduceRight = Array.prototype.reduceRight;
-var filter = Array.prototype.filter;
-var forEach = Array.prototype.forEach;
-var every = Array.prototype.every;
-var some = Array.prototype.some;
-
-
-function _isGeneratorFunction(value) {
-    return value && Object.getPrototypeOf(value).constructor.name === "GeneratorFunction";
-}
-
-Array.prototype.map = function(callback, _this) {
-    return _isGeneratorFunction(callback) ? array.map.call(this, callback, _this) : map.call(this, callback, _this);
-};
-
-Array.prototype.reduce = function(callback, initialValue) {
-    return _isGeneratorFunction(callback) ? array.reduce.call(this, callback, initialValue) : reduce.call(this, callback, initialValue);
-};
-
-Array.prototype.reduceRight = function(callback, initialValue) {
-    return _isGeneratorFunction(callback) ? array.reduceRight.call(this, callback, initialValue) : reduceRight.call(this, callback, initialValue);
-};
-
-Array.prototype.filter = function(callback, _this) {
-    return _isGeneratorFunction(callback) ? array.filter.call(this, callback, _this) : filter.call(this, callback, _this);
-};
-
-Array.prototype.forEach = function(callback, _this) {
-    return _isGeneratorFunction(callback) ? array.forEach.call(this, callback, _this) : forEach.call(this, callback, _this);
-};
-
-//Array.prototype.every = function(callback, _this) {
-//    return _isGeneratorFunction(callback) ? array.every(callback, _this) : every(callback, _this);
-//};
-//
-//Array.prototype.some = function(callback, _this) {
-//    return _isGeneratorFunction(callback) ? array.some(callback, _this) : some(callback, _this);
-//};
-
-},{"./array-compiled":1}]},{},[2]);
+},{}]},{},[1]);

@@ -11,7 +11,7 @@ processing.usingDebugger = true;
 var poster = new Poster(window.parent);
 var debugr = new ProcessingDebugger({
     context: processing,
-    language: "es5",
+    language: "es6",
     onBreakpoint: function () {
         var scope = gehry.deconstruct(debugr.currentScope);
         poster.post("break", debugr.currentLine, debugr.currentStack, scope);

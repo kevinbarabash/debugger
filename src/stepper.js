@@ -170,6 +170,9 @@ class Stepper {
             if (result.value.name) {
                 this.stack.peek().name = result.value.name;
             }
+            if (result.value.popAgain) {
+                this.stack.peek().popAgain = result.value.popAgain;
+            }
             if (result.value.line) {
                 frame.line = result.value.line;
             }
@@ -200,7 +203,7 @@ class Stepper {
 
     _popAndStoreReturnValue(value) {
         var frame = this.stack.pop();
-        this._retVal = frame.gen["obj"] || value;
+        this._retVal = frame.gen.obj || value;
     }
     
     _isGenerator(obj) {

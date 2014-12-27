@@ -28,7 +28,6 @@ languages.forEach(function (language) {
                 image: image
             };
 
-            // TODO: create a build file which exports just Debugger
             _debugger = new Debugger({
                 language: language
             });
