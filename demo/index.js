@@ -154,9 +154,11 @@ function updateCallStack(stackValues) {
 
     var $ul = $("<ul></ul>");
     stackValues.forEach(function (frame) {
-        var $name = $("<span></span>").text(frame.name);
-        var $line = $("<span></span>").text(frame.line).css({ float: "right" });
-        $ul.prepend($("<li></li>").append($name, $line));
+        if (frame.name !== undefined) {
+            var $name = $("<span></span>").text(frame.name);
+            var $line = $("<span></span>").text(frame.line).css({ float: "right" });
+            $ul.prepend($("<li></li>").append($name, $line));
+        }
     });
     $callStack.append($ul);
 }

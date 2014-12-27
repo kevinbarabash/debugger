@@ -1,4 +1,4 @@
-var basic = require("basic-ds");
+var LinkedList = require("basic-ds").LinkedList;
 var b = require("ast-types").builders;
 var escodegen = require("escodegen");
 var escope = require("escope");
@@ -285,7 +285,7 @@ function transform(code, context, options) {
                     var scope = getScopeVariables(node, parent, context);
                 }
 
-                var bodyList = basic.LinkedList.fromArray(node.body);
+                var bodyList = LinkedList.fromArray(node.body);
                 insertYields(bodyList);
 
                 if (bodyList.first) {
@@ -400,8 +400,9 @@ function transform(code, context, options) {
         regenerator.transform(generatorFunction);
         injectWithContext(generatorFunction);
         addScopes(generatorFunction, context);
-
-        return new Function(escodegen.generate(generatorFunction) + "\n" + "return generatorFunction;");
+        code = escodegen.generate(generatorFunction);
+        console.log(code);
+        return new Function(code + "\n" + "return generatorFunction;");
     }
 }
 

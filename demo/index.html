@@ -22,48 +22,12 @@
       <span class="tab">sketch_01.js</span>
     </div>
     <div id="editor">background(255);
-noStroke();
-
-var a = {};
-var b = {};
-a.b = b;
-b.a = a;
-
-var randomColor = function () {
-    var r;
-    r = random(255);
-    var g = random(255);
-    var b = random(255);
-    fill(r,g,b);
-};
-
-for (var i = 0; i < 3; i++) {
-    randomColor();
-    ellipse(random(400),random(400),75,75);
-}
-
-draw = function () {
-    randomColor();
-    var p = new PVector(random(100), random(100));
-    ellipse(p.x, p.y, 25, 25);
-};
-
-mouseClicked = function () {
-    randomColor();
-    ellipse(mouseX, mouseY, 75, 75);
-};
-
-keyPressed = function () {
-    console.log("keyPressed, keyCode = " + keyCode + ", key = " + key);
-};
-
-keyReleased = function () {
-    console.log("keyReleased, keyCode = " + keyCode + ", key = " + key);
-};
-
-keyTyped = function () {
-    console.log("__keyTyped__");
-};
+        var a = [1,2,3];
+        var b = a.map(function (value) {
+        console.log("value = " + value);
+        return value * value;
+        });
+        console.log(b);
 
 </div>
   </div>

@@ -14,7 +14,8 @@ var _extends = function (child, parent) {
 };
 
 /*global Debugger */
-//var Debugger = require("./debugger");
+// defining Debugger as a global instead of requiring it so that we can test it
+// independently of ProcessingDebugger
 
 function emptyFunction() {}
 

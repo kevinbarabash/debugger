@@ -33766,8 +33766,9 @@ function transform(code, context, options) {
     regenerator.transform(generatorFunction);
     injectWithContext(generatorFunction);
     addScopes(generatorFunction, context);
-
-    return new Function(escodegen.generate(generatorFunction) + "\n" + "return generatorFunction;");
+    code = escodegen.generate(generatorFunction);
+    console.log(code);
+    return new Function(code + "\n" + "return generatorFunction;");
   }
 }
 
