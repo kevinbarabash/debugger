@@ -17,6 +17,30 @@ methods.forEach(function (methodName) {
   };
 });
 
+
+var originalSetTimeout = window.setTimeout;
+var originalSetInterval = window.setInterval;
+
+window.setTimeout = function (callback, delay) {
+  if (_isGeneratorFunction(callback)) {
+    return originalSetTimeout(function () {
+      __schedule__(callback);
+    }, delay);
+  } else {
+    return originalSetTimeout(callback, delay);
+  }
+};
+
+window.setInterval = function (callback, delay) {
+  if (_isGeneratorFunction(callback)) {
+    return originalSetInterval(function () {
+      __schedule__(callback);
+    }, delay);
+  } else {
+    return originalSetTimeout(callback, delay);
+  }
+};
+
 },{"./array":2}],2:[function(require,module,exports){
 "use strict";
 

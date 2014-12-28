@@ -40,6 +40,11 @@ class Debugger {
                 return obj;
             }
         };
+        // TODO: figure out a better way to communicate the __schedule__ function to the runtime
+        this._context.__schedule__ = (gen) => {
+            var stepper = this._createStepper(gen());
+            this.scheduler.addTask(stepper);
+        };
         this._context.__usingDebugger = true;
     }
     

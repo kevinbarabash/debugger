@@ -13,3 +13,27 @@ methods.forEach(function (methodName) {
         return method.apply(this, arguments);
     }
 });
+
+
+var originalSetTimeout = window.setTimeout;
+var originalSetInterval = window.setInterval;
+
+window.setTimeout = function(callback, delay) {
+    if (_isGeneratorFunction(callback)) {
+        return originalSetTimeout(function() {
+            __schedule__(callback);
+        }, delay);
+    } else {
+        return originalSetTimeout(callback, delay);
+    }
+};
+
+window.setInterval = function(callback, delay) {
+    if (_isGeneratorFunction(callback)) {
+        return originalSetInterval(function () {
+            __schedule__(callback);
+        }, delay);
+    } else {
+        return originalSetTimeout(callback, delay);
+    }
+};

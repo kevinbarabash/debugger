@@ -151,6 +151,11 @@ var Debugger = (function () {
             return obj;
           }
         };
+        // TODO: figure out a better way to communicate the __schedule__ function to the runtime
+        window.__schedule__ = function (gen) {
+          var stepper = _this2._createStepper(gen());
+          _this2.scheduler.addTask(stepper);
+        };
         this._context.__usingDebugger = true;
       },
       get: function () {
