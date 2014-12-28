@@ -33372,6 +33372,7 @@ var Stepper = (function () {
 
     // if the result.value contains scope information add it to the
     // current stack frame
+    // TODO: create a whitelist and copy the props en-mass
     if (result.value) {
       if (result.value.scope) {
         this.stack.peek().scope = result.value.scope;
@@ -33379,8 +33380,8 @@ var Stepper = (function () {
       if (result.value.name) {
         this.stack.peek().name = result.value.name;
       }
-      if (result.value.popAgain) {
-        this.stack.peek().popAgain = result.value.popAgain;
+      if (result.value.stepInAgain) {
+        this.stack.peek().stepInAgain = result.value.stepInAgain;
       }
       if (result.value.line) {
         frame.line = result.value.line;
@@ -33413,6 +33414,16 @@ var Stepper = (function () {
   Stepper.prototype._popAndStoreReturnValue = function (value) {
     var frame = this.stack.pop();
     this._retVal = frame.gen.obj || value;
+    if (this.stack.peek() && this.stack.peek().stepInAgain) {
+      var currentLine = this.line;
+      var action = this.stepIn();
+      if (this.breakpointsEnabled && this._breakpoints[this.line] && action !== "stepOut" && currentLine !== this.line) {
+        this._paused = true;
+      }
+      if (this._paused) {
+        this.breakCallback();
+      }
+    }
   };
 
   Stepper.prototype._isGenerator = function (obj) {

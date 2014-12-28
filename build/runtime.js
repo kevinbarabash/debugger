@@ -40,7 +40,8 @@ var map = regeneratorRuntime.mark(function _callee(callback, _this) {
         }
         _context.next = 5;
         return {
-          gen: callback.call(_this2, _this2[i], i, _this)
+          gen: callback.call(_this2, _this2[i], i, _this),
+          stepInAgain: true
         };
       case 5: _context.t0 = _context.sent;
         result.push(_context.t0);

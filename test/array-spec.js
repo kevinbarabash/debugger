@@ -27,63 +27,97 @@ languages.forEach(function (language) {
         });
 
         describe("map", function () {
-            runTest({
-                title: "runs correctly",
-                code: function () {
+            it("runs correctly with user defined functions", function () {
+                var code = getFunctionBody(function () {
                     var a = [1,2,3];
                     var b = a.map(function (val) {
                         return val * val;
                     });
-                },
-                test: function () {
-                    _debugger.start();
+                });
 
-                    expect(context.b[0]).to.be(1);
-                    expect(context.b[1]).to.be(4);
-                    expect(context.b[2]).to.be(9);
-                }
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.b[0]).to.be(1);
+                expect(context.b[1]).to.be(4);
+                expect(context.b[2]).to.be(9);
             });
 
-            runTest({
-                title: "can break inside the callback",
-                code: function () {
-                    var a = [1,2,3];
-                    var b = a.map(function (val) {
-                        return val * val;
-                    });
-                },
-                test: function () {
-                    _debugger.setBreakpoint(3);
-                    _debugger.start();
-                    
-                    expect(_debugger.line).to.be(3);
-                    _debugger.resume();
-                    expect(_debugger.line).to.be(3);
-                    _debugger.resume();
-                    expect(_debugger.line).to.be(3);
-                    _debugger.resume();
-                }
+            it("runs correctly with built-in functions", function () {
+                var code = getFunctionBody(function () {
+                    var a = [1,4,9];
+                    var b = a.map(Math.sqrt);
+                });
+                
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.b[0]).to.be(1);
+                expect(context.b[1]).to.be(2);
+                expect(context.b[2]).to.be(3);
             });
 
-            runTest({
-                title: "reports scope variables inside the callback",
-                code: function () {
+            it("can break inside the callback", function () {
+                var code = getFunctionBody(function () {
                     var a = [1,2,3];
                     var b = a.map(function (val) {
                         return val * val;
                     });
-                },
-                test: function () {
-                    _debugger.setBreakpoint(3);
-                    _debugger.start();
+                });
 
-                    expect(_debugger.currentScope.val).to.be(1);
-                    _debugger.resume();
-                    expect(_debugger.currentScope.val).to.be(2);
-                    _debugger.resume();
-                    expect(_debugger.currentScope.val).to.be(3);
-                    _debugger.resume();
-                }
+                _debugger.load(code);
+                _debugger.setBreakpoint(3);
+                _debugger.start();
+                
+                expect(_debugger.line).to.be(3);
+                _debugger.resume();
+                expect(_debugger.line).to.be(3);
+                _debugger.resume();
+                expect(_debugger.line).to.be(3);
+                _debugger.resume();
+            });
+
+            it("reports scope variables inside the callback", function () {
+                var code = getFunctionBody(function () {
+                    var a = [1,2,3];
+                    var b = a.map(function (val) {
+                        return val * val;
+                    });
+                });
+                
+                _debugger.load(code);
+                _debugger.setBreakpoint(3);
+                _debugger.start();
+
+                expect(_debugger.currentScope.val).to.be(1);
+                _debugger.resume();
+                expect(_debugger.currentScope.val).to.be(2);
+                _debugger.resume();
+                expect(_debugger.currentScope.val).to.be(3);
+                _debugger.resume();
+            });
+            
+            it("should step out of the callback to the main program", function () {
+                var code = getFunctionBody(function () {
+                    var a = [1,2,3];
+                    var b = a.map(function (val) {
+                        return val * val;
+                    });
+                    print("end of line");
+                });
+                
+                _debugger.load(code);
+                _debugger.setBreakpoint(3);
+                _debugger.start();
+                _debugger.stepOut();
+                expect(_debugger.line).to.be(3);
+                _debugger.stepOut();
+                expect(_debugger.line).to.be(3);
+                _debugger.stepOut();
+                expect(_debugger.line).to.be(2);
+                _debugger.stepOver();
+                expect(_debugger.line).to.be(5);
+
             });
         });
 
@@ -303,64 +337,76 @@ languages.forEach(function (language) {
         });
 
         describe("forEach", function () {
-            runTest({
-                title: "runs correctly",
-                code: function () {
+            it("runs correctly with a user defined callback", function () {
+                var code = getFunctionBody(function () {
                     var a = [1,2,3];
                     a.forEach(function (val) {
                         print(val)
                     });
-                },
-                test: function () {
-                    _debugger.start();
+                });
+                
+                _debugger.load(code);
+                _debugger.start();
 
-                    expect(context.print.calledWith(1)).to.be(true);
-                    expect(context.print.calledWith(2)).to.be(true);
-                    expect(context.print.calledWith(3)).to.be(true);
-                    expect(context.print.callCount).to.be(3);
-                }
+                expect(context.print.calledWith(1)).to.be(true);
+                expect(context.print.calledWith(2)).to.be(true);
+                expect(context.print.calledWith(3)).to.be(true);
+                expect(context.print.callCount).to.be(3);
             });
 
-            runTest({
-                title: "can break inside the callback",
-                code: function () {
+            it("runs correctly with a built-in callback", function () {
+                var code = getFunctionBody(function () {
                     var a = [1,2,3];
-                    a.forEach(function (val) {
-                        print(val)
-                    });
-                },
-                test: function () {
-                    _debugger.setBreakpoint(3);
-                    _debugger.start();
+                    a.forEach(print);
+                });
+                
+                _debugger.load(code);
+                _debugger.start();
 
-                    expect(_debugger.line).to.be(3);
-                    _debugger.resume();
-                    expect(_debugger.line).to.be(3);
-                    _debugger.resume();
-                    expect(_debugger.line).to.be(3);
-                    _debugger.resume();
-                }
+                expect(context.print.calledWith(1)).to.be(true);
+                expect(context.print.calledWith(2)).to.be(true);
+                expect(context.print.calledWith(3)).to.be(true);
+                expect(context.print.callCount).to.be(3);
             });
 
-            runTest({
-                title: "reports scope variables inside the callback",
-                code: function () {
+            it("can break inside the callback", function () {
+                var code = getFunctionBody(function () {
                     var a = [1,2,3];
                     a.forEach(function (val) {
                         print(val)
                     });
-                },
-                test: function () {
-                    _debugger.setBreakpoint(3);
-                    _debugger.start();
+                });
+                
+                _debugger.load(code);
+                _debugger.setBreakpoint(3);
+                _debugger.start();
 
-                    expect(_debugger.currentScope.val).to.be(1);
-                    _debugger.resume();
-                    expect(_debugger.currentScope.val).to.be(2);
-                    _debugger.resume();
-                    expect(_debugger.currentScope.val).to.be(3);
-                    _debugger.resume();
-                }
+                expect(_debugger.line).to.be(3);
+                _debugger.resume();
+                expect(_debugger.line).to.be(3);
+                _debugger.resume();
+                expect(_debugger.line).to.be(3);
+                _debugger.resume();
+            });
+
+            it("reports scope variables inside the callback", function () {
+                var code = getFunctionBody(function () {
+                    var a = [1,2,3];
+                    a.forEach(function (val) {
+                        print(val)
+                    });
+                });
+                
+                _debugger.load(code);
+                _debugger.setBreakpoint(3);
+                _debugger.start();
+
+                expect(_debugger.currentScope.val).to.be(1);
+                _debugger.resume();
+                expect(_debugger.currentScope.val).to.be(2);
+                _debugger.resume();
+                expect(_debugger.currentScope.val).to.be(3);
+                _debugger.resume();
             });
         });
 

@@ -8,7 +8,8 @@ var map = function *(callback, _this) {
     var result = [];
     for (var i = 0; i < this.length; i++) {
         result.push(yield {
-            gen: callback.call(this, this[i], i, _this)
+            gen: callback.call(this, this[i], i, _this),
+            stepInAgain: true
         });
     }
     return result;
