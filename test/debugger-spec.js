@@ -959,6 +959,28 @@ languages.forEach(function (language) {
             });
         });
 
+        describe("debugger statement", function () {
+            it("should break on debugger statements", function () {
+                var code = getFunctionBody(function () {
+                    x = 5;
+                    debugger;
+                    y = 10;
+                    p = new Vector(x,y);
+                });
+                
+                _debugger.load(code);
+                _debugger.start();
+                
+                expect(_debugger.line).to.be(2);
+                _debugger.resume();
+                
+                expect(context.x).to.be(5);
+                expect(context.y).to.be(10);
+                expect(context.p.x).to.be(5);
+                expect(context.p.y).to.be(10);
+            });
+        });
+
         describe("Scopes and Context", function () {
             it("should update the values of in scope variables", function () {
                 var code = getFunctionBody(function () {

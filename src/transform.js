@@ -39,6 +39,10 @@ function insertYields (bodyList) {
     bodyList.forEachNode(function (node) {  // this is a linked list node
         // TODO: separate vars for list nodes and ast nodes
         var loc = node.value.loc;
+        if (loc === null) {
+            return;
+        }
+ 
         var yieldExpression = b.expressionStatement(
             b.yieldExpression(
                 b.objectExpression([
@@ -280,6 +284,8 @@ function transform(code, context, options) {
             node._parent = parent;
         },
         leave: function(node, parent) {
+            var loc;
+
             if (node.type === "Program" || node.type === "BlockStatement") {
                 if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
                     var scope = getScopeVariables(node, parent, context);
@@ -364,7 +370,7 @@ function transform(code, context, options) {
                     }
 
                     // create a yieldExpress to wrap the call
-                    var loc = node.loc;
+                    loc = node.loc;
 
                     return b.yieldExpression(
                         b.objectExpression([
@@ -377,6 +383,17 @@ function transform(code, context, options) {
                 } else {
                     throw "we don't handle '" + node.callee.type + "' callees";
                 }
+            } else if (node.type === "DebuggerStatement") {
+                loc = node.loc;
+                
+                return b.expressionStatement(
+                    b.yieldExpression(
+                        b.objectExpression([
+                            b.property("init", b.identifier("line"), b.literal(loc.start.line)),
+                            b.property("init", b.identifier("breakpoint"), b.literal(true))
+                        ])
+                    )
+                );
             }
 
             delete node._parent;

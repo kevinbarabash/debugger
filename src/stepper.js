@@ -3,6 +3,8 @@
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Task = require("../external/scheduler/lib/task");
 
+var frameProps = ["scope", "name", "line", "stepInAgain"];
+
 class Stepper {
     constructor(genObj, options) {
         // TODO: align these names with the callback names on Debugger
@@ -163,21 +165,21 @@ class Stepper {
 
         // if the result.value contains scope information add it to the
         // current stack frame
-        // TODO: create a whitelist and copy the props en-mass
+        // TODO: make this list static
+        
         if (result.value) {
-            if (result.value.scope) {
-                this.stack.peek().scope = result.value.scope;
-            }
-            if (result.value.name) {
-                this.stack.peek().name = result.value.name;
-            }
-            if (result.value.stepInAgain) {
-                this.stack.peek().stepInAgain = result.value.stepInAgain;
-            }
-            if (result.value.line) {
-                frame.line = result.value.line;
+            frameProps.forEach(prop => {
+                if (result.value.hasOwnProperty(prop)) {
+                    frame[prop] = result.value[prop];
+                }
+            });
+
+            if (result.value.breakpoint) {
+                this._paused = true;
+                this.breakCallback();
             }
         }
+
         return result;
     }
 
@@ -205,6 +207,18 @@ class Stepper {
     _popAndStoreReturnValue(value) {
         var frame = this.stack.pop();
         this._retVal = frame.gen.obj || value;
+
+        // Handle a non user code call site.
+        // This happens when stepping out of our resuming execution when paused 
+        // inside a callback to Array.prototype.map, reduce, etc.
+        // we don't want to the debugger to stop inside of our custom implementation
+        // of those methods.
+        // The reason why we call stepIn() is because if we're at the end of the
+        // callback there's a possibility that the callback should be called 
+        // again because we haven't finished iterating.
+        // If it is the last iteration and we call stepIn(), we'll be returned
+        // immediately because the generator for Array.prototype.map, reduce,
+        // etc. is done.
         if (this.stack.peek() && this.stack.peek().stepInAgain) {
             var currentLine = this.line;
             var action = this.stepIn();
@@ -221,7 +235,6 @@ class Stepper {
         if (this._language.toLowerCase() === "es6") {
             return obj instanceof Object && obj.toString() === "[object Generator]"
         } else {
-            // note: the regenerator runtime provides proper prototypes
             return obj && typeof(obj.next) === "function";
         }
     };

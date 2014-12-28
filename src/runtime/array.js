@@ -9,7 +9,7 @@ var map = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
         result.push(yield {
             gen: callback.call(this, this[i], i, _this),
-            stepInAgain: true
+            stepInAgain: true   // non user code call site
         });
     }
     return result;

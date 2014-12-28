@@ -33227,6 +33227,8 @@ var _classProps = function (child, staticProps, instanceProps) {
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Task = require("../external/scheduler/lib/task");
 
+var frameProps = ["scope", "name", "line", "stepInAgain"];
+
 var Stepper = (function () {
   var Stepper = function Stepper(genObj, options) {
     var _this = this;
@@ -33372,21 +33374,21 @@ var Stepper = (function () {
 
     // if the result.value contains scope information add it to the
     // current stack frame
-    // TODO: create a whitelist and copy the props en-mass
+    // TODO: make this list static
+
     if (result.value) {
-      if (result.value.scope) {
-        this.stack.peek().scope = result.value.scope;
-      }
-      if (result.value.name) {
-        this.stack.peek().name = result.value.name;
-      }
-      if (result.value.stepInAgain) {
-        this.stack.peek().stepInAgain = result.value.stepInAgain;
-      }
-      if (result.value.line) {
-        frame.line = result.value.line;
+      frameProps.forEach(function (prop) {
+        if (result.value.hasOwnProperty(prop)) {
+          frame[prop] = result.value[prop];
+        }
+      });
+
+      if (result.value.breakpoint) {
+        this._paused = true;
+        this.breakCallback();
       }
     }
+
     return result;
   };
 
@@ -33414,6 +33416,18 @@ var Stepper = (function () {
   Stepper.prototype._popAndStoreReturnValue = function (value) {
     var frame = this.stack.pop();
     this._retVal = frame.gen.obj || value;
+
+    // Handle a non user code call site.
+    // This happens when stepping out of our resuming execution when paused
+    // inside a callback to Array.prototype.map, reduce, etc.
+    // we don't want to the debugger to stop inside of our custom implementation
+    // of those methods.
+    // The reason why we call stepIn() is because if we're at the end of the
+    // callback there's a possibility that the callback should be called
+    // again because we haven't finished iterating.
+    // If it is the last iteration and we call stepIn(), we'll be returned
+    // immediately because the generator for Array.prototype.map, reduce,
+    // etc. is done.
     if (this.stack.peek() && this.stack.peek().stepInAgain) {
       var currentLine = this.line;
       var action = this.stepIn();
@@ -33430,7 +33444,6 @@ var Stepper = (function () {
     if (this._language.toLowerCase() === "es6") {
       return obj instanceof Object && obj.toString() === "[object Generator]";
     } else {
-      // note: the regenerator runtime provides proper prototypes
       return obj && typeof (obj.next) === "function";
     }
   };
@@ -33507,6 +33520,10 @@ function insertYields(bodyList) {
     // this is a linked list node
     // TODO: separate vars for list nodes and ast nodes
     var loc = node.value.loc;
+    if (loc === null) {
+      return;
+    }
+
     var yieldExpression = b.expressionStatement(b.yieldExpression(b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.start.line))])));
     // add an extra property to differentiate function calls
     // that are followed by a statment from those that aren't
@@ -33694,6 +33711,8 @@ function transform(code, context, options) {
       node._parent = parent;
     },
     leave: function (node, parent) {
+      var loc;
+
       if (node.type === "Program" || node.type === "BlockStatement") {
         if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
           var scope = getScopeVariables(node, parent, context);
@@ -33753,7 +33772,7 @@ function transform(code, context, options) {
           }
 
           // create a yieldExpress to wrap the call
-          var loc = node.loc;
+          loc = node.loc;
 
           return b.yieldExpression(b.objectExpression([b.property("init", b.identifier("gen"), gen),
           // TODO: this is the current line, but we should actually be passing next node's line
@@ -33762,6 +33781,10 @@ function transform(code, context, options) {
         } else {
           throw "we don't handle '" + node.callee.type + "' callees";
         }
+      } else if (node.type === "DebuggerStatement") {
+        loc = node.loc;
+
+        return b.expressionStatement(b.yieldExpression(b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.start.line)), b.property("init", b.identifier("breakpoint"), b.literal(true))])));
       }
 
       delete node._parent;
