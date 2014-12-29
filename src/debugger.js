@@ -42,8 +42,7 @@ class Debugger {
         };
         // TODO: figure out a better way to communicate the __schedule__ function to the runtime
         this._context.__schedule__ = (gen) => {
-            var stepper = this._createStepper(gen());
-            this.scheduler.addTask(stepper);
+            this.queueGenerator(gen);
         };
         this._context.__usingDebugger = true;
     }
@@ -93,7 +92,8 @@ class Debugger {
 
     queueGenerator(gen) {
         if (!this.done) {
-            var stepper = this._createStepper(gen());
+            // TODO: add a test to verify that variables from the context are accessible
+            var stepper = this._createStepper(gen(this.context));
             this.scheduler.addTask(stepper);
         }
     }

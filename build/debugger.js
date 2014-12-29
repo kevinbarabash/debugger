@@ -61,7 +61,8 @@ var Debugger = (function () {
 
   Debugger.prototype.queueGenerator = function (gen) {
     if (!this.done) {
-      var stepper = this._createStepper(gen());
+      // TODO: add a test to verify that variables from the context are accessible
+      var stepper = this._createStepper(gen(this.context));
       this.scheduler.addTask(stepper);
     }
   };
@@ -152,9 +153,8 @@ var Debugger = (function () {
           }
         };
         // TODO: figure out a better way to communicate the __schedule__ function to the runtime
-        window.__schedule__ = function (gen) {
-          var stepper = _this2._createStepper(gen());
-          _this2.scheduler.addTask(stepper);
+        this._context.__schedule__ = function (gen) {
+          _this2.queueGenerator(gen);
         };
         this._context.__usingDebugger = true;
       },
@@ -33601,26 +33601,15 @@ function injectWithContext(generatorFunction) {
   var success = false;
   for (var i = 0; i < body.length; i++) {
     var stmt = body[i];
-    if (stmt.type === "ReturnStatement") {
-      var arg = stmt.argument;
-      if (arg.type === "CallExpression") {
-        var callee = arg.callee;
-        if (callee.type === "MemberExpression") {
-          if (callee.object.type === "Identifier" && callee.property.type === "Identifier") {
-            var objName = callee.object.name;
-            var propName = callee.property.name;
+    if (stmt.type === "ReturnStatement" && stmt.argument.type === "CallExpression") {
+      var callee = stmt.argument.callee;
+      if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
+        var blockStmt = stmt.argument.arguments[0].body;
 
-            if (objName === "regeneratorRuntime" && propName === "wrap") {
-              var firstArg = arg.arguments[0];
-              var blockStmt = firstArg.body;
+        var withStmt = b.withStatement(b.identifier("context"), b.blockStatement(blockStmt.body));
 
-              var withStmt = b.withStatement(b.identifier("context"), b.blockStatement(blockStmt.body));
-
-              blockStmt.body = [withStmt];
-              success = true;
-            }
-          }
-        }
+        blockStmt.body = [withStmt];
+        success = true;
       }
     }
   }
@@ -33642,38 +33631,35 @@ function addScopes(generatorFunction, context) {
       node._parent = parent;
     },
     leave: function (node, parent) {
-      if (node.type === "ReturnStatement") {
-        if (node.argument.type === "CallExpression") {
-          var callee = node.argument.callee;
-          var firstArg = node.argument.arguments[0];
+      if (node.type === "ReturnStatement" && node.argument.type === "CallExpression") {
+        var callee = node.argument.callee;
+        if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
+          var properties = node._parent._parent.params.map(function (param) {
+            return b.property("init", b.identifier(param.name), b.identifier(param.name));
+          });
 
-          if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
-            var properties = node._parent._parent.params.map(function (param) {
-              return b.property("init", b.identifier(param.name), b.identifier(param.name));
+          if (node._parent.body[0].declarations) {
+            node._parent.body[0].declarations.forEach(function (decl) {
+              properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
             });
-
-            if (node._parent.body[0].declarations) {
-              node._parent.body[0].declarations.forEach(function (decl) {
-                properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
-              });
-            }
-
-            // filter out variables defined in the context from the local vars
-            // but only for the root scope
-            // filter out "context" to so it doesn't appear in the scope
-            // TODO: give "context" a random name so that users don't mess with it
-            if (firstArg.id.name === "generatorFunction$") {
-              properties = properties.filter(function (prop) {
-                return !context.hasOwnProperty(prop.key.name) && prop.key.name !== "context";
-              });
-            }
-
-            node._parent.body.unshift(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]));
-
-            var blockStmt = firstArg.body;
-            var withStmt = b.withStatement(b.identifier("__scope__"), b.blockStatement(blockStmt.body));
-            blockStmt.body = [withStmt];
           }
+
+          // filter out variables defined in the context from the local vars
+          // but only for the root scope
+          // filter out "context" to so it doesn't appear in the scope
+          // TODO: give "context" a random name so that users don't mess with it
+          var firstArg = node.argument.arguments[0];
+          if (firstArg.id.name === "generatorFunction$") {
+            properties = properties.filter(function (prop) {
+              return !context.hasOwnProperty(prop.key.name) && prop.key.name !== "context";
+            });
+          }
+
+          node._parent.body.unshift(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]));
+
+          var blockStmt = firstArg.body;
+          var withStmt = b.withStatement(b.identifier("__scope__"), b.blockStatement(blockStmt.body));
+          blockStmt.body = [withStmt];
         }
       }
       delete node._parent;
@@ -33704,6 +33690,8 @@ function create__scope__(node, bodyList, scope) {
   node.body = [b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]), b.withStatement(b.identifier("__scope__"), b.blockStatement(bodyList.toArray()))];
 }
 
+
+
 function transform(code, context, options) {
   var es6 = options && options.language.toLowerCase() === "es6";
 
@@ -33716,24 +33704,30 @@ function transform(code, context, options) {
       node._parent = parent;
     },
     leave: function (node, parent) {
-      var loc;
+      var loc, literal, scope, bodyList;
 
-      if (node.type === "Program" || node.type === "BlockStatement") {
+      if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
+        // convert all user defined functions to generators
+        node.generator = true;
+      } else if (node.type === "Program" || node.type === "BlockStatement") {
         if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
-          var scope = getScopeVariables(node, parent, context);
+          scope = getScopeVariables(node, parent, context);
         }
 
-        var bodyList = LinkedList.fromArray(node.body);
+        bodyList = LinkedList.fromArray(node.body);
         insertYields(bodyList);
 
         if (bodyList.first) {
           if (parent.type === "FunctionDeclaration") {
-            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal(stringForId(parent.id))));
+            literal = stringForId(parent.id);
           } else if (parent.type === "FunctionExpression") {
-            var name = getNameForFunctionExpression(parent);
-            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal(name)));
+            literal = getNameForFunctionExpression(parent);
           } else if (node.type === "Program") {
-            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal("<PROGRAM>")));
+            literal = "<PROGRAM>";
+          }
+
+          if (literal !== undefined) {
+            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal(literal)));
           }
         }
 
@@ -33757,22 +33751,15 @@ function transform(code, context, options) {
 
           node.body = bodyList.toArray();
         }
-      } else if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
-        node.generator = true;
       } else if (node.type === "CallExpression" || node.type === "NewExpression") {
         if (node.callee.type === "Identifier" || node.callee.type === "MemberExpression" || node.callee.type === "YieldExpression") {
           var gen = node;
 
           // if "new" then build a call to "__instantiate__"
           if (node.type === "NewExpression") {
-            // put the constructor name as the 2nd param
-            if (node.callee.type === "Identifier") {
-              node.arguments.unshift(b.literal(node.callee.name));
-            } else {
-              node.arguments.unshift(b.literal(null));
-            }
-            // put the constructor itself as the 1st param
-            node.arguments.unshift(node.callee);
+            var name = node.callee.type === "Identifier" ? node.callee.name : null;
+            node.arguments.unshift(b.literal(name)); // constructor name
+            node.arguments.unshift(node.callee); // constructor
             gen = b.callExpression(b.identifier("__instantiate__"), node.arguments);
           }
 
@@ -33792,6 +33779,7 @@ function transform(code, context, options) {
         return b.expressionStatement(b.yieldExpression(b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.start.line)), b.property("init", b.identifier("breakpoint"), b.literal(true))])));
       }
 
+      // clean up
       delete node._parent;
     }
   });
@@ -33810,6 +33798,7 @@ function transform(code, context, options) {
     addScopes(generatorFunction, context);
     code = escodegen.generate(generatorFunction);
     console.log(code);
+
     return new Function(code + "\n" + "return generatorFunction;");
   }
 }
