@@ -33496,64 +33496,49 @@ var regenerator = require("regenerator");
 
 function getScopeVariables(node, parent, context) {
   var variables = parent.__$escope$__.variables;
+
   return variables.filter(function (variable) {
     // don't include context variables in the scopes
     if (node.type === "Program" && context.hasOwnProperty(variable.name)) {
       return false;
     }
+
     // function declarations like "function Point() {}"
     // don't work properly when defining methods on the
     // prototoype so filter those out as well
     var isFunctionDeclaration = variable.defs.some(function (def) {
       return def.type === "FunctionName" && def.node.type === "FunctionDeclaration";
     });
+
     if (isFunctionDeclaration) {
       return false;
     }
+
     // filter out "arguments"
     // TODO: make this optional, advanced users may want to inspect this
     if (variable.name === "arguments") {
       return false;
     }
+
     return true;
   });
 }
 
 // insert yield { line: <line_number> } in between each line
 function insertYields(bodyList) {
-  bodyList.forEachNode(function (node) {
-    // this is a linked list node
-    // TODO: separate vars for list nodes and ast nodes
-    var loc = node.value.loc;
+  bodyList.forEachNode(function (listNode) {
+    var astNode = listNode.value;
+    var loc = astNode.loc;
+
+    // astNodes without a valid loc are ones that have been inserted
+    // and are the result of a yield expression replacing a debugger statement
     if (loc === null) {
       return;
     }
 
     var yieldExpression = b.expressionStatement(b.yieldExpression(b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.start.line))])));
-    // add an extra property to differentiate function calls
-    // that are followed by a statment from those that aren't
-    // the former requires taking an extra _step() to get the
-    // next line
-    if (node.value.type === "ExpressionStatement") {
-      if (node.value.expression.type === "YieldExpression") {
-        node.value.expression.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-      }
-      if (node.value.expression.type === "AssignmentExpression") {
-        var expr = node.value.expression.right;
-        if (expr.type === "YieldExpression") {
-          expr.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-        }
-      }
-    }
-    // TODO: add test case for "var x = foo()" stepAgain
-    // TODO: add test case for "var x = foo(), y = foo()" stepAgain on last decl
-    if (node.value.type === "VariableDeclaration") {
-      var lastDecl = node.value.declarations[node.value.declarations.length - 1];
-      if (lastDecl.init && lastDecl.init.type === "YieldExpression") {
-        lastDecl.init.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-      }
-    }
-    bodyList.insertBeforeNode(node, yieldExpression);
+
+    bodyList.insertBeforeNode(listNode, yieldExpression);
   });
 }
 
@@ -33640,7 +33625,7 @@ function addScopes(generatorFunction, context) {
 
           if (node._parent.body[0].declarations) {
             node._parent.body[0].declarations.forEach(function (decl) {
-              properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
+              return properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
             });
           }
 
@@ -33766,10 +33751,29 @@ function transform(code, context, options) {
           // create a yieldExpress to wrap the call
           loc = node.loc;
 
-          return b.yieldExpression(b.objectExpression([b.property("init", b.identifier("gen"), gen),
+          var properties = [b.property("init", b.identifier("gen"), gen), b.property("init", b.identifier("line"), b.literal(loc.start.line))
           // TODO: this is the current line, but we should actually be passing next node's line
           // TODO: handle this in when the ForStatement is parsed where we have more information
-          b.property("init", b.identifier("line"), b.literal(loc.start.line))]));
+          ];
+
+          // We add an extra property to differentiate function calls
+          // that are followed by a statment from those that aren't.
+          // The former requires taking an extra _step() to get the
+          // next line.
+          if (parent._parent.type === "ExpressionStatement" || parent.type === "ExpressionStatement") {
+            properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
+          }
+
+          // TODO: add test case for "var x = foo()" stepAgain
+          // TODO: add test case for "var x = foo(), y = foo()" stepAgain on last decl
+          if (parent.type === "VariableDeclarator" && parent._parent.type === "VariableDeclaration" && parent._parent._parent.type !== "ForStatement") {
+            var decls = parent._parent.declarations;
+            if (node === decls[decls.length - 1].init) {
+              properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
+            }
+          }
+
+          return b.yieldExpression(b.objectExpression(properties));
         } else {
           throw "we don't handle '" + node.callee.type + "' callees";
         }

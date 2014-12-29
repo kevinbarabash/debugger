@@ -1,7 +1,6 @@
 var fs = require("fs");
 var browserify = require("browserify");
 var to5ify = require("6to5ify");
-var transform = require("./src/transform");
 
 var options = {};
 
