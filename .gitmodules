@@ -6,4 +6,4 @@
 	url = https://github.com/kevinb7/scheduler.git
 [submodule "external/processing-js"]
 	path = external/processing-js
-	url = git://github.com/kevinb7/processing-js.git
+	url = https://github.com/kevinb7/processing-js.git

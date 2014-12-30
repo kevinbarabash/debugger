@@ -42,12 +42,19 @@ mousePressed = function () {
     fill(col);
     noStroke();
     ellipse(mouseX, mouseY, width, width);
-}
+};
 
 mouseDragged = function () {
     stroke(col);
     line(pmouseX, pmouseY, mouseX, mouseY);
-    console.log("pmouseX = " + pmouseX + ", mouseX = " + mouseX);
+};
+
+mouseOver = function () {
+    console.log("mouseover");
+};
+
+mouseOut = function () {
+  console.log("mouseut");
 };
     </div>
 

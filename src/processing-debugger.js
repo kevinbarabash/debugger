@@ -6,7 +6,7 @@ function emptyFunction() {}
 
 var events = [
     "mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased",
-    "keyPressed", "keyReleased", "keyTyped"
+    "mouseOver", "mouseOut", "keyPressed", "keyReleased", "keyTyped"
 ];
 
 class ProcessingDebugger extends Debugger {

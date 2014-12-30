@@ -19,7 +19,7 @@ var _extends = function (child, parent) {
 
 function emptyFunction() {}
 
-var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "keyPressed", "keyReleased", "keyTyped"];
+var events = ["mouseClicked", "mouseDragged", "mousePressed", "mouseMoved", "mouseReleased", "mouseOver", "mouseOut", "keyPressed", "keyReleased", "keyTyped"];
 
 var ProcessingDebugger = (function (Debugger) {
   var ProcessingDebugger = function ProcessingDebugger(options) {
