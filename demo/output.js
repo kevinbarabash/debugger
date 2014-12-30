@@ -28,6 +28,8 @@ poster.listen("load", function (code) {
 });
 
 poster.listen("start", function () {
+    processing.size(400,400);
+    processing.resetMatrix();
     debugr.start();
 });
 

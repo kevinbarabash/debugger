@@ -16,53 +16,71 @@
 </head>
 <body>
 
-<div id="container">
-  <div id="editor-container">
-    <div class="header">
-      <span class="tab">sketch_01.js</span>
-    </div>
-    <div id="editor">background(255);
-var a = [1,2,3];
-var b = a.map(function (value) {
-  console.log("value = " + value);
-  return value * value;
-});
-console.log(b);
-setTimeout(function () {
-  console.log("hello");
-}, 500);
-</div>
+<div id="wrapper">
+  
+  <div id="header">
+    <select>
+      <option>Paint</option>
+      <option>Joystick</option>
+    </select>
+    <br>
+    <br>
   </div>
 
-  <div id="side">
-    <div class="header">
-      <span class="tab">canvas: 01</span>
-    </div>
-    <iframe width="400" height="400" src="output.html"></iframe>
+  <div id="container">
 
-    <div class="header">
-      <span class="tab">Debugger</span>
+    <div id="editor">
+background(255);
+
+var width = 10;
+var col;
+
+strokeWeight(width);
+
+mousePressed = function () {
+    col = color(random(255), random(255), random(255));
+    fill(col);
+    noStroke();
+    ellipse(mouseX, mouseY, width, width);
+}
+
+mouseDragged = function () {
+    stroke(col);
+    line(pmouseX, pmouseY, mouseX, mouseY);
+    console.log("pmouseX = " + pmouseX + ", mouseX = " + mouseX);
+};
     </div>
-    <div class="button header">
-      <span class="tab button" id="startButton">Start</span>
-      <span class="tab button" id="continueButton">Continue</span>
-      <span class="tab button" id="stepInButton">In</span>
-      <span class="tab button" id="stepOverButton">Over</span>
-      <span class="tab button" id="stepOutButton">Out</span>
-    </div>
-    <div id="inspector" class="ace_editor">
-      <div class="column">
-        <div class="section_header">Call Stack</div>
-        <div id="callStack"></div>
+
+    <div id="side">
+      <iframe width="400" height="400" src="output.html"></iframe>
+
+      <div id="inspector-container">
+
+        <div class="button-menu">
+          <span class="button" id="startButton">Start</span>
+          <span class="button" id="continueButton">Continue</span>
+          <span class="button" id="stepInButton">In</span>
+          <span class="button" id="stepOverButton">Over</span>
+          <span class="button" id="stepOutButton">Out</span>
+        </div>
+        <div id="inspector" class="ace_editor">
+          <div class="column">
+            <div class="section_header">Call Stack</div>
+            <div id="callStack"></div>
+          </div>
+          <div class="column">
+            <div class="section_header">Local Variables</div>
+            <div id="variableList" class="object-browser"></div>
+          </div>
+        </div>
+
       </div>
-      <div class="column">
-        <div class="section_header">Local Variables</div>
-        <div id="variableList" class="object-browser"></div>
-      </div>
+
     </div>
+
   </div>
-
 </div>
+
 
 </body>
 </html>
