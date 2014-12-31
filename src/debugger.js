@@ -9,13 +9,36 @@ var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 
+var canUseNativeGenerators = function() {
+    try {
+        var code = "\n" +
+            "var generator = (function* () {\n" +
+            "  yield* (function* () {\n" +
+            "    yield 5; yield 6;\n" +
+            "  }());\n" +
+            "}());\n" +
+            "\n" +
+            "var item = generator.next();\n" +
+            "var passed = item.value === 5 && item.done === false;\n" +
+            "item = generator.next();\n" +
+            "passed &= item.value === 6 && item.done === false;\n" +
+            "item = generator.next();\n" +
+            "passed &= item.value === undefined && item.done === true;\n" +
+            "return passed;";
+        return Function(code)()
+    } catch(e) {
+        return false;
+    }
+};
+
 class Debugger {
 
+    // TODO: add debug messages flag
     constructor(options) {
         this.context = options.context || {};
         this.onBreakpoint = options.onBreakpoint || function () {};
         this.onFunctionDone = options.onFunctionDone || function () {};
-        this.language = options.language || "es5";
+        this.nativeGenerators = options.nativeGenerators && canUseNativeGenerators();
         
         this.scheduler = new Scheduler();
         this.breakpoints = {};
@@ -74,8 +97,7 @@ class Debugger {
     }
 
     load(code) {
-        var debugFunction = transform(code, this.context, { language: this.language });
-        //console.log(debugFunction);
+        var debugFunction = transform(code, this.context, { nativeGenerators: this.nativeGenerators });
         this.mainGeneratorFunction = debugFunction();
     }
 
@@ -196,7 +218,7 @@ class Debugger {
                     this.onMainDone();
                 }
             },
-            language: this.language
+            nativeGenerators: this.nativeGenerators
         });
 
         stepper.breakpointsEnabled = this.breakpointsEnabled;

@@ -230,7 +230,7 @@ function create__scope__(node, bodyList, scope) {
 
 
 function transform(code, context, options) {
-    var es6 = options && options.language.toLowerCase() === "es6";
+    var nativeGenerators = !!options.nativeGenerators;
 
     var ast = esprima.parse(code, { loc: true });
     var scopeManager = escope.analyze(ast);
@@ -273,7 +273,7 @@ function transform(code, context, options) {
                     }   
                 }
 
-                if (es6) {
+                if (nativeGenerators) {
                     // if there are any variables defined in this scope
                     // create a __scope__ dictionary containing their values
                     // and include in the first yield
@@ -364,7 +364,7 @@ function transform(code, context, options) {
         }
     });
 
-    if (es6) {
+    if (nativeGenerators) {
         var debugCode = "return function*(context){\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
 

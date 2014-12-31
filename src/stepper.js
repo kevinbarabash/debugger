@@ -13,7 +13,7 @@ class Stepper {
         
         this._breakpoints = options.breakpoints || {};
         this.breakpointsEnabled = true;
-        this._language = options.language || "es5";
+        this.nativeGenerators = !!options.nativeGenerators;
 
         this._started = false;
         this._paused = false;
@@ -232,9 +232,10 @@ class Stepper {
     }
     
     _isGenerator(obj) {
-        if (this._language.toLowerCase() === "es6") {
+        if (this.nativeGenerators) {
             return obj instanceof Object && obj.toString() === "[object Generator]"
         } else {
+            // TODO: figure out a better check
             return obj && typeof(obj.next) === "function";
         }
     };

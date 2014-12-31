@@ -1,11 +1,11 @@
-/**
- * Created by kevin on 2014-12-24.
- */
+/*global describe, it, beforeEach, afterEach */
 
-var languages = ["es5", "es6"];
+[false, true].forEach(function (nativeGenerators) {
+    var title = nativeGenerators ?
+        "Debugger (Native Generators)" :
+        "Debugger (Regenerator Generators";
 
-languages.forEach(function (language) {
-    describe(language + " Processing Debugger", function () {
+    describe(title, function () {
 
         var _debugger, context;
 
@@ -31,7 +31,7 @@ languages.forEach(function (language) {
             };
 
             _debugger = new ProcessingDebugger({
-                language: language
+                nativeGenerators: nativeGenerators
             });
             _debugger.context = context;
         });

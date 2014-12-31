@@ -18,12 +18,24 @@ var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 
+var canUseNativeGenerators = function () {
+  try {
+    var code = "\n" + "var generator = (function* () {\n" + "  yield* (function* () {\n" + "    yield 5; yield 6;\n" + "  }());\n" + "}());\n" + "\n" + "var item = generator.next();\n" + "var passed = item.value === 5 && item.done === false;\n" + "item = generator.next();\n" + "passed &= item.value === 6 && item.done === false;\n" + "item = generator.next();\n" + "passed &= item.value === undefined && item.done === true;\n" + "return passed;";
+    return Function(code)();
+  } catch (e) {
+    return false;
+  }
+};
+
 var Debugger = (function () {
-  var Debugger = function Debugger(options) {
+  var Debugger =
+
+  // TODO: add debug messages flag
+  function Debugger(options) {
     this.context = options.context || {};
     this.onBreakpoint = options.onBreakpoint || function () {};
     this.onFunctionDone = options.onFunctionDone || function () {};
-    this.language = options.language || "es5";
+    this.nativeGenerators = options.nativeGenerators && canUseNativeGenerators();
 
     this.scheduler = new Scheduler();
     this.breakpoints = {};
@@ -43,8 +55,7 @@ var Debugger = (function () {
   };
 
   Debugger.prototype.load = function (code) {
-    var debugFunction = transform(code, this.context, { language: this.language });
-    //console.log(debugFunction);
+    var debugFunction = transform(code, this.context, { nativeGenerators: this.nativeGenerators });
     this.mainGeneratorFunction = debugFunction();
   };
 
@@ -119,7 +130,7 @@ var Debugger = (function () {
           _this.onMainDone();
         }
       },
-      language: this.language
+      nativeGenerators: this.nativeGenerators
     });
 
     stepper.breakpointsEnabled = this.breakpointsEnabled;
@@ -33243,7 +33254,7 @@ var Stepper = (function () {
 
     this._breakpoints = options.breakpoints || {};
     this.breakpointsEnabled = true;
-    this._language = options.language || "es5";
+    this.nativeGenerators = !!options.nativeGenerators;
 
     this._started = false;
     this._paused = false;
@@ -33446,9 +33457,10 @@ var Stepper = (function () {
   };
 
   Stepper.prototype._isGenerator = function (obj) {
-    if (this._language.toLowerCase() === "es6") {
+    if (this.nativeGenerators) {
       return obj instanceof Object && obj.toString() === "[object Generator]";
     } else {
+      // TODO: figure out a better check
       return obj && typeof (obj.next) === "function";
     }
   };
@@ -33678,7 +33690,7 @@ function create__scope__(node, bodyList, scope) {
 
 
 function transform(code, context, options) {
-  var es6 = options && options.language.toLowerCase() === "es6";
+  var nativeGenerators = !!options.nativeGenerators;
 
   var ast = esprima.parse(code, { loc: true });
   var scopeManager = escope.analyze(ast);
@@ -33716,7 +33728,7 @@ function transform(code, context, options) {
           }
         }
 
-        if (es6) {
+        if (nativeGenerators) {
           // if there are any variables defined in this scope
           // create a __scope__ dictionary containing their values
           // and include in the first yield
@@ -33788,7 +33800,7 @@ function transform(code, context, options) {
     }
   });
 
-  if (es6) {
+  if (nativeGenerators) {
     var debugCode = "return function*(context){\nwith(context){\n" + escodegen.generate(ast) + "\n}\n}";
 
     return new Function(debugCode);
