@@ -382,7 +382,6 @@ function transform(code, context, options) {
         injectWithContext(generatorFunction);
         addScopes(generatorFunction, context);
         code = escodegen.generate(generatorFunction);
-        console.log(code);
         
         return new Function(code + "\n" + "return generatorFunction;");
     }

@@ -19,9 +19,9 @@
 <div id="wrapper">
   
   <div id="header">
-    <select>
-      <option>Paint</option>
-      <option>Joystick</option>
+    <select id="programSelect">
+      <option value="paint.js">Paint</option>
+      <option value="keyboard.js">Keyboard</option>
     </select>
     <br>
     <br>
@@ -29,34 +29,7 @@
 
   <div id="container">
 
-    <div id="editor">
-background(255);
-
-var width = 10;
-var col;
-
-strokeWeight(width);
-
-mousePressed = function () {
-    col = color(random(255), random(255), random(255));
-    fill(col);
-    noStroke();
-    ellipse(mouseX, mouseY, width, width);
-};
-
-mouseDragged = function () {
-    stroke(col);
-    line(pmouseX, pmouseY, mouseX, mouseY);
-};
-
-mouseOver = function () {
-    console.log("mouseover");
-};
-
-mouseOut = function () {
-  console.log("mouseut");
-};
-    </div>
+    <div id="editor"></div>
 
     <div id="side">
       <iframe width="400" height="400" src="output.html"></iframe>

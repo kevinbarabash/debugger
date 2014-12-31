@@ -40,7 +40,7 @@ poster.listen("done", function () {
     overlay.resume();
 });
 
-$("#startButton").click(function (e) {
+function start() {
     overlay.resume();
     var code = session.getValue();
 
@@ -48,10 +48,14 @@ $("#startButton").click(function (e) {
     editor.session.getBreakpoints().forEach(function (value, index) {
         breakpoints[index + 1] = true;
     });
-    
+
     poster.post("setBreakpoints", breakpoints);
     poster.post("load", code);
     poster.post("start");
+}
+
+$("#startButton").click(function (e) {
+    start();
 });
 
 $("#continueButton").click(function () {
@@ -171,4 +175,32 @@ poster.listen("ready", function () {
     var code = session.getValue();
     poster.post("load", code);
     poster.post("start");
+});
+
+var cache = {};
+
+function loadProgram(name) {
+    if (!cache[name]) {
+        var path = "examples/" + name;
+
+        $.ajax(path, {
+            type: 'GET',
+            dataType: 'text',
+            contentType: "application/javascript",
+            success: function(response) {
+                cache[name] = response;
+                session.setValue(response);
+                start();
+            }
+        });
+    } else {
+        session.setValue(cache[name]);
+        start();
+    }
+}
+
+loadProgram("paint.js");
+
+$("#programSelect").change(function () {
+    loadProgram($(this).val());
 });
