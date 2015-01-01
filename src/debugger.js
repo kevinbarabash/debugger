@@ -9,6 +9,8 @@ var Stepper = require("./stepper");
 var Scheduler = require("../external/scheduler/lib/scheduler");
 var transform = require("./transform");
 
+require("./runtime/runtime");
+
 var canUseNativeGenerators = function() {
     try {
         var code = "\n" +
@@ -146,6 +148,8 @@ class Debugger {
     }
 
     // used by tests right now to stop execution
+    // TODO: clear the scheduler's queue
+    // TODO: use this in the demo to exit debug mode
     stop() {
         this.done = true;
     }

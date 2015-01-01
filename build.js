@@ -2,14 +2,7 @@ var fs = require("fs");
 var browserify = require("browserify");
 var to5ify = require("6to5ify");
 
-var options = {};
-
-browserify(options)
-    .transform(to5ify)
-    .require("./src/runtime/runtime.js", { entry: true })
-    .bundle()
-    .on("error", function (err) { console.log("Error : " + err.message); })
-    .pipe(fs.createWriteStream("./build/runtime.js"));
+var options;
 
 options = {
     standalone: "Debugger"

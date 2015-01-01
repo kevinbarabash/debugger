@@ -204,3 +204,6 @@ loadProgram("paint.js");
 $("#programSelect").change(function () {
     loadProgram($(this).val());
 });
+
+// TODO: preserve breakpoints on reload
+// TODO: preserve code changes on reload
