@@ -1,3 +1,6 @@
+// Use the arrow keys to move the red circle
+// click on the canvas for keyboard focus
+
 var x = 200;
 var y = 200;
 var vx = 0;

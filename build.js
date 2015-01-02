@@ -8,12 +8,15 @@ options = {
     standalone: "Debugger"
 };
 
+var stream = fs.createWriteStream("./build/debugger.js");
+var runtime = fs.readFileSync("./node_modules/regenerator/runtime.js");
+stream.write(runtime);
 browserify(options)
     .transform(to5ify)
     .require("./src/debugger.js", { entry: true })
     .bundle()
     .on("error", function (err) { console.log("Error : " + err.message); })
-    .pipe(fs.createWriteStream("./build/debugger.js"));
+    .pipe(stream);
 
 options = {
     standalone: "ProcessingDebugger"

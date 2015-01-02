@@ -41,17 +41,31 @@ body
   display: flex;
   flex-shrink: 0;
   flex-direction: column;
-  margin-left:5px;
+  margin-left: 5px;
 
-.header
+#header
+  margin-bottom: 1em;
   display: flex;
-  flex-shrink: 1;
-  flex-grow: 0;
   flex-direction: row;
-  
-  span
-    padding-bottom: 6px;
-    padding-top: 10px;
+  flex-shrink: 0;
+  flex-grow: 0;
+  align-items: flex-end;
+  font-family: sans-serif;
+
+#select 
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  flex-shrink: 0;
+
+#title
+  display: flex;
+  flex-direction: row;
+  flex-grow: 0;
+  flex-shrink: 0;
+  font-size: 32pt;
+  font-weight: 900;
+  margin-bottom: -0.2em;
 
 .tab
   background-color: #EEE;
@@ -64,7 +78,6 @@ body
 
 canvas
   background-color: white;
-  margin-bottom: 10px;
 
 #inspector
   background-color: white;
@@ -119,9 +132,6 @@ h2
   border-bottom: solid 1px gray;
   background-color:#BBB;
 
-#debugControls
-  margin-bottom: 10px;
-
 #variableList
   list-style-type: none;
   padding-left:0;
@@ -158,8 +168,11 @@ h2
 
 iframe
   border: solid 1px gray;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   display:block;
 
 .overlay:focus
   outline: none;
+
+select
+  margin-left: 10px;

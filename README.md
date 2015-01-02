@@ -21,7 +21,6 @@ purpose.  That being said, it already supports a lot of JavaScript constructs.
 
 ## TODO ##
 
-- include regeneratorRuntime.js in debugger.js
 - improved __for__ loop support
 - handle processing.js' __frameRate__ function
 - more accurate position information so that the actual command can be highlighted
@@ -31,7 +30,6 @@ purpose.  That being said, it already supports a lot of JavaScript constructs.
 
 ## Usage ##
 
-    <script src="PATH_TO_RENEGERATOR_RUNTIME"></script>
     <script src="debugger.js"></script>
 
     var _debugger = new Debugger({ 
@@ -59,7 +57,6 @@ purpose.  That being said, it already supports a lot of JavaScript constructs.
 There is currently only one subclass: ProcessingDebugger.  This subclass handles
 processing-js' draw loop and event handlers properly.
 
-    <script src="PATH_TO_RENEGERATOR_RUNTIME"></script>
     <script src="debugger.js"></script>
     <script src="processing-debugger.js"></script>
 

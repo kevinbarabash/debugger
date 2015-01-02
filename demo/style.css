@@ -97,15 +97,22 @@ body {
   flex-direction: column;
   margin-left: 5px;
 }
-.header {
+#header {
+  margin-bottom: 1em;
   display: -webkit-box;
   display: -moz-box;
   display: -webkit-flex;
   display: -ms-flexbox;
   display: box;
   display: flex;
-  -webkit-flex-shrink: 1;
-  flex-shrink: 1;
+  -webkit-box-orient: horizontal;
+  -moz-box-orient: horizontal;
+  -o-box-orient: horizontal;
+  -webkit-flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
   -webkit-box-flex: 0;
   -moz-box-flex: 0;
   -o-box-flex: 0;
@@ -113,16 +120,62 @@ body {
   box-flex: 0;
   -webkit-flex-grow: 0;
   flex-grow: 0;
+  -webkit-box-align: end;
+  -moz-box-align: end;
+  -o-box-align: end;
+  -ms-flex-align: end;
+  -webkit-align-items: flex-end;
+  align-items: flex-end;
+  font-family: sans-serif;
+}
+#select {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: box;
+  display: flex;
   -webkit-box-orient: horizontal;
   -moz-box-orient: horizontal;
   -o-box-orient: horizontal;
   -webkit-flex-direction: row;
   -ms-flex-direction: row;
   flex-direction: row;
+  -webkit-box-flex: 1;
+  -moz-box-flex: 1;
+  -o-box-flex: 1;
+  -ms-box-flex: 1;
+  box-flex: 1;
+  -webkit-flex-grow: 1;
+  flex-grow: 1;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
 }
-.header span {
-  padding-bottom: 6px;
-  padding-top: 10px;
+#title {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: box;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -moz-box-orient: horizontal;
+  -o-box-orient: horizontal;
+  -webkit-flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
+  -webkit-box-flex: 0;
+  -moz-box-flex: 0;
+  -o-box-flex: 0;
+  -ms-box-flex: 0;
+  box-flex: 0;
+  -webkit-flex-grow: 0;
+  flex-grow: 0;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+  font-size: 32pt;
+  font-weight: 900;
+  margin-bottom: -0.2em;
 }
 .tab {
   background-color: #eee;
@@ -142,7 +195,6 @@ body {
 }
 canvas {
   background-color: #fff;
-  margin-bottom: 10px;
 }
 #inspector {
   background-color: #fff;
@@ -279,9 +331,6 @@ h2 {
   border-bottom: solid 1px #808080;
   background-color: #bbb;
 }
-#debugControls {
-  margin-bottom: 10px;
-}
 #variableList {
   list-style-type: none;
   padding-left: 0;
@@ -318,9 +367,12 @@ h2 {
 }
 iframe {
   border: solid 1px #808080;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   display: block;
 }
 .overlay:focus {
   outline: none;
+}
+select {
+  margin-left: 10px;
 }
