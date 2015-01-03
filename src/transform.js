@@ -10,9 +10,7 @@ var regenerator = require("regenerator");
 // TODO: rewrite without using with, instead rewrite local vars as scope$1.varName
 
 function getScopeVariables (node, parent, context) {
-    var variables = parent.__$escope$__.variables;
-
-    return variables.filter(variable => {
+    var locals = parent.__$escope$__.variables.filter(variable => {
 
         // don't include context variables in the scopes
         if (node.type === "Program" && context.hasOwnProperty(variable.name)) {
@@ -37,6 +35,17 @@ function getScopeVariables (node, parent, context) {
 
         return true;
     });
+    
+    var closure = parent.__$escope$__.through
+        .filter(ref => ref.identifier.name !== undefined)
+        .map(ref => {
+            return ref.identifier.name;
+        });
+    
+    return {
+        locals: locals,
+        closure: closure
+    };
 }
 
 // insert yield { line: <line_number> } in between each line
@@ -132,11 +141,11 @@ function injectWithContext(generatorFunction) {
  * Add scope statements for generator functions created with 
  * regenerator
  * 
- * @param generatorFunction
+ * @param entry
  * @param context
  */
-function addScopes(generatorFunction, context) {
-    estraverse.traverse(generatorFunction, {
+function addScopes(entry, context) {
+    estraverse.traverse(entry, {
         enter: (node, parent) => {
             node._parent = parent;
         },
@@ -145,12 +154,12 @@ function addScopes(generatorFunction, context) {
                 var callee = node.argument.callee;
                 if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
 
-                    var properties = node._parent._parent.params.map(param => 
+                    var properties = parent._parent.params.map(param => 
                         b.property("init", b.identifier(param.name), b.identifier(param.name))
                     );
 
-                    if (node._parent.body[0].declarations) {
-                        node._parent.body[0].declarations.forEach(decl =>
+                    if (parent.body[0].declarations) {
+                        parent.body[0].declarations.forEach(decl =>
                             properties.push(b.property(
                                 "init",
                                 b.identifier(decl.id.name),
@@ -164,12 +173,12 @@ function addScopes(generatorFunction, context) {
                     // filter out "context" to so it doesn't appear in the scope
                     // TODO: give "context" a random name so that users don't mess with it
                     var firstArg = node.argument.arguments[0];
-                    if (firstArg.id.name === "generatorFunction$") {
+                    if (firstArg.id.name === "entry$") {
                         properties = properties.filter(prop =>
                             !context.hasOwnProperty(prop.key.name) && prop.key.name !== "context");
                     }
 
-                    node._parent.body.unshift(
+                    parent.body.unshift(
                         b.variableDeclaration(
                             "var",
                             [b.variableDeclarator(
@@ -194,9 +203,9 @@ function addScopes(generatorFunction, context) {
 
 
 function create__scope__(node, bodyList, scope) {
-    var properties = scope.map(variable => {
-        var isParam = variable.defs.some(def => def.type === "Parameter");
-        var name = variable.name;
+    var properties = scope.locals.map(local => {
+        var isParam = local.defs.some(def => def.type === "Parameter");
+        var name = local.name;
 
         // if the variable is a parameter initialize its
         // value with the value of the parameter
@@ -249,10 +258,6 @@ function transform(code, context, options) {
                 node.generator = true;
                 
             } else if (node.type === "Program" || node.type === "BlockStatement") {
-                
-                if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
-                    scope = getScopeVariables(node, parent, context);
-                }
 
                 bodyList = LinkedList.fromArray(node.body);
                 insertYields(bodyList);
@@ -274,11 +279,15 @@ function transform(code, context, options) {
                 }
 
                 if (nativeGenerators) {
+                    if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
+                        scope = getScopeVariables(node, parent, context);
+                    }
+
                     // if there are any variables defined in this scope
                     // create a __scope__ dictionary containing their values
                     // and include in the first yield
                     
-                    if (scope && scope.length > 0 && bodyList.first) {
+                    if (scope && scope.locals.length > 0 && bodyList.first) {
                         create__scope__(node, bodyList, scope);
                     } else {
                         node.body = bodyList.toArray();
@@ -370,20 +379,21 @@ function transform(code, context, options) {
 
         return new Function(debugCode);
     } else {
-        var generatorFunction = b.functionDeclaration(
-            b.identifier("generatorFunction"), 
+        var entry = b.functionDeclaration(
+            b.identifier("entry"), 
             [b.identifier("context")], 
             b.blockStatement(ast.body), 
             true,   // generator 
             false   // expression
         );
 
-        regenerator.transform(generatorFunction);
-        injectWithContext(generatorFunction);
-        addScopes(generatorFunction, context);
-        code = escodegen.generate(generatorFunction);
-        
-        return new Function(code + "\n" + "return generatorFunction;");
+        regenerator.transform(entry);
+        addScopes(entry, context);
+        injectWithContext(entry);
+
+        code = escodegen.generate(entry);
+        console.log(code);
+        return new Function(code + "\n" + "return entry;");
     }
 }
 

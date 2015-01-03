@@ -34285,9 +34285,7 @@ var regenerator = require("regenerator");
 // TODO: rewrite without using with, instead rewrite local vars as scope$1.varName
 
 function getScopeVariables(node, parent, context) {
-  var variables = parent.__$escope$__.variables;
-
-  return variables.filter(function (variable) {
+  var locals = parent.__$escope$__.variables.filter(function (variable) {
     // don't include context variables in the scopes
     if (node.type === "Program" && context.hasOwnProperty(variable.name)) {
       return false;
@@ -34312,6 +34310,17 @@ function getScopeVariables(node, parent, context) {
 
     return true;
   });
+
+  var closure = parent.__$escope$__.through.filter(function (ref) {
+    return ref.identifier.name !== undefined;
+  }).map(function (ref) {
+    return ref.identifier.name;
+  });
+
+  return {
+    locals: locals,
+    closure: closure
+  };
 }
 
 // insert yield { line: <line_number> } in between each line
@@ -34397,11 +34406,11 @@ function injectWithContext(generatorFunction) {
  * Add scope statements for generator functions created with 
  * regenerator
  * 
- * @param generatorFunction
+ * @param entry
  * @param context
  */
-function addScopes(generatorFunction, context) {
-  estraverse.traverse(generatorFunction, {
+function addScopes(entry, context) {
+  estraverse.traverse(entry, {
     enter: function (node, parent) {
       node._parent = parent;
     },
@@ -34409,12 +34418,12 @@ function addScopes(generatorFunction, context) {
       if (node.type === "ReturnStatement" && node.argument.type === "CallExpression") {
         var callee = node.argument.callee;
         if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
-          var properties = node._parent._parent.params.map(function (param) {
+          var properties = parent._parent.params.map(function (param) {
             return b.property("init", b.identifier(param.name), b.identifier(param.name));
           });
 
-          if (node._parent.body[0].declarations) {
-            node._parent.body[0].declarations.forEach(function (decl) {
+          if (parent.body[0].declarations) {
+            parent.body[0].declarations.forEach(function (decl) {
               return properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
             });
           }
@@ -34424,13 +34433,13 @@ function addScopes(generatorFunction, context) {
           // filter out "context" to so it doesn't appear in the scope
           // TODO: give "context" a random name so that users don't mess with it
           var firstArg = node.argument.arguments[0];
-          if (firstArg.id.name === "generatorFunction$") {
+          if (firstArg.id.name === "entry$") {
             properties = properties.filter(function (prop) {
               return !context.hasOwnProperty(prop.key.name) && prop.key.name !== "context";
             });
           }
 
-          node._parent.body.unshift(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]));
+          parent.body.unshift(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]));
 
           var blockStmt = firstArg.body;
           var withStmt = b.withStatement(b.identifier("__scope__"), b.blockStatement(blockStmt.body));
@@ -34444,11 +34453,11 @@ function addScopes(generatorFunction, context) {
 
 
 function create__scope__(node, bodyList, scope) {
-  var properties = scope.map(function (variable) {
-    var isParam = variable.defs.some(function (def) {
+  var properties = scope.locals.map(function (local) {
+    var isParam = local.defs.some(function (def) {
       return def.type === "Parameter";
     });
-    var name = variable.name;
+    var name = local.name;
 
     // if the variable is a parameter initialize its
     // value with the value of the parameter
@@ -34485,10 +34494,6 @@ function transform(code, context, options) {
         // convert all user defined functions to generators
         node.generator = true;
       } else if (node.type === "Program" || node.type === "BlockStatement") {
-        if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
-          scope = getScopeVariables(node, parent, context);
-        }
-
         bodyList = LinkedList.fromArray(node.body);
         insertYields(bodyList);
 
@@ -34507,11 +34512,15 @@ function transform(code, context, options) {
         }
 
         if (nativeGenerators) {
+          if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
+            scope = getScopeVariables(node, parent, context);
+          }
+
           // if there are any variables defined in this scope
           // create a __scope__ dictionary containing their values
           // and include in the first yield
 
-          if (scope && scope.length > 0 && bodyList.first) {
+          if (scope && scope.locals.length > 0 && bodyList.first) {
             create__scope__(node, bodyList, scope);
           } else {
             node.body = bodyList.toArray();
@@ -34583,16 +34592,17 @@ function transform(code, context, options) {
 
     return new Function(debugCode);
   } else {
-    var generatorFunction = b.functionDeclaration(b.identifier("generatorFunction"), [b.identifier("context")], b.blockStatement(ast.body), true, // generator
+    var entry = b.functionDeclaration(b.identifier("entry"), [b.identifier("context")], b.blockStatement(ast.body), true, // generator
     false // expression
     );
 
-    regenerator.transform(generatorFunction);
-    injectWithContext(generatorFunction);
-    addScopes(generatorFunction, context);
-    code = escodegen.generate(generatorFunction);
+    regenerator.transform(entry);
+    addScopes(entry, context);
+    injectWithContext(entry);
 
-    return new Function(code + "\n" + "return generatorFunction;");
+    code = escodegen.generate(entry);
+    console.log(code);
+    return new Function(code + "\n" + "return entry;");
   }
 }
 

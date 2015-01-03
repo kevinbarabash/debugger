@@ -3,7 +3,7 @@
 [false, true].forEach(function (nativeGenerators) {
     var title = nativeGenerators ?
         "Debugger (Native Generators)" :
-        "Debugger (Regenerator Generators";
+        "Debugger (Regenerator Generators)";
 
     describe(title, function () {
 
