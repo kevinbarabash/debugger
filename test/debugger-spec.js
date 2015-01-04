@@ -1171,6 +1171,22 @@
             it("should inject a __usingDebugger variable into the context", function () {
                 expect(context.__usingDebugger).to.be(true);
             });
+            
+            it("should work with mulitple variables declarations + instantiation on the same line", function () {
+                code = getFunctionBody(function () {
+                    var a = 5, b = 10;
+                    x = a;
+                    y = b;
+                });
+                
+                _debugger.load(code);
+                _debugger.setBreakpoint(2);
+                _debugger.start();
+                
+                var scope = _debugger.currentScope;
+                expect(scope.a).to.be(5);
+                expect(scope.b).to.be(10);
+            });
         });
 
         // all function calls are treated as ambiguous by _createDebugGenerator
@@ -1405,6 +1421,7 @@
                     _debugger.start(true);
 
                     _debugger.stepOver();
+                    expect(_debugger.line).to.be(4);
                     _debugger.stepOver();
                     expect(_debugger.line).to.be(7);
                     _debugger.stepOver();

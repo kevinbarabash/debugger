@@ -2,8 +2,8 @@
 
 [false, true].forEach(function (nativeGenerators) {
     var title = nativeGenerators ?
-        "Debugger (Native Generators)" :
-        "Debugger (Regenerator Generators)";
+        "Processing Debugger (Native Generators)" :
+        "Processing Debugger (Regenerator Generators)";
 
     describe(title, function () {
 
@@ -27,7 +27,9 @@
                     this.x = x;
                     this.y = y;
                 },
-                image: image
+                image: image,
+                draw: null,
+                mouseClicked: null
             };
 
             _debugger = new ProcessingDebugger({
@@ -40,6 +42,7 @@
             it("should run 'draw' if defined", function (done) {
                 var code = getFunctionBody(function () {
                     draw = function () {
+                        console.log("draw");
                         x = 5;
                         y = 10;
                     };
