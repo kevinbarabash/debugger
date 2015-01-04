@@ -1,4 +1,5 @@
 var LinkedList = require("basic-ds").LinkedList;
+var Stack = require("basic-ds").Stack;
 var b = require("ast-types").builders;
 var escodegen = require("escodegen");
 var escope = require("escope");
@@ -57,6 +58,7 @@ function insertYields (bodyList) {
         
         // astNodes without a valid loc are ones that have been inserted
         // and are the result of a yield expression replacing a debugger statement
+        // TODO: find a better way to handle debugger statements
         if (loc === null) {
             return;
         }
@@ -201,6 +203,10 @@ function addScopes(entry, context) {
     });
 }
 
+var id = 0;
+var genId = function() {
+    id++;
+};
 
 function create__scope__(node, bodyList, scope) {
     var properties = scope.locals.map(local => {
@@ -213,11 +219,13 @@ function create__scope__(node, bodyList, scope) {
         return b.property("init", b.identifier(name), value);
     });
 
+    var id = genId();
+    
     // modify the first yield statement to include the scope
     // as part of the value
     var firstStatement = bodyList.first.value;
     firstStatement.expression.argument.properties.push(
-        b.property("init", b.identifier("scope"), b.identifier("__scope__"))
+        b.property("init", b.identifier("scope"), b.identifier("__scope__" + id))
     );
     
     // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
@@ -225,33 +233,78 @@ function create__scope__(node, bodyList, scope) {
         b.variableDeclaration(
             "var",
             [b.variableDeclarator(
-                b.identifier("__scope__"), 
+                b.identifier("__scope__" + id), 
                 b.objectExpression(properties)
             )]
         ),
         b.withStatement(
-            b.identifier("__scope__"),
+            b.identifier("__scope__" + id),
             b.blockStatement(bodyList.toArray())
         )
     ];
 }
 
+var isReference = function(node, parent) {
+    // we're a property key so we aren't referenced
+    if (parent.type === "Property" && parent.key === node) return false;
+
+    // we're a variable declarator id so we aren't referenced
+    if (parent.type === "VariableDeclarator" && parent.id === node) return false;
+
+    var isMemberExpression = parent.type === "MemberExpression";
+
+    // we're in a member expression and we're the computed property so we're referenced
+    var isComputedProperty = isMemberExpression && parent.property === node && parent.computed;
+
+    // we're in a member expression and we're the object so we're referenced
+    var isObject = isMemberExpression && parent.object === node;
+
+    // we are referenced
+    return !isMemberExpression || isComputedProperty || isObject;
+};
 
 
 function transform(code, context, options) {
+    id = 0; // reset the id so we don't run out
     var nativeGenerators = !!options.nativeGenerators;
 
     var ast = esprima.parse(code, { loc: true });
     var scopeManager = escope.analyze(ast);
     scopeManager.attach();
+    
+    var scopeStack = new Stack();
 
     estraverse.replace(ast, {
         enter: (node, parent) => {
+            if (node.__$escope$__) {
+                console.log(node.type + " has __$escope$__");
+
+                var scope = {};
+                var isRoot = scopeStack.size === 0;
+                
+                node.__$escope$__.variables.forEach(variable => {
+                    // don't include variables from the context in the root scope
+                    if (isRoot && context.hasOwnProperty(variable.name)) {
+                        return;
+                    }
+
+                    if (variable.defs.length > 0) {
+                        scope[variable.name] = {
+                            type: variable.defs[0].type
+                        };
+                    }
+                });
+
+                scopeStack.push(scope);
+                var names = node.__$escope$__.variables.map(variable => variable.name);
+                console.log(names);
+            }
+            
             node._parent = parent;
         },
         leave: (node, parent) => {
-            var loc, literal, scope, bodyList;
-
+            var loc, literal, scope, bodyList, properties, scopes, i;
+            
             if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 
                 // convert all user defined functions to generators
@@ -281,17 +334,41 @@ function transform(code, context, options) {
                 if (nativeGenerators) {
                     if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
                         scope = getScopeVariables(node, parent, context);
+
+                        
+                    }
+
+                    if (node.__$escope$__ || parent.__$escope$__) {
+                        scope = scopeStack.pop();
+
+                        bodyList.first.value.expression.argument.properties.push(
+                            b.property("init", b.identifier("scope"), b.identifier("$scope$" + scopeStack.size))
+                        );
+                        
+                        properties = Object.keys(scope).map(name => {
+                            var type = scope[name].type;
+                            var value = type === "Parameter" ? name : "undefined";
+                            return b.property("init", b.identifier(name), b.identifier(value));
+                        });
+
+                        bodyList.push_front(b.variableDeclaration(
+                            "var",
+                            [b.variableDeclarator(
+                                b.identifier("$scope$" + scopeStack.size),  // zero index
+                                b.objectExpression(properties)
+                            )]
+                        ));
                     }
 
                     // if there are any variables defined in this scope
                     // create a __scope__ dictionary containing their values
                     // and include in the first yield
                     
-                    if (scope && scope.locals.length > 0 && bodyList.first) {
-                        create__scope__(node, bodyList, scope);
-                    } else {
+                    //if (scope && scope.locals.length > 0 && bodyList.first) {
+                    //    create__scope__(node, bodyList, scope);
+                    //} else {
                         node.body = bodyList.toArray();
-                    }
+                    //}
                 } else {
                     // if the function isn't empty create a "scope" property
                     // to the first yield statement
@@ -325,7 +402,7 @@ function transform(code, context, options) {
                     // create a yieldExpress to wrap the call
                     loc = node.loc;
                     
-                    var properties = [
+                    properties = [
                         b.property("init", b.identifier("gen"), gen),
                         b.property("init", b.identifier("line"), b.literal(loc.start.line))
                         // TODO: this is the current line, but we should actually be passing next node's line
@@ -366,16 +443,71 @@ function transform(code, context, options) {
                         ])
                     )
                 );
+            } else if (node.type === "Identifier" && parent.type !== "FunctionExpression" && parent.type !== "FunctionDeclaration") {
+                if (isReference(node, parent)) {
+                    scopes = scopeStack.items;
+                    
+                    // iterate backwards and replace references with member
+                    // expressions, e.g. x -> $scope$0.x
+                    for (i = scopes.length - 1; i > -1; i--) {
+                        scope = scopes[i];
+                        if (scope.hasOwnProperty(node.name)) {
+                            return b.memberExpression(
+                                b.identifier("$scope$" + i),
+                                b.identifier(node.name),
+                                false   // "computed" boolean
+                            );
+                        }
+                    }
+                }
+            } else if (node.type === "VariableDeclaration") {
+                if (node.declarations.length === 1) {
+                    var decl = node.declarations[0];
+                    if (decl.init !== null) {
+                        scopes = scopeStack.items;
+
+                        for (i = scopes.length - 1; i > -1; i--) {
+                            scope = scopes[i];
+                            name = decl.id.name;
+                            if (scope.hasOwnProperty(name)) {
+                                console.log("VariableDeclaration name = " + name);
+
+                                var me = b.memberExpression(
+                                    b.identifier("$scope$" + i),
+                                    b.identifier(name),
+                                    false   // "computed" boolean
+                                );
+                                
+                                var ae = b.assignmentExpression(
+                                    "=",
+                                    me,
+                                    decl.init
+                                );
+                                
+                                if (parent.type !== "ForStatement") {
+                                    var stmt = b.expressionStatement(ae);
+                                    stmt.loc = decl.loc;    // TODO: make "loc"ation faking more robust
+                                    return stmt;
+                                } else {
+                                    ae.loc = decl.loc;
+                                    return ae;
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // clean up
-            delete node._parent;
+            //delete node._parent;
         }
     });
 
     if (nativeGenerators) {
         var debugCode = "return function*(context){\nwith(context){\n" +
             escodegen.generate(ast) + "\n}\n}";
+        
+        console.log(debugCode);
 
         return new Function(debugCode);
     } else {

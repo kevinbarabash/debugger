@@ -1,6 +1,6 @@
 /*global describe, it, beforeEach, afterEach */
 
-[false, true].forEach(function (nativeGenerators) {
+[true].forEach(function (nativeGenerators) {
     var title = nativeGenerators ?
         "Debugger (Native Generators)" :
         "Debugger (Regenerator Generators)";
