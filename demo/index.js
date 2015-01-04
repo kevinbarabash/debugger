@@ -16,6 +16,17 @@ var overlay = iframeOverlay.createOverlay(iframe);
 // which throws away the contentWindow and probably forces it to reload
 var poster = new Poster(iframe.contentWindow);
 
+var paused = false;
+var editorContainer = $("#editor-container").get(0);
+editorContainer.addEventListener("mousedown", function (e) {
+    if (paused) {
+        var elem = document.elementAtPoint(e.pageX, e.pageY);
+        if (!$(elem).hasClass("ace_gutter-cell")) {
+            e.stopPropagation();
+        }
+    }
+}, true);
+
 poster.listen("break", function (line, stackValues, scope) {
     enableButtons();
     if (line > 0) {
@@ -23,9 +34,12 @@ poster.listen("break", function (line, stackValues, scope) {
         updateView(line);
         updateCallStack(stackValues);
         updateLocals(gehry.reconstruct(scope));
-    } else {
-        disableButtons();
-        editor.setHighlightActiveLine(false);
+        
+        // disable editing
+        editor.setReadOnly(true);
+        $(".ace_cursor").hide();
+        paused = true;
+        $("#editor-container").attr("disabled", "");
     }
 });
 
@@ -38,6 +52,12 @@ poster.listen("done", function () {
     updateCallStack([]);
     updateLocals();
     overlay.resume();
+
+    // enabled editing again
+    editor.setReadOnly(false);
+    paused = false;
+    $(".ace_cursor").show();
+    $("#editor-container").removeAttr("disabled");
 });
 
 function start() {

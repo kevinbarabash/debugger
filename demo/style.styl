@@ -28,7 +28,6 @@ body
 
 #editor-container
   display: flex;
-  margin-right: 10px;
   flex-grow: 1;
   flex-shrink: 1;
   flex-direction: column;
@@ -140,7 +139,7 @@ h2
   background-color: rgb(0, 128, 255);
 
 .ace_active-line
-  background-color: rgba(0, 128, 255, 0.3) !important;
+  background-color: rgb(179, 217, 255) !important;
   
 .ace_fold
   background-color: mediumpurple;
@@ -176,3 +175,7 @@ iframe
 
 select
   margin-left: 10px;
+  
+[disabled]
+  .ace_content
+    background-color: rgba(255,255,0,0.25);

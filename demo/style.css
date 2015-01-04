@@ -53,7 +53,6 @@ body {
   display: -ms-flexbox;
   display: box;
   display: flex;
-  margin-right: 10px;
   -webkit-box-flex: 1;
   -moz-box-flex: 1;
   -o-box-flex: 1;
@@ -339,7 +338,7 @@ h2 {
   background-color: #0080ff;
 }
 .ace_active-line {
-  background-color: rgba(0,128,255,0.3) !important;
+  background-color: #b3d9ff !important;
 }
 .ace_fold {
   background-color: #9370db;
@@ -375,4 +374,7 @@ iframe {
 }
 select {
   margin-left: 10px;
+}
+[disabled] .ace_content {
+  background-color: rgba(255,255,0,0.25);
 }
