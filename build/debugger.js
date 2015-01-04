@@ -34550,14 +34550,14 @@ function transform(code, context, options) {
       node._parent = parent;
     },
     leave: function (node, parent) {
-      var loc, literal, scope, bodyList, properties, scopes, i;
+      var loc, literal, scope, bodyList, properties, scopes, i, stmt;
 
       if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
         // convert all user defined functions to generators
         node.generator = true;
 
         if (node.type === "FunctionDeclaration") {
-          var stmt = b.expressionStatement(b.assignmentExpression("=", b.memberExpression(b.identifier("$scope$" + (scopeStack.size - 1)), node.id, false // computed
+          stmt = b.expressionStatement(b.assignmentExpression("=", b.memberExpression(b.identifier("$scope$" + (scopeStack.size - 1)), node.id, false // computed
           ), b.functionExpression(null, node.params, node.body, true, // generator
           false // expression
           )));
@@ -34634,7 +34634,8 @@ function transform(code, context, options) {
             var name = node.callee.type === "Identifier" ? node.callee.name : null;
             node.arguments.unshift(b.literal(name)); // constructor name
             node.arguments.unshift(node.callee); // constructor
-            gen = b.callExpression(b.identifier("__instantiate__"), node.arguments);
+            gen = b.callExpression(b.memberExpression(b.identifier("context"), b.identifier("__instantiate__"), false // computed
+            ), node.arguments);
           }
 
           // create a yieldExpress to wrap the call
@@ -34682,6 +34683,10 @@ function transform(code, context, options) {
               return b.memberExpression(b.identifier("$scope$" + i), b.identifier(node.name), false // "computed" boolean
               );
             }
+            if (context.hasOwnProperty(node.name)) {
+              return b.memberExpression(b.identifier("context"), b.identifier(node.name), false // "computed" boolean
+              );
+            }
           }
         }
       } else if (node.type === "VariableDeclaration") {
@@ -34690,25 +34695,41 @@ function transform(code, context, options) {
           if (decl.init !== null) {
             scopes = scopeStack.items;
 
+            var ae, me;
+
             for (i = scopes.length - 1; i > -1; i--) {
               scope = scopes[i];
               name = decl.id.name;
               if (scope.hasOwnProperty(name)) {
-                console.log("VariableDeclaration name = " + name);
-
-                var me = b.memberExpression(b.identifier("$scope$" + i), b.identifier(name), false // "computed" boolean
+                me = b.memberExpression(b.identifier("$scope$" + i), b.identifier(name), false // "computed" boolean
                 );
 
-                var ae = b.assignmentExpression("=", me, decl.init);
+                ae = b.assignmentExpression("=", me, decl.init);
 
                 if (parent.type !== "ForStatement") {
-                  var stmt = b.expressionStatement(ae);
+                  stmt = b.expressionStatement(ae);
                   stmt.loc = decl.loc; // TODO: make "loc"ation faking more robust
                   return stmt;
                 } else {
                   ae.loc = decl.loc;
                   return ae;
                 }
+              }
+            }
+
+            if (context.hasOwnProperty(name)) {
+              me = b.memberExpression(b.identifier("context"), b.identifier(name), false // "computed" boolean
+              );
+
+              ae = b.assignmentExpression("=", me, decl.init);
+
+              if (parent.type !== "ForStatement") {
+                stmt = b.expressionStatement(ae);
+                stmt.loc = decl.loc; // TODO: make "loc"ation faking more robust
+                return stmt;
+              } else {
+                ae.loc = decl.loc;
+                return ae;
               }
             }
           }
@@ -34721,7 +34742,8 @@ function transform(code, context, options) {
   });
 
   if (nativeGenerators) {
-    var debugCode = "return function*(context){\nwith(context){\n" + escodegen.generate(ast) + "\n}\n}";
+    // TODO: obfuscate "context" more
+    var debugCode = "return function*(context){\n" + escodegen.generate(ast) + "\n}";
 
     console.log(debugCode);
 
