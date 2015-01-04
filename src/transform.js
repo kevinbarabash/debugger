@@ -79,9 +79,16 @@ function insertYields (bodyList) {
 function stringForId(node) {
     var name = "";
     if (node.type === "Identifier") {
-        name = node.name;
+        if (node.name.indexOf("$scope$") === -1) {
+            name = node.name;
+        }
     } else if (node.type === "MemberExpression") {
-        name = stringForId(node.object) + "." + node.property.name;
+        var part = stringForId(node.object);
+        if (part.length > 0) {
+            name = stringForId(node.object) + "." + node.property.name;
+        } else {
+            name = node.property.name;
+        }
     } else if (node.type === "ThisExpression") {
         name = "this";
     } else {
@@ -309,6 +316,30 @@ function transform(code, context, options) {
                 
                 // convert all user defined functions to generators
                 node.generator = true;
+
+                if (node.type === "FunctionDeclaration") {
+
+                    var stmt = b.expressionStatement(
+                        b.assignmentExpression(
+                            "=",
+                            b.memberExpression(
+                                b.identifier("$scope$" + (scopeStack.size - 1)),
+                                node.id,
+                                false   // computed
+                            ),
+                            b.functionExpression(
+                                null,
+                                node.params,
+                                node.body,
+                                true,   // generator 
+                                false   // expression
+                            )
+                        )
+                    );
+
+                    stmt.loc = node.loc;
+                    return stmt;
+                }
                 
             } else if (node.type === "Program" || node.type === "BlockStatement") {
 
@@ -334,30 +365,31 @@ function transform(code, context, options) {
                 if (nativeGenerators) {
                     if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
                         scope = getScopeVariables(node, parent, context);
-
-                        
                     }
 
                     if (node.__$escope$__ || parent.__$escope$__) {
                         scope = scopeStack.pop();
 
-                        bodyList.first.value.expression.argument.properties.push(
-                            b.property("init", b.identifier("scope"), b.identifier("$scope$" + scopeStack.size))
-                        );
-                        
-                        properties = Object.keys(scope).map(name => {
-                            var type = scope[name].type;
-                            var value = type === "Parameter" ? name : "undefined";
-                            return b.property("init", b.identifier(name), b.identifier(value));
-                        });
+                        // guard against empty functions
+                        if (bodyList.first) {
+                            bodyList.first.value.expression.argument.properties.push(
+                                b.property("init", b.identifier("scope"), b.identifier("$scope$" + scopeStack.size))
+                            );
 
-                        bodyList.push_front(b.variableDeclaration(
-                            "var",
-                            [b.variableDeclarator(
-                                b.identifier("$scope$" + scopeStack.size),  // zero index
-                                b.objectExpression(properties)
-                            )]
-                        ));
+                            properties = Object.keys(scope).map(name => {
+                                var type = scope[name].type;
+                                var value = type === "Parameter" ? name : "undefined";
+                                return b.property("init", b.identifier(name), b.identifier(value));
+                            });
+
+                            bodyList.push_front(b.variableDeclaration(
+                                "var",
+                                [b.variableDeclarator(
+                                    b.identifier("$scope$" + scopeStack.size),  // zero index
+                                    b.objectExpression(properties)
+                                )]
+                            ));
+                        }
                     }
 
                     // if there are any variables defined in this scope
