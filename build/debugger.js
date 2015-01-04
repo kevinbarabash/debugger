@@ -4360,8 +4360,172 @@ exports.PathVisitor = require("./lib/path-visitor");
 exports.visit = exports.PathVisitor.visit;
 
 },{"./def/core":6,"./def/e4x":7,"./def/es6":8,"./def/es7":9,"./def/fb-harmony":10,"./def/mozilla":11,"./lib/equiv":12,"./lib/node-path":13,"./lib/path-visitor":14,"./lib/types":18}],20:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"./ListNode":21,"dup":4}],21:[function(require,module,exports){
+var ListNode = require("./ListNode");
+var LinkedList = (function () {
+    function LinkedList() {
+        this.first = null;
+        this.last = null;
+    }
+    LinkedList.prototype.push_back = function (value) {
+        var node = new ListNode(value);
+        if (this.first === null && this.last === null) {
+            this.first = node;
+            this.last = node;
+        }
+        else {
+            node.prev = this.last;
+            this.last.next = node;
+            this.last = node;
+        }
+    };
+    LinkedList.prototype.push_front = function (value) {
+        var node = new ListNode(value);
+        if (this.first === null && this.last === null) {
+            this.first = node;
+            this.last = node;
+        }
+        else {
+            node.next = this.first;
+            this.first.prev = node;
+            this.first = node;
+        }
+    };
+    LinkedList.prototype.pop_back = function () {
+        if (this.last) {
+            var value = this.last.value;
+            if (this.last.prev) {
+                var last = this.last;
+                this.last = last.prev;
+                this.last.next = null;
+                last.destroy();
+            }
+            else {
+                this.last = null;
+                this.first = null;
+            }
+            return value;
+        }
+        else {
+            return null;
+        }
+    };
+    LinkedList.prototype.pop_front = function () {
+        if (this.first) {
+            var value = this.first.value;
+            if (this.first.next) {
+                var first = this.first;
+                this.first = first.next;
+                this.first.prev = null;
+                first.destroy();
+            }
+            else {
+                this.first = null;
+                this.last = null;
+            }
+            return value;
+        }
+        else {
+            return null;
+        }
+    };
+    LinkedList.prototype.clear = function () {
+        this.first = this.last = null;
+    };
+    LinkedList.prototype.insertBeforeNode = function (refNode, value) {
+        if (refNode === this.first) {
+            this.push_front(value);
+        }
+        else {
+            var node = new ListNode(value);
+            node.prev = refNode.prev;
+            node.next = refNode;
+            refNode.prev.next = node;
+            refNode.prev = node;
+        }
+    };
+    LinkedList.prototype.forEachNode = function (callback, _this) {
+        var node = this.first;
+        var index = 0;
+        while (node !== null) {
+            callback.call(_this, node, index);
+            node = node.next;
+            index++;
+        }
+    };
+    LinkedList.prototype.forEach = function (callback, _this) {
+        this.forEachNode(function (node, index) { return callback.call(_this, node.value, index); }, _this);
+    };
+    LinkedList.prototype.nodeAtIndex = function (index) {
+        var i = 0;
+        var node = this.first;
+        while (node !== null) {
+            if (index === i) {
+                return node;
+            }
+            i++;
+            node = node.next;
+        }
+        return null;
+    };
+    LinkedList.prototype.replaceNodeWithValues = function (node, values) {
+        if (values.length > 0) {
+            var list = LinkedList.fromArray(values);
+            list.first.prev = node.prev;
+            list.last.next = node.next;
+            if (node.prev !== null) {
+                node.prev.next = list.first;
+            }
+            else {
+                this.first = list.first;
+            }
+            if (node.next !== null) {
+                node.next.prev = list.last;
+            }
+            else {
+                this.last = list.last;
+            }
+        }
+        else {
+            if (node.prev !== null) {
+                node.prev.next = node.next;
+            }
+            else {
+                this.first = node.next;
+            }
+            if (node.next !== null) {
+                node.next.prev = node.prev;
+            }
+            else {
+                this.last = node.prev;
+            }
+        }
+        node.prev = node.next = null;
+    };
+    LinkedList.prototype.valueAtIndex = function (index) {
+        var node = this.nodeAtIndex(index);
+        return node ? node.value : undefined;
+    };
+    LinkedList.prototype.toArray = function () {
+        var array = [];
+        var node = this.first;
+        while (node !== null) {
+            array.push(node.value);
+            node = node.next;
+        }
+        return array;
+    };
+    LinkedList.fromArray = function (array) {
+        var list = new LinkedList();
+        array.forEach(function (value) {
+            list.push_back(value);
+        });
+        return list;
+    };
+    return LinkedList;
+})();
+module.exports = LinkedList;
+
+},{"./ListNode":21}],21:[function(require,module,exports){
 arguments[4][5][0].apply(exports,arguments)
 },{"dup":5}],22:[function(require,module,exports){
 var Stack = (function () {
@@ -12788,7 +12952,7 @@ define(function (require, exports, module) {
 
   /**
    * Converts from a two-complement value to a value where the sign bit is
-   * is placed in the least significant bit.  For example, as decimals:
+   * placed in the least significant bit.  For example, as decimals:
    *   1 becomes 2 (10 binary), -1 becomes 3 (11 binary)
    *   2 becomes 4 (100 binary), -2 becomes 5 (101 binary)
    */
@@ -12800,7 +12964,7 @@ define(function (require, exports, module) {
 
   /**
    * Converts to a two-complement value from a value where the sign bit is
-   * is placed in the least significant bit.  For example, as decimals:
+   * placed in the least significant bit.  For example, as decimals:
    *   2 (10 binary) becomes 1, 3 (11 binary) becomes -1
    *   4 (100 binary) becomes 2, 5 (101 binary) becomes -2
    */
@@ -13992,6 +14156,11 @@ define(function (require, exports, module) {
   // Matches a Windows-style newline, or any character.
   var REGEX_CHARACTER = /\r\n|[\s\S]/g;
 
+  // Private symbol for identifying `SourceNode`s when multiple versions of
+  // the source-map library are loaded. This MUST NOT CHANGE across
+  // versions!
+  var isSourceNode = "$$$isSourceNode$$$";
+
   /**
    * SourceNodes provide a way to abstract over interpolating/concatenating
    * snippets of generated JavaScript source code while maintaining the line and
@@ -14011,6 +14180,7 @@ define(function (require, exports, module) {
     this.column = aColumn == null ? null : aColumn;
     this.source = aSource == null ? null : aSource;
     this.name = aName == null ? null : aName;
+    this[isSourceNode] = true;
     if (aChunks != null) this.add(aChunks);
   }
 
@@ -14141,7 +14311,7 @@ define(function (require, exports, module) {
         this.add(chunk);
       }, this);
     }
-    else if (aChunk instanceof SourceNode || typeof aChunk === "string") {
+    else if (aChunk[isSourceNode] || typeof aChunk === "string") {
       if (aChunk) {
         this.children.push(aChunk);
       }
@@ -14166,7 +14336,7 @@ define(function (require, exports, module) {
         this.prepend(aChunk[i]);
       }
     }
-    else if (aChunk instanceof SourceNode || typeof aChunk === "string") {
+    else if (aChunk[isSourceNode] || typeof aChunk === "string") {
       this.children.unshift(aChunk);
     }
     else {
@@ -14188,7 +14358,7 @@ define(function (require, exports, module) {
     var chunk;
     for (var i = 0, len = this.children.length; i < len; i++) {
       chunk = this.children[i];
-      if (chunk instanceof SourceNode) {
+      if (chunk[isSourceNode]) {
         chunk.walk(aFn);
       }
       else {
@@ -14233,7 +14403,7 @@ define(function (require, exports, module) {
    */
   SourceNode.prototype.replaceRight = function SourceNode_replaceRight(aPattern, aReplacement) {
     var lastChild = this.children[this.children.length - 1];
-    if (lastChild instanceof SourceNode) {
+    if (lastChild[isSourceNode]) {
       lastChild.replaceRight(aPattern, aReplacement);
     }
     else if (typeof lastChild === 'string') {
@@ -14266,7 +14436,7 @@ define(function (require, exports, module) {
   SourceNode.prototype.walkSourceContents =
     function SourceNode_walkSourceContents(aFn) {
       for (var i = 0, len = this.children.length; i < len; i++) {
-        if (this.children[i] instanceof SourceNode) {
+        if (this.children[i][isSourceNode]) {
           this.children[i].walkSourceContents(aFn);
         }
       }
@@ -15079,8 +15249,8 @@ module.exports={
     "url": "https://github.com/estools/escodegen/issues"
   },
   "_id": "escodegen@1.4.4-dev",
-  "_shasum": "98618a516884405d2bafa29df2a1ba030c1550f8",
-  "_from": "../../../var/folders/b9/bw58nn4x1n7c0p6cffqvfb_80000gn/T/npm-546-694db0a6/1419439823882-0.4201883701607585/0c6d8a6d8dfca8bae751fe1fc843d0e6363d9929",
+  "_shasum": "e3d95200511b8f02c6f8b45bd897a52186ae39bb",
+  "_from": "../../../var/folders/b9/bw58nn4x1n7c0p6cffqvfb_80000gn/T/npm-5697-dad1bab6/1420395223756-0.4521849087905139/0c6d8a6d8dfca8bae751fe1fc843d0e6363d9929",
   "_resolved": "git://github.com/kevinb7/escodegen.git#0c6d8a6d8dfca8bae751fe1fc843d0e6363d9929"
 }
 
@@ -32802,8 +32972,150 @@ arguments[4][55][0].apply(exports,arguments)
 },{"./source-map/source-map-consumer":120,"./source-map/source-map-generator":121,"./source-map/source-node":122,"dup":55}],116:[function(require,module,exports){
 arguments[4][56][0].apply(exports,arguments)
 },{"./util":123,"amdefine":124,"dup":56}],117:[function(require,module,exports){
-arguments[4][57][0].apply(exports,arguments)
-},{"./base64":118,"amdefine":124,"dup":57}],118:[function(require,module,exports){
+/* -*- Mode: js; js-indent-level: 2; -*- */
+/*
+ * Copyright 2011 Mozilla Foundation and contributors
+ * Licensed under the New BSD license. See LICENSE or:
+ * http://opensource.org/licenses/BSD-3-Clause
+ *
+ * Based on the Base 64 VLQ implementation in Closure Compiler:
+ * https://code.google.com/p/closure-compiler/source/browse/trunk/src/com/google/debugging/sourcemap/Base64VLQ.java
+ *
+ * Copyright 2011 The Closure Compiler Authors. All rights reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *  * Neither the name of Google Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+if (typeof define !== 'function') {
+    var define = require('amdefine')(module, require);
+}
+define(function (require, exports, module) {
+
+  var base64 = require('./base64');
+
+  // A single base 64 digit can contain 6 bits of data. For the base 64 variable
+  // length quantities we use in the source map spec, the first bit is the sign,
+  // the next four bits are the actual value, and the 6th bit is the
+  // continuation bit. The continuation bit tells us whether there are more
+  // digits in this value following this digit.
+  //
+  //   Continuation
+  //   |    Sign
+  //   |    |
+  //   V    V
+  //   101011
+
+  var VLQ_BASE_SHIFT = 5;
+
+  // binary: 100000
+  var VLQ_BASE = 1 << VLQ_BASE_SHIFT;
+
+  // binary: 011111
+  var VLQ_BASE_MASK = VLQ_BASE - 1;
+
+  // binary: 100000
+  var VLQ_CONTINUATION_BIT = VLQ_BASE;
+
+  /**
+   * Converts from a two-complement value to a value where the sign bit is
+   * is placed in the least significant bit.  For example, as decimals:
+   *   1 becomes 2 (10 binary), -1 becomes 3 (11 binary)
+   *   2 becomes 4 (100 binary), -2 becomes 5 (101 binary)
+   */
+  function toVLQSigned(aValue) {
+    return aValue < 0
+      ? ((-aValue) << 1) + 1
+      : (aValue << 1) + 0;
+  }
+
+  /**
+   * Converts to a two-complement value from a value where the sign bit is
+   * is placed in the least significant bit.  For example, as decimals:
+   *   2 (10 binary) becomes 1, 3 (11 binary) becomes -1
+   *   4 (100 binary) becomes 2, 5 (101 binary) becomes -2
+   */
+  function fromVLQSigned(aValue) {
+    var isNegative = (aValue & 1) === 1;
+    var shifted = aValue >> 1;
+    return isNegative
+      ? -shifted
+      : shifted;
+  }
+
+  /**
+   * Returns the base 64 VLQ encoded value.
+   */
+  exports.encode = function base64VLQ_encode(aValue) {
+    var encoded = "";
+    var digit;
+
+    var vlq = toVLQSigned(aValue);
+
+    do {
+      digit = vlq & VLQ_BASE_MASK;
+      vlq >>>= VLQ_BASE_SHIFT;
+      if (vlq > 0) {
+        // There are still more digits in this value, so we must make sure the
+        // continuation bit is marked.
+        digit |= VLQ_CONTINUATION_BIT;
+      }
+      encoded += base64.encode(digit);
+    } while (vlq > 0);
+
+    return encoded;
+  };
+
+  /**
+   * Decodes the next base 64 VLQ value from the given string and returns the
+   * value and the rest of the string via the out parameter.
+   */
+  exports.decode = function base64VLQ_decode(aStr, aOutParam) {
+    var i = 0;
+    var strLen = aStr.length;
+    var result = 0;
+    var shift = 0;
+    var continuation, digit;
+
+    do {
+      if (i >= strLen) {
+        throw new Error("Expected more digits in base 64 VLQ value.");
+      }
+      digit = base64.decode(aStr.charAt(i++));
+      continuation = !!(digit & VLQ_CONTINUATION_BIT);
+      digit &= VLQ_BASE_MASK;
+      result = result + (digit << shift);
+      shift += VLQ_BASE_SHIFT;
+    } while (continuation);
+
+    aOutParam.value = fromVLQSigned(result);
+    aOutParam.rest = aStr.slice(i);
+  };
+
+});
+
+},{"./base64":118,"amdefine":124}],118:[function(require,module,exports){
 arguments[4][58][0].apply(exports,arguments)
 },{"amdefine":124,"dup":58}],119:[function(require,module,exports){
 arguments[4][59][0].apply(exports,arguments)
@@ -32812,8 +33124,416 @@ arguments[4][60][0].apply(exports,arguments)
 },{"./array-set":116,"./base64-vlq":117,"./binary-search":119,"./util":123,"amdefine":124,"dup":60}],121:[function(require,module,exports){
 arguments[4][61][0].apply(exports,arguments)
 },{"./array-set":116,"./base64-vlq":117,"./util":123,"amdefine":124,"dup":61}],122:[function(require,module,exports){
-arguments[4][62][0].apply(exports,arguments)
-},{"./source-map-generator":121,"./util":123,"amdefine":124,"dup":62}],123:[function(require,module,exports){
+/* -*- Mode: js; js-indent-level: 2; -*- */
+/*
+ * Copyright 2011 Mozilla Foundation and contributors
+ * Licensed under the New BSD license. See LICENSE or:
+ * http://opensource.org/licenses/BSD-3-Clause
+ */
+if (typeof define !== 'function') {
+    var define = require('amdefine')(module, require);
+}
+define(function (require, exports, module) {
+
+  var SourceMapGenerator = require('./source-map-generator').SourceMapGenerator;
+  var util = require('./util');
+
+  // Matches a Windows-style `\r\n` newline or a `\n` newline used by all other
+  // operating systems these days (capturing the result).
+  var REGEX_NEWLINE = /(\r?\n)/;
+
+  // Matches a Windows-style newline, or any character.
+  var REGEX_CHARACTER = /\r\n|[\s\S]/g;
+
+  /**
+   * SourceNodes provide a way to abstract over interpolating/concatenating
+   * snippets of generated JavaScript source code while maintaining the line and
+   * column information associated with the original source code.
+   *
+   * @param aLine The original line number.
+   * @param aColumn The original column number.
+   * @param aSource The original source's filename.
+   * @param aChunks Optional. An array of strings which are snippets of
+   *        generated JS, or other SourceNodes.
+   * @param aName The original identifier.
+   */
+  function SourceNode(aLine, aColumn, aSource, aChunks, aName) {
+    this.children = [];
+    this.sourceContents = {};
+    this.line = aLine == null ? null : aLine;
+    this.column = aColumn == null ? null : aColumn;
+    this.source = aSource == null ? null : aSource;
+    this.name = aName == null ? null : aName;
+    if (aChunks != null) this.add(aChunks);
+  }
+
+  /**
+   * Creates a SourceNode from generated code and a SourceMapConsumer.
+   *
+   * @param aGeneratedCode The generated code
+   * @param aSourceMapConsumer The SourceMap for the generated code
+   * @param aRelativePath Optional. The path that relative sources in the
+   *        SourceMapConsumer should be relative to.
+   */
+  SourceNode.fromStringWithSourceMap =
+    function SourceNode_fromStringWithSourceMap(aGeneratedCode, aSourceMapConsumer, aRelativePath) {
+      // The SourceNode we want to fill with the generated code
+      // and the SourceMap
+      var node = new SourceNode();
+
+      // All even indices of this array are one line of the generated code,
+      // while all odd indices are the newlines between two adjacent lines
+      // (since `REGEX_NEWLINE` captures its match).
+      // Processed fragments are removed from this array, by calling `shiftNextLine`.
+      var remainingLines = aGeneratedCode.split(REGEX_NEWLINE);
+      var shiftNextLine = function() {
+        var lineContents = remainingLines.shift();
+        // The last line of a file might not have a newline.
+        var newLine = remainingLines.shift() || "";
+        return lineContents + newLine;
+      };
+
+      // We need to remember the position of "remainingLines"
+      var lastGeneratedLine = 1, lastGeneratedColumn = 0;
+
+      // The generate SourceNodes we need a code range.
+      // To extract it current and last mapping is used.
+      // Here we store the last mapping.
+      var lastMapping = null;
+
+      aSourceMapConsumer.eachMapping(function (mapping) {
+        if (lastMapping !== null) {
+          // We add the code from "lastMapping" to "mapping":
+          // First check if there is a new line in between.
+          if (lastGeneratedLine < mapping.generatedLine) {
+            var code = "";
+            // Associate first line with "lastMapping"
+            addMappingWithCode(lastMapping, shiftNextLine());
+            lastGeneratedLine++;
+            lastGeneratedColumn = 0;
+            // The remaining code is added without mapping
+          } else {
+            // There is no new line in between.
+            // Associate the code between "lastGeneratedColumn" and
+            // "mapping.generatedColumn" with "lastMapping"
+            var nextLine = remainingLines[0];
+            var code = nextLine.substr(0, mapping.generatedColumn -
+                                          lastGeneratedColumn);
+            remainingLines[0] = nextLine.substr(mapping.generatedColumn -
+                                                lastGeneratedColumn);
+            lastGeneratedColumn = mapping.generatedColumn;
+            addMappingWithCode(lastMapping, code);
+            // No more remaining code, continue
+            lastMapping = mapping;
+            return;
+          }
+        }
+        // We add the generated code until the first mapping
+        // to the SourceNode without any mapping.
+        // Each line is added as separate string.
+        while (lastGeneratedLine < mapping.generatedLine) {
+          node.add(shiftNextLine());
+          lastGeneratedLine++;
+        }
+        if (lastGeneratedColumn < mapping.generatedColumn) {
+          var nextLine = remainingLines[0];
+          node.add(nextLine.substr(0, mapping.generatedColumn));
+          remainingLines[0] = nextLine.substr(mapping.generatedColumn);
+          lastGeneratedColumn = mapping.generatedColumn;
+        }
+        lastMapping = mapping;
+      }, this);
+      // We have processed all mappings.
+      if (remainingLines.length > 0) {
+        if (lastMapping) {
+          // Associate the remaining code in the current line with "lastMapping"
+          addMappingWithCode(lastMapping, shiftNextLine());
+        }
+        // and add the remaining lines without any mapping
+        node.add(remainingLines.join(""));
+      }
+
+      // Copy sourcesContent into SourceNode
+      aSourceMapConsumer.sources.forEach(function (sourceFile) {
+        var content = aSourceMapConsumer.sourceContentFor(sourceFile);
+        if (content != null) {
+          if (aRelativePath != null) {
+            sourceFile = util.join(aRelativePath, sourceFile);
+          }
+          node.setSourceContent(sourceFile, content);
+        }
+      });
+
+      return node;
+
+      function addMappingWithCode(mapping, code) {
+        if (mapping === null || mapping.source === undefined) {
+          node.add(code);
+        } else {
+          var source = aRelativePath
+            ? util.join(aRelativePath, mapping.source)
+            : mapping.source;
+          node.add(new SourceNode(mapping.originalLine,
+                                  mapping.originalColumn,
+                                  source,
+                                  code,
+                                  mapping.name));
+        }
+      }
+    };
+
+  /**
+   * Add a chunk of generated JS to this source node.
+   *
+   * @param aChunk A string snippet of generated JS code, another instance of
+   *        SourceNode, or an array where each member is one of those things.
+   */
+  SourceNode.prototype.add = function SourceNode_add(aChunk) {
+    if (Array.isArray(aChunk)) {
+      aChunk.forEach(function (chunk) {
+        this.add(chunk);
+      }, this);
+    }
+    else if (aChunk instanceof SourceNode || typeof aChunk === "string") {
+      if (aChunk) {
+        this.children.push(aChunk);
+      }
+    }
+    else {
+      throw new TypeError(
+        "Expected a SourceNode, string, or an array of SourceNodes and strings. Got " + aChunk
+      );
+    }
+    return this;
+  };
+
+  /**
+   * Add a chunk of generated JS to the beginning of this source node.
+   *
+   * @param aChunk A string snippet of generated JS code, another instance of
+   *        SourceNode, or an array where each member is one of those things.
+   */
+  SourceNode.prototype.prepend = function SourceNode_prepend(aChunk) {
+    if (Array.isArray(aChunk)) {
+      for (var i = aChunk.length-1; i >= 0; i--) {
+        this.prepend(aChunk[i]);
+      }
+    }
+    else if (aChunk instanceof SourceNode || typeof aChunk === "string") {
+      this.children.unshift(aChunk);
+    }
+    else {
+      throw new TypeError(
+        "Expected a SourceNode, string, or an array of SourceNodes and strings. Got " + aChunk
+      );
+    }
+    return this;
+  };
+
+  /**
+   * Walk over the tree of JS snippets in this node and its children. The
+   * walking function is called once for each snippet of JS and is passed that
+   * snippet and the its original associated source's line/column location.
+   *
+   * @param aFn The traversal function.
+   */
+  SourceNode.prototype.walk = function SourceNode_walk(aFn) {
+    var chunk;
+    for (var i = 0, len = this.children.length; i < len; i++) {
+      chunk = this.children[i];
+      if (chunk instanceof SourceNode) {
+        chunk.walk(aFn);
+      }
+      else {
+        if (chunk !== '') {
+          aFn(chunk, { source: this.source,
+                       line: this.line,
+                       column: this.column,
+                       name: this.name });
+        }
+      }
+    }
+  };
+
+  /**
+   * Like `String.prototype.join` except for SourceNodes. Inserts `aStr` between
+   * each of `this.children`.
+   *
+   * @param aSep The separator.
+   */
+  SourceNode.prototype.join = function SourceNode_join(aSep) {
+    var newChildren;
+    var i;
+    var len = this.children.length;
+    if (len > 0) {
+      newChildren = [];
+      for (i = 0; i < len-1; i++) {
+        newChildren.push(this.children[i]);
+        newChildren.push(aSep);
+      }
+      newChildren.push(this.children[i]);
+      this.children = newChildren;
+    }
+    return this;
+  };
+
+  /**
+   * Call String.prototype.replace on the very right-most source snippet. Useful
+   * for trimming whitespace from the end of a source node, etc.
+   *
+   * @param aPattern The pattern to replace.
+   * @param aReplacement The thing to replace the pattern with.
+   */
+  SourceNode.prototype.replaceRight = function SourceNode_replaceRight(aPattern, aReplacement) {
+    var lastChild = this.children[this.children.length - 1];
+    if (lastChild instanceof SourceNode) {
+      lastChild.replaceRight(aPattern, aReplacement);
+    }
+    else if (typeof lastChild === 'string') {
+      this.children[this.children.length - 1] = lastChild.replace(aPattern, aReplacement);
+    }
+    else {
+      this.children.push(''.replace(aPattern, aReplacement));
+    }
+    return this;
+  };
+
+  /**
+   * Set the source content for a source file. This will be added to the SourceMapGenerator
+   * in the sourcesContent field.
+   *
+   * @param aSourceFile The filename of the source file
+   * @param aSourceContent The content of the source file
+   */
+  SourceNode.prototype.setSourceContent =
+    function SourceNode_setSourceContent(aSourceFile, aSourceContent) {
+      this.sourceContents[util.toSetString(aSourceFile)] = aSourceContent;
+    };
+
+  /**
+   * Walk over the tree of SourceNodes. The walking function is called for each
+   * source file content and is passed the filename and source content.
+   *
+   * @param aFn The traversal function.
+   */
+  SourceNode.prototype.walkSourceContents =
+    function SourceNode_walkSourceContents(aFn) {
+      for (var i = 0, len = this.children.length; i < len; i++) {
+        if (this.children[i] instanceof SourceNode) {
+          this.children[i].walkSourceContents(aFn);
+        }
+      }
+
+      var sources = Object.keys(this.sourceContents);
+      for (var i = 0, len = sources.length; i < len; i++) {
+        aFn(util.fromSetString(sources[i]), this.sourceContents[sources[i]]);
+      }
+    };
+
+  /**
+   * Return the string representation of this source node. Walks over the tree
+   * and concatenates all the various snippets together to one string.
+   */
+  SourceNode.prototype.toString = function SourceNode_toString() {
+    var str = "";
+    this.walk(function (chunk) {
+      str += chunk;
+    });
+    return str;
+  };
+
+  /**
+   * Returns the string representation of this source node along with a source
+   * map.
+   */
+  SourceNode.prototype.toStringWithSourceMap = function SourceNode_toStringWithSourceMap(aArgs) {
+    var generated = {
+      code: "",
+      line: 1,
+      column: 0
+    };
+    var map = new SourceMapGenerator(aArgs);
+    var sourceMappingActive = false;
+    var lastOriginalSource = null;
+    var lastOriginalLine = null;
+    var lastOriginalColumn = null;
+    var lastOriginalName = null;
+    this.walk(function (chunk, original) {
+      generated.code += chunk;
+      if (original.source !== null
+          && original.line !== null
+          && original.column !== null) {
+        if(lastOriginalSource !== original.source
+           || lastOriginalLine !== original.line
+           || lastOriginalColumn !== original.column
+           || lastOriginalName !== original.name) {
+          map.addMapping({
+            source: original.source,
+            original: {
+              line: original.line,
+              column: original.column
+            },
+            generated: {
+              line: generated.line,
+              column: generated.column
+            },
+            name: original.name
+          });
+        }
+        lastOriginalSource = original.source;
+        lastOriginalLine = original.line;
+        lastOriginalColumn = original.column;
+        lastOriginalName = original.name;
+        sourceMappingActive = true;
+      } else if (sourceMappingActive) {
+        map.addMapping({
+          generated: {
+            line: generated.line,
+            column: generated.column
+          }
+        });
+        lastOriginalSource = null;
+        sourceMappingActive = false;
+      }
+      chunk.match(REGEX_CHARACTER).forEach(function (ch, idx, array) {
+        if (REGEX_NEWLINE.test(ch)) {
+          generated.line++;
+          generated.column = 0;
+          // Mappings end at eol
+          if (idx + 1 === array.length) {
+            lastOriginalSource = null;
+            sourceMappingActive = false;
+          } else if (sourceMappingActive) {
+            map.addMapping({
+              source: original.source,
+              original: {
+                line: original.line,
+                column: original.column
+              },
+              generated: {
+                line: generated.line,
+                column: generated.column
+              },
+              name: original.name
+            });
+          }
+        } else {
+          generated.column += ch.length;
+        }
+      });
+    });
+    this.walkSourceContents(function (sourceFile, sourceContent) {
+      map.setSourceContent(sourceFile, sourceContent);
+    });
+
+    return { code: generated.code, map: map };
+  };
+
+  exports.SourceNode = SourceNode;
+
+});
+
+},{"./source-map-generator":121,"./util":123,"amdefine":124}],123:[function(require,module,exports){
 arguments[4][63][0].apply(exports,arguments)
 },{"amdefine":124,"dup":63}],124:[function(require,module,exports){
 (function (process,__filename){
@@ -34283,49 +35003,60 @@ var estraverse = require("estraverse");
 var regenerator = require("regenerator");
 
 // TODO: inject at least one yield statement into an empty bodyList so that we can step into empty functions
-// TODO: rewrite without using with, instead rewrite local vars as scope$1.varName
 
-function getScopeVariables(node, parent, context) {
-  var locals = parent.__$escope$__.variables.filter(function (variable) {
-    // don't include context variables in the scopes
-    if (node.type === "Program" && context.hasOwnProperty(variable.name)) {
-      return false;
+var rewriteVariableDeclarations = function (bodyList, scopeStack, context) {
+  var nodes = [];
+  bodyList.forEachNode(function (listNode) {
+    if (listNode.value.type === "VariableDeclaration") {
+      nodes.push(listNode);
     }
+  });
 
-    // function declarations like "function Point() {}"
-    // don't work properly when defining methods on the
-    // prototoype so filter those out as well
-    var isFunctionDeclaration = variable.defs.some(function (def) {
-      return def.type === "FunctionName" && def.node.type === "FunctionDeclaration";
+  nodes.forEach(function (node) {
+    var replacements = [];
+
+    node.value.declarations.forEach(function (decl) {
+      if (decl.init !== null) {
+        var name, ae, me, stmt, i, scope;
+        var scopes = scopeStack.items;
+
+        for (i = scopes.length - 1; i > -1; i--) {
+          scope = scopes[i];
+          name = decl.id.name;
+          if (scope.hasOwnProperty(name)) {
+            me = b.memberExpression(b.identifier("$scope$" + i), b.identifier(name), false // "computed" boolean
+            );
+
+            ae = b.assignmentExpression("=", me, decl.init);
+
+            stmt = b.expressionStatement(ae);
+            stmt.loc = decl.loc; // TODO: make "loc"ation faking more robust
+            replacements.push(stmt);
+            return;
+          }
+        }
+
+        if (context.hasOwnProperty(name)) {
+          me = b.memberExpression(b.identifier("context"), b.identifier(name), false // "computed" boolean
+          );
+
+          ae = b.assignmentExpression("=", me, decl.init);
+
+          stmt = b.expressionStatement(ae);
+          stmt.loc = decl.loc; // TODO: make "loc"ation faking more robust
+          replacements.push(stmt);
+        }
+      }
     });
 
-    if (isFunctionDeclaration) {
-      return false;
+    if (replacements.length > 0) {
+      bodyList.replaceNodeWithValues(node, replacements);
     }
-
-    // filter out "arguments"
-    // TODO: make this optional, advanced users may want to inspect this
-    if (variable.name === "arguments") {
-      return false;
-    }
-
-    return true;
   });
-
-  var closure = parent.__$escope$__.through.filter(function (ref) {
-    return ref.identifier.name !== undefined;
-  }).map(function (ref) {
-    return ref.identifier.name;
-  });
-
-  return {
-    locals: locals,
-    closure: closure
-  };
-}
+};
 
 // insert yield { line: <line_number> } in between each line
-function insertYields(bodyList) {
+var insertYields = function (bodyList) {
   bodyList.forEachNode(function (listNode) {
     var astNode = listNode.value;
     var loc = astNode.loc;
@@ -34341,7 +35072,7 @@ function insertYields(bodyList) {
 
     bodyList.insertBeforeNode(listNode, yieldExpression);
   });
-}
+};
 
 
 function stringForId(node) {
@@ -34365,7 +35096,8 @@ function stringForId(node) {
   return name;
 }
 
-function getNameForFunctionExpression(node) {
+
+var getNameForFunctionExpression = function (node) {
   var name = "";
   if (node._parent.type === "Property") {
     name = node._parent.key.name;
@@ -34380,114 +35112,8 @@ function getNameForFunctionExpression(node) {
     name = "<anonymous>"; // TODO: test anonymous callbacks
   }
   return name;
-}
-
-/**
- * Used by the ES5 transformer to inject a "with(context) { }" statement
- * around the body of a function declaration that has been passed through
- * the regenerator.
- * 
- * @param {esprima.Syntax.FunctionDeclaration} generatorFunction
- */
-function injectWithContext(generatorFunction) {
-  var body = generatorFunction.body.body;
-  var success = false;
-  for (var i = 0; i < body.length; i++) {
-    var stmt = body[i];
-    if (stmt.type === "ReturnStatement" && stmt.argument.type === "CallExpression") {
-      var callee = stmt.argument.callee;
-      if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
-        var blockStmt = stmt.argument.arguments[0].body;
-
-        var withStmt = b.withStatement(b.identifier("context"), b.blockStatement(blockStmt.body));
-
-        blockStmt.body = [withStmt];
-        success = true;
-      }
-    }
-  }
-  if (!success) {
-    throw "unable to inject 'with' statement";
-  }
-}
-
-/**
- * Add scope statements for generator functions created with 
- * regenerator
- * 
- * @param entry
- * @param context
- */
-function addScopes(entry, context) {
-  estraverse.traverse(entry, {
-    enter: function (node, parent) {
-      node._parent = parent;
-    },
-    leave: function (node, parent) {
-      if (node.type === "ReturnStatement" && node.argument.type === "CallExpression") {
-        var callee = node.argument.callee;
-        if (callee.object.name === "regeneratorRuntime" && callee.property.name === "wrap") {
-          var properties = parent._parent.params.map(function (param) {
-            return b.property("init", b.identifier(param.name), b.identifier(param.name));
-          });
-
-          if (parent.body[0].declarations) {
-            parent.body[0].declarations.forEach(function (decl) {
-              return properties.push(b.property("init", b.identifier(decl.id.name), b.identifier("undefined")));
-            });
-          }
-
-          // filter out variables defined in the context from the local vars
-          // but only for the root scope
-          // filter out "context" to so it doesn't appear in the scope
-          // TODO: give "context" a random name so that users don't mess with it
-          var firstArg = node.argument.arguments[0];
-          if (firstArg.id.name === "entry$") {
-            properties = properties.filter(function (prop) {
-              return !context.hasOwnProperty(prop.key.name) && prop.key.name !== "context";
-            });
-          }
-
-          parent.body.unshift(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__"), b.objectExpression(properties))]));
-
-          var blockStmt = firstArg.body;
-          var withStmt = b.withStatement(b.identifier("__scope__"), b.blockStatement(blockStmt.body));
-          blockStmt.body = [withStmt];
-        }
-      }
-      delete node._parent;
-    }
-  });
-}
-
-var id = 0;
-var genId = function () {
-  id++;
 };
 
-function create__scope__(node, bodyList, scope) {
-  var properties = scope.locals.map(function (local) {
-    var isParam = local.defs.some(function (def) {
-      return def.type === "Parameter";
-    });
-    var name = local.name;
-
-    // if the variable is a parameter initialize its
-    // value with the value of the parameter
-    var value = isParam ? b.identifier(name) : b.identifier("undefined");
-    return b.property("init", b.identifier(name), value);
-  });
-
-  var id = genId();
-
-  // modify the first yield statement to include the scope
-  // as part of the value
-  var firstStatement = bodyList.first.value;
-  firstStatement.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier("__scope__" + id)));
-
-  // replace the body with "var __scope__ = { ... }; with(__scope___) { body }"
-  node.body = [b.variableDeclaration("var", [b.variableDeclarator(b.identifier("__scope__" + id), b.objectExpression(properties))]), b.withStatement(b.identifier("__scope__" + id), b.blockStatement(bodyList.toArray()))];
-}
 
 var isReference = function (node, parent) {
   // we're a property key so we aren't referenced
@@ -34509,8 +35135,7 @@ var isReference = function (node, parent) {
 };
 
 
-function transform(code, context, options) {
-  id = 0; // reset the id so we don't run out
+var transform = function (code, context, options) {
   var nativeGenerators = !!options.nativeGenerators;
 
   var ast = esprima.parse(code, { loc: true });
@@ -34522,8 +35147,6 @@ function transform(code, context, options) {
   estraverse.replace(ast, {
     enter: function (node, parent) {
       if (node.__$escope$__) {
-        console.log(node.type + " has __$escope$__");
-
         var scope = {};
         var isRoot = scopeStack.size === 0;
 
@@ -34544,7 +35167,6 @@ function transform(code, context, options) {
         var names = node.__$escope$__.variables.map(function (variable) {
           return variable.name;
         });
-        console.log(names);
       }
 
       node._parent = parent;
@@ -34567,6 +35189,11 @@ function transform(code, context, options) {
         }
       } else if (node.type === "Program" || node.type === "BlockStatement") {
         bodyList = LinkedList.fromArray(node.body);
+
+        // rewrite variable declarations first
+        rewriteVariableDeclarations(bodyList, scopeStack, context);
+
+        // insert yield statements between each statement
         insertYields(bodyList);
 
         if (bodyList.first) {
@@ -34583,55 +35210,32 @@ function transform(code, context, options) {
           }
         }
 
-        if (nativeGenerators) {
-          if (parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || node.type === "Program") {
-            scope = getScopeVariables(node, parent, context);
+        if (node.__$escope$__ || parent.__$escope$__) {
+          scope = scopeStack.pop();
+
+          // guard against empty functions
+          if (bodyList.first) {
+            bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier("$scope$" + scopeStack.size)));
+
+            properties = Object.keys(scope).map(function (name) {
+              var type = scope[name].type;
+              var value = type === "Parameter" ? name : "undefined";
+              return b.property("init", b.identifier(name), b.identifier(value));
+            });
+
+            bodyList.push_front(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("$scope$" + scopeStack.size), // zero index
+            b.objectExpression(properties))]));
           }
-
-          if (node.__$escope$__ || parent.__$escope$__) {
-            scope = scopeStack.pop();
-
-            // guard against empty functions
-            if (bodyList.first) {
-              bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier("$scope$" + scopeStack.size)));
-
-              properties = Object.keys(scope).map(function (name) {
-                var type = scope[name].type;
-                var value = type === "Parameter" ? name : "undefined";
-                return b.property("init", b.identifier(name), b.identifier(value));
-              });
-
-              bodyList.push_front(b.variableDeclaration("var", [b.variableDeclarator(b.identifier("$scope$" + scopeStack.size), // zero index
-              b.objectExpression(properties))]));
-            }
-          }
-
-          // if there are any variables defined in this scope
-          // create a __scope__ dictionary containing their values
-          // and include in the first yield
-
-          //if (scope && scope.locals.length > 0 && bodyList.first) {
-          //    create__scope__(node, bodyList, scope);
-          //} else {
-          node.body = bodyList.toArray();
-          //}
-        } else {
-          // if the function isn't empty create a "scope" property
-          // to the first yield statement
-          if (bodyList.first !== null) {
-            var firstStatement = bodyList.first.value;
-            firstStatement.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier("__scope__")));
-          }
-
-          node.body = bodyList.toArray();
         }
+
+        node.body = bodyList.toArray();
       } else if (node.type === "CallExpression" || node.type === "NewExpression") {
         if (node.callee.type === "Identifier" || node.callee.type === "MemberExpression" || node.callee.type === "YieldExpression") {
           var gen = node;
 
           // if "new" then build a call to "__instantiate__"
           if (node.type === "NewExpression") {
-            var name = node.callee.type === "Identifier" ? node.callee.name : null;
+            var name = stringForId(node.callee);
             node.arguments.unshift(b.literal(name)); // constructor name
             node.arguments.unshift(node.callee); // constructor
             gen = b.callExpression(b.memberExpression(b.identifier("context"), b.identifier("__instantiate__"), false // computed
@@ -34654,13 +35258,8 @@ function transform(code, context, options) {
             properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
           }
 
-          // TODO: add test case for "var x = foo()" stepAgain
-          // TODO: add test case for "var x = foo(), y = foo()" stepAgain on last decl
           if (parent.type === "VariableDeclarator" && parent._parent.type === "VariableDeclaration" && parent._parent._parent.type !== "ForStatement") {
-            var decls = parent._parent.declarations;
-            if (node === decls[decls.length - 1].init) {
-              properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-            }
+            properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
           }
 
           return b.yieldExpression(b.objectExpression(properties));
@@ -34689,13 +35288,13 @@ function transform(code, context, options) {
             }
           }
         }
-      } else if (node.type === "VariableDeclaration") {
-        if (node.declarations.length === 1) {
-          var decl = node.declarations[0];
-          if (decl.init !== null) {
-            scopes = scopeStack.items;
+      } else if (node.type === "VariableDeclaration" && parent.type === "ForStatement") {
+        var replacements = [];
 
-            var ae, me;
+        node.declarations.forEach(function (decl) {
+          if (decl.init !== null) {
+            var ae, me, i;
+            var scopes = scopeStack.items;
 
             for (i = scopes.length - 1; i > -1; i--) {
               scope = scopes[i];
@@ -34703,65 +35302,53 @@ function transform(code, context, options) {
               if (scope.hasOwnProperty(name)) {
                 me = b.memberExpression(b.identifier("$scope$" + i), b.identifier(name), false // "computed" boolean
                 );
-
                 ae = b.assignmentExpression("=", me, decl.init);
-
-                if (parent.type !== "ForStatement") {
-                  stmt = b.expressionStatement(ae);
-                  stmt.loc = decl.loc; // TODO: make "loc"ation faking more robust
-                  return stmt;
-                } else {
-                  ae.loc = decl.loc;
-                  return ae;
-                }
+                ae.loc = decl.loc;
+                replacements.push(ae);
+                return;
               }
             }
-
             if (context.hasOwnProperty(name)) {
               me = b.memberExpression(b.identifier("context"), b.identifier(name), false // "computed" boolean
               );
-
               ae = b.assignmentExpression("=", me, decl.init);
-
-              if (parent.type !== "ForStatement") {
-                stmt = b.expressionStatement(ae);
-                stmt.loc = decl.loc; // TODO: make "loc"ation faking more robust
-                return stmt;
-              } else {
-                ae.loc = decl.loc;
-                return ae;
-              }
+              ae.loc = decl.loc;
+              replacements.push(ae);
             }
           }
+        });
+
+        if (replacements.length === 1) {
+          return replacements[0];
+        } else if (replacements.length > 1) {
+          return b.sequenceExpression(replacements);
         }
       }
 
       // clean up
-      //delete node._parent;
+      delete node._parent;
     }
   });
 
-  if (nativeGenerators) {
-    // TODO: obfuscate "context" more
-    var debugCode = "return function*(context){\n" + escodegen.generate(ast) + "\n}";
+  var debugCode;
 
-    console.log(debugCode);
+  // TODO: obfuscate "context" more
+  if (nativeGenerators) {
+    debugCode = "return function*(context){\n" + escodegen.generate(ast) + "\n}";
 
     return new Function(debugCode);
   } else {
+    // regenerator likes functions so wrap the code in a function
     var entry = b.functionDeclaration(b.identifier("entry"), [b.identifier("context")], b.blockStatement(ast.body), true, // generator
     false // expression
     );
 
     regenerator.transform(entry);
-    addScopes(entry, context);
-    injectWithContext(entry);
+    debugCode = escodegen.generate(entry);
 
-    code = escodegen.generate(entry);
-    console.log(code);
-    return new Function(code + "\n" + "return entry;");
+    return new Function(debugCode + "\n" + "return entry;");
   }
-}
+};
 
 module.exports = transform;
 
