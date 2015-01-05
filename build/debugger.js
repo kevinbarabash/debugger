@@ -35217,6 +35217,30 @@ var yieldObject = function (obj, loc) {
 };
 
 
+var wrapExpression = function (expr, nextExpr) {
+  var obj = {
+    value: expr
+  };
+  if (nextExpr) {
+    obj.line = nextExpr.loc.start.line;
+  } else {
+    obj.stepAgain = true;
+  }
+  return b.yieldExpression(objectExpression(obj));
+};
+
+
+var wrapSequenceExpressions = function (seqNode, nextExpr) {
+  var replacements = [];
+  var expressions = seqNode.expressions;
+  for (var i = 0; i < expressions.length - 1; i++) {
+    replacements.push(wrapExpression(expressions[i], expressions[i + 1]));
+  }
+  replacements.push(expressions[i], nextExpr);
+  return replacements;
+};
+
+
 var addScopeDict = function (bodyList) {
   var scopeName = "$scope$" + (scopeStack.size - 1);
   var scope = scopeStack.peek();
@@ -35374,8 +35398,6 @@ var transform = function (code, _context, options) {
           }
         }
       } else if (node.type === "ForStatement") {
-        var i;
-
         // TODO: if the body of a ForStatement isn't a BlockStatement, convert it to one
         // TODO: write tests with programs that don't use a BlockStatement with a for loop
 
@@ -35385,57 +35407,24 @@ var transform = function (code, _context, options) {
 
         // TODO: come up with a set of tests that check all of these cases
         if (node.init.type === "SequenceExpression") {
-          replacements = [];
-          for (i = 0; i < node.init.expressions.length - 1; i++) {
-            obj = {
-              value: node.init.expressions[i],
-              line: node.init.expressions[i + 1].loc.start.line
-            };
-            replacements.push(objectExpression(obj));
-          }
-          obj = {
-            value: node.init.expressions[i],
-            line: node.test.loc.start.line // TODO: check if test is null and set line to be after body
-          };
-          replacements.push(objectExpression(obj));
-          node.init.expressions = replacements;
+          node.init.epxressions = wrapSequenceExpressions(node.init, node.test);
         } else {
-          obj = {
-            value: node.init,
-            line: node.test.loc.start.line
-          };
-          node.init = b.yieldExpression(objectExpression(obj));
+          node.init = wrapExpression(node.init, node.test);
         }
 
         if (node.update.type === "SequenceExpression") {
-          replacements = [];
-          for (i = 0; i < node.update.expressions.length - 1; i++) {
-            obj = {
-              value: node.update.expressions[i],
-              line: node.update.expressions[i + 1].loc.start.line
-            };
-            replacements.push(objectExpression(obj));
-          }
-          obj = {
-            value: node.update.expressions[i],
-            line: node.test.loc.start.line // TODO: check if test is null and set line to be after body
-          };
-          replacements.push(objectExpression(obj));
-          node.update.expressions = replacements;
+          node.update.expressions = wrapSequenceExpressions(node.update, node.test);
         } else {
-          obj = {
-            value: node.update,
-            line: node.test.loc.start.line
-          };
-          node.update = b.yieldExpression(objectExpression(obj));
+          node.update = wrapExpression(node.update, node.test);
         }
 
         if (node.test !== null) {
-          obj = {
-            value: node.test,
-            stepAgain: true
-          };
-          node.test = b.yieldExpression(objectExpression(obj));
+          node.test = wrapExpression(node.test);
+        }
+      } else if (node.type === "WhileStatement" || node.type === "DoWhileStatement") {
+        node.body.body.push(yieldObject({ line: node.test.loc.start.line }));
+        if (node.test !== null) {
+          node.test = wrapExpression(node.test);
         }
       } else if (node.type === "VariableDeclaration" && parent.type === "ForStatement") {
         replacements = [];
