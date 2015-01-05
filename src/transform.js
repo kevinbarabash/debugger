@@ -8,6 +8,15 @@ var estraverse = require("estraverse");
 var regenerator = require("regenerator");
 
 
+var assignmentStatement = function(left, right, loc) {
+    var stmt = b.expressionStatement(
+        b.assignmentExpression("=", left, right)
+    );
+    stmt.loc = loc;
+    return stmt;
+};
+
+
 var rewriteVariableDeclarations = function(bodyList, scopeStack, context) {
     var nodes = [];
     bodyList.forEachNode(listNode => {
@@ -18,16 +27,14 @@ var rewriteVariableDeclarations = function(bodyList, scopeStack, context) {
 
     nodes.forEach(node => {
         var replacements = [];
-        
+
         node.value.declarations.forEach(decl => {
             if (decl.init !== null) {
                 var scopeName = getScopeName(scopeStack, context, decl.id.name);
                 if (scopeName) {
-                    var me = memberExpression(scopeName, decl.id.name);
-                    var ae = b.assignmentExpression("=", me, decl.init);
-                    var stmt = b.expressionStatement(ae);
-                    stmt.loc = decl.loc;    // TODO: make "loc"ation faking more robust
-                    replacements.push(stmt);
+                    replacements.push(assignmentStatement(
+                        memberExpression(scopeName, decl.id.name), decl.init, decl.loc
+                    ));
                 }
             }
         });
@@ -36,37 +43,39 @@ var rewriteVariableDeclarations = function(bodyList, scopeStack, context) {
             bodyList.replaceNodeWithValues(node, replacements);
         }
     });
-    
 };
 
-// insert yield { line: <line_number> } in between each line
+
+var isBreakpoint = function(node) {
+    if (node.type === "ExpressionStatement") {
+        var expr = node.expression;
+        if (expr.type === "YieldExpression") {
+            var arg = expr.argument;
+            if (arg.type === "ObjectExpression") {
+                return arg.properties.some(prop => {
+                    return prop.key.name === "breakpoint";
+                });
+            }
+        }
+    }
+    return false;
+};
+
+
 var insertYields = function(bodyList) {
     bodyList.forEachNode(listNode => {
-
         var astNode = listNode.value;
-        var loc = astNode.loc;
-        
-        // astNodes without a valid loc are ones that have been inserted
-        // and are the result of a yield expression replacing a debugger statement
-        // TODO: find a better way to handle debugger statements
-        if (loc === null) {
+        if (isBreakpoint(astNode)) {
             return;
         }
- 
-        var yieldExpression = b.expressionStatement(
-            b.yieldExpression(
-                b.objectExpression([
-                    b.property("init", b.identifier("line"), b.literal(loc.start.line))
-                ])
-            )
-        );
 
-        bodyList.insertBeforeNode(listNode, yieldExpression);
+        var line = astNode.loc.start.line;
+        bodyList.insertBeforeNode(listNode, yieldObject({ line: line }));
     });
 };
 
 
-function stringForId(node) {
+var stringForId = function(node) {
     var name = "";
     if (node.type === "Identifier") {
         if (node.name.indexOf("$scope$") === -1) {
@@ -85,7 +94,7 @@ function stringForId(node) {
         throw "can't call stringForId on nodes of type '" + node.type + "'";
     }
     return name;
-}
+};
 
 
 var getNameForFunctionExpression = function(node) {
@@ -125,6 +134,7 @@ var isReference = function(node, parent) {
     return !isMemberExpression || isComputedProperty || isObject;
 };
 
+
 var assignmentForDeclarator = function(scopeName, decl) {
     var ae = b.assignmentExpression(
         "=", memberExpression(scopeName, decl.id.name), decl.init);
@@ -144,7 +154,7 @@ var getScopeName = function(scopeStack, context, name) {
         }
     }
     if (context.hasOwnProperty(name)) {
-        return "context";
+        return contextName;
     }
 };
 
@@ -154,7 +164,7 @@ var callInstantiate = function(node) {
     node.arguments.unshift(b.literal(name));    // constructor name
     node.arguments.unshift(node.callee);        // constructor
     return b.callExpression(
-        memberExpression("context", "__instantiate__"), node.arguments
+        memberExpression(contextName, "__instantiate__"), node.arguments
     );
 };
 
@@ -176,6 +186,23 @@ var memberExpression = function(objName, propName) {
         b.identifier(propName),
         false
     );
+};
+
+
+var objectExpression = function(obj) {
+    return b.objectExpression(Object.keys(obj).map(key => {
+        var val = obj[key];
+        if (typeof val === "object") {
+            return b.property("init", b.identifier(key), val);
+        } else {
+            return b.property("init", b.identifier(key), b.literal(obj[key]));
+        }
+    }));
+};
+
+
+var yieldObject = function(obj) {
+    return b.expressionStatement(b.yieldExpression(objectExpression(obj)));
 };
 
 
@@ -208,14 +235,50 @@ var getFunctionName = function(node, parent) {
 };
 
 
-var transform = function(code, context, options) {
-    var nativeGenerators = !!options.nativeGenerators;
+var compile = function(ast, options) {
+    var debugCode, generator;
+    
+    if (options.nativeGenerators) {
+        debugCode = "return function*(" + contextName + "){\n" + escodegen.generate(ast) + "\n}";
 
-    var ast = esprima.parse(code, { loc: true });
-    var scopeManager = escope.analyze(ast);
+        generator = new Function(debugCode);
+    } else {
+        // regenerator likes functions so wrap the code in a function
+        var entry = b.functionDeclaration(
+            b.identifier("entry"),
+            [b.identifier(contextName)],
+            b.blockStatement(ast.body),
+            true,   // generator 
+            false   // expression
+        );
+
+        regenerator.transform(entry);
+        debugCode = escodegen.generate(entry);
+
+        generator = new Function(debugCode + "\n" + "return entry;");
+    }
+    
+    if (options.debug) {
+        console.log(debugCode);
+    }
+    
+    return generator;
+};
+
+
+// randomized global
+var contextName;
+
+
+var transform = function(code, context, options) {
+    var ast, scopeManager, scopeStack;
+    
+    ast = esprima.parse(code, { loc: true });
+    scopeManager = escope.analyze(ast);
     scopeManager.attach();
     
-    var scopeStack = new Stack();
+    scopeStack = new Stack();
+    contextName = "context" + Date.now();
 
     estraverse.replace(ast, {
         enter: (node, parent) => {
@@ -242,25 +305,20 @@ var transform = function(code, context, options) {
             node._parent = parent;
         },
         leave: (node, parent) => {
-            var line, bodyList, properties, stmt;
-            
             if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
-                node.generator = true;  // convert all user defined functions to generators
+                // convert all user defined functions to generators
+                node.generator = true;
+                
                 if (node.type === "FunctionDeclaration") {
                     scopeName = "$scope$" + (scopeStack.size - 1);
-                    stmt = b.expressionStatement(
-                        b.assignmentExpression(
-                            "=",
-                            memberExpression(scopeName, node.id.name),
-                            b.functionExpression(null, node.params, node.body, true, false)
-                        )
+                    return assignmentStatement(
+                        memberExpression(scopeName, node.id.name),
+                        b.functionExpression(null, node.params, node.body, true, false),
+                        node.loc
                     );
-
-                    stmt.loc = node.loc;
-                    return stmt;
                 }
             } else if (node.type === "Program" || node.type === "BlockStatement") {
-                bodyList = LinkedList.fromArray(node.body);
+                var bodyList = LinkedList.fromArray(node.body);
                 
                 // rewrite variable declarations first
                 rewriteVariableDeclarations(bodyList, scopeStack, context);
@@ -269,19 +327,13 @@ var transform = function(code, context, options) {
                 insertYields(bodyList);
 
                 if (bodyList.first === null) {
-                    var yieldExpression = b.expressionStatement(
-                        b.yieldExpression(
-                            b.objectExpression([
-                                b.property("init", b.identifier("line"), b.literal(node.loc.end.line))
-                            ])
-                        )
-                    );
-
-                    bodyList.push_back(yieldExpression);
+                    bodyList.push_back(yieldObject({ line: node.loc.end.line }));
                 }
 
                 var functionName = getFunctionName(node, parent);
                 if (functionName) {
+                    // modify the first yield statement so that the object
+                    // returned contains the function's name
                     bodyList.first.value.expression.argument.properties.push(
                         b.property("init", b.identifier("name"), b.literal(functionName))
                     );
@@ -292,39 +344,34 @@ var transform = function(code, context, options) {
 
                 node.body = bodyList.toArray();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                var gen = node.type === "NewExpression" ? callInstantiate(node) : node;
-                line = node.loc.start.line;
-                
-                properties = [
-                    b.property("init", b.identifier("gen"), gen),
-                    b.property("init", b.identifier("line"), b.literal(line))
-                    // TODO: this is the current line, but we should actually be passing next node's line
-                    // TODO: handle this in when the ForStatement is parsed where we have more information
-                ];
+                var obj = {
+                    gen: node.type === "NewExpression" ? callInstantiate(node) : node,
+                    line: node.loc.start.line
+                };
+
+                // TODO: obj.line is the current line, but we should actually be passing next node's line
+                // TODO: handle this in when the ForStatement is parsed where we have more information
 
                 // We add an extra property to differentiate function calls
                 // that are followed by a statment from those that aren't.
                 // The former requires taking an extra _step() to get the
                 // next line.
                 if (parent._parent.type === "ExpressionStatement" || parent.type === "ExpressionStatement") {
-                    properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
+                    obj.stepAgain = true;
                 }
 
-                if (parent.type === "VariableDeclarator" && parent._parent.type === "VariableDeclaration" && parent._parent._parent.type !== "ForStatement") {
-                    properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
+                // TODO: should also check to make sure that it's not part another kind of loop
+                // this function call is part of a variable declaration but not part of a "ForStatement"
+                if (parent.type === "VariableDeclarator" && parent._parent._parent.type !== "ForStatement") {
+                    obj.stepAgain = true;
                 }
 
-                return b.yieldExpression(b.objectExpression(properties));
+                return b.yieldExpression(objectExpression(obj));
             } else if (node.type === "DebuggerStatement") {
-                line = node.loc.start.line;
-                return b.expressionStatement(
-                    b.yieldExpression(
-                        b.objectExpression([
-                            b.property("init", b.identifier("line"), b.literal(line)),
-                            b.property("init", b.identifier("breakpoint"), b.literal(true))
-                        ])
-                    )
-                );
+                return yieldObject({
+                    line: node.loc.start.line,
+                    breakpoint: true
+                });
             } else if (node.type === "Identifier" && parent.type !== "FunctionExpression" && parent.type !== "FunctionDeclaration") {
                 if (isReference(node, parent)) {
                     var scopeName = getScopeName(scopeStack, context, node.name);
@@ -356,29 +403,8 @@ var transform = function(code, context, options) {
             delete node._parent;
         }
     });
-
-    var debugCode;
-
-    // TODO: obfuscate "context" more
-    if (nativeGenerators) {
-        debugCode = "return function*(context){\n" + escodegen.generate(ast) + "\n}";
  
-        return new Function(debugCode);
-    } else {
-        // regenerator likes functions so wrap the code in a function
-        var entry = b.functionDeclaration(
-            b.identifier("entry"), 
-            [b.identifier("context")], 
-            b.blockStatement(ast.body), 
-            true,   // generator 
-            false   // expression
-        );
-
-        regenerator.transform(entry);
-        debugCode = escodegen.generate(entry);
-
-        return new Function(debugCode + "\n" + "return entry;");
-    }
+    return compile(ast, options);
 };
 
 module.exports = transform;
