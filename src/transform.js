@@ -143,6 +143,11 @@ var assignmentForDeclarator = function(scopeName, decl) {
 };
 
 
+var hasProperty = function(context, key) {
+    return context[key] !== undefined || context.hasOwnProperty(key);
+};
+
+
 var getScopeName = function(scopeStack, context, name) {
     var scopes = scopeStack.items;
 
@@ -153,7 +158,7 @@ var getScopeName = function(scopeStack, context, name) {
             return "$scope$" + i;
         }
     }
-    if (context.hasOwnProperty(name)) {
+    if (hasProperty(context, name)) {
         return contextName;
     }
 };
@@ -288,7 +293,7 @@ var transform = function(code, context, options) {
                 
                 node.__$escope$__.variables.forEach(variable => {
                     // don't include variables from the context in the root scope
-                    if (isRoot && context.hasOwnProperty(variable.name)) {
+                    if (isRoot && hasProperty(context, variable.name)) {
                         return;
                     }
 

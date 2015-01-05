@@ -179,7 +179,8 @@ function updateCallStack(stackValues) {
     var $ul = $("<ul></ul>");
     stackValues.forEach(function (frame) {
         if (frame.name !== undefined) {
-            var $name = $("<span></span>").text(frame.name);
+            var name = frame.name.replace(/context[0-9]+./, "");
+            var $name = $("<span></span>").text(name);
             var $line = $("<span></span>").text(frame.line).css({ float: "right" });
             $ul.prepend($("<li></li>").append($name, $line));
         }
