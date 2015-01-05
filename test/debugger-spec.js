@@ -32,7 +32,7 @@
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                debug: true
+                //debug: true
             });
             _debugger.context = context;
         });

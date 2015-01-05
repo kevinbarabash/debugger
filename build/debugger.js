@@ -34467,7 +34467,7 @@ var map = regeneratorRuntime.mark(function _callee(callback, _this) {
         }
         _context.next = 5;
         return {
-          gen: callback.call(_this2, _this2[i], i, _this),
+          value: callback.call(_this2, _this2[i], i, _this),
           stepInAgain: true // non user code call site
         };
       case 5: _context.t0 = _context.sent;
@@ -34511,7 +34511,7 @@ var reduce = regeneratorRuntime.mark(function _callee2(callback, initialValue) {
         }
         _context2.next = 11;
         return {
-          gen: callback.call(_this3, result, _this3[i], i, _this3)
+          value: callback.call(_this3, result, _this3[i], i, _this3)
         };
       case 11: result = _context2.sent;
       case 12: i++;
@@ -34552,7 +34552,7 @@ var reduceRight = regeneratorRuntime.mark(function _callee3(callback, initialVal
         }
         _context3.next = 11;
         return {
-          gen: callback.call(_this4, result, _this4[i], i, _this4)
+          value: callback.call(_this4, result, _this4[i], i, _this4)
         };
       case 11: result = _context3.sent;
       case 12: i--;
@@ -34580,7 +34580,7 @@ var filter = regeneratorRuntime.mark(function _callee4(callback, _this) {
         value = _this5[i];
         _context4.next = 6;
         return {
-          gen: callback.call(_this5, value, i, _this)
+          value: callback.call(_this5, value, i, _this)
         };
       case 6: cond = _context4.sent;
         if (cond) {
@@ -34609,7 +34609,7 @@ var forEach = regeneratorRuntime.mark(function _callee5(callback, _this) {
         }
         _context5.next = 4;
         return {
-          gen: callback.call(_this6, _this6[i], i, _this)
+          value: callback.call(_this6, _this6[i], i, _this)
         };
       case 4: i++;
         _context5.next = 1;
@@ -34633,7 +34633,7 @@ var every = regeneratorRuntime.mark(function _callee6(callback, _this) {
         }
         _context6.next = 4;
         return {
-          gen: callback.call(_this7, _this7[i], i, _this)
+          value: callback.call(_this7, _this7[i], i, _this)
         };
       case 4: cond = _context6.sent;
         if (cond) {
@@ -34664,7 +34664,7 @@ var some = regeneratorRuntime.mark(function _callee7(callback, _this) {
         }
         _context7.next = 4;
         return {
-          gen: callback.call(_this8, _this8[i], i, _this)
+          value: callback.call(_this8, _this8[i], i, _this)
         };
       case 4: cond = _context7.sent;
         if (!cond) {
@@ -34780,22 +34780,27 @@ var Stepper = (function () {
   Stepper.prototype.stepIn = function () {
     var result;
     if (result = this._step()) {
-      if (result.value && result.value.hasOwnProperty("gen")) {
-        if (this._isGenerator(result.value.gen)) {
+      if (result.value && result.value.hasOwnProperty("value")) {
+        var value = result.value.value;
+
+        if (this._isGenerator(value)) {
           this.stack.push({
-            gen: result.value.gen,
+            gen: value,
             line: this.line
           });
           this.stepIn();
           return "stepIn";
         } else {
-          this._retVal = result.value.gen;
+          this._retVal = value;
           if (result.value.stepAgain) {
-            result = this._step();
+            return this.stepIn();
           }
         }
       }
+
       if (result.done) {
+        // when the generator is done, result.value contains the return value
+        // of the generator function
         this._popAndStoreReturnValue(result.value);
         return "stepOut";
       }
@@ -34806,21 +34811,26 @@ var Stepper = (function () {
   Stepper.prototype.stepOver = function () {
     var result;
     if (result = this._step()) {
-      if (result.value && result.value.hasOwnProperty("gen")) {
-        if (this._isGenerator(result.value.gen)) {
-          this._runScope(result.value.gen);
+      if (result.value && result.value.hasOwnProperty("value")) {
+        var value = result.value.value;
+
+        if (this._isGenerator(value)) {
+          this._runScope(value);
           if (result.value.stepAgain) {
             this.stepOver();
           }
           return "stepOver";
         } else {
-          this._retVal = result.value.gen;
+          this._retVal = value;
           if (result.value.stepAgain) {
-            result = this._step();
+            return this.stepOver();
           }
         }
       }
+
       if (result.done) {
+        // when the generator is done, result.value contains the return value
+        // of the generator function
         this._popAndStoreReturnValue(result.value);
         return "stepOut";
       }
@@ -34832,15 +34842,20 @@ var Stepper = (function () {
     var result;
     if (result = this._step()) {
       while (!result.done) {
-        if (result.value.hasOwnProperty("gen")) {
-          if (this._isGenerator(result.value.gen)) {
-            this._runScope(result.value.gen);
+        if (result.value.hasOwnProperty("value")) {
+          var value = result.value.value;
+
+          if (this._isGenerator(value)) {
+            this._runScope(value);
           } else {
-            this._retVal = result.value.gen;
+            this._retVal = value;
           }
         }
         result = this._step();
       }
+
+      // when the generator is done, result.value contains the return value
+      // of the generator function
       this._popAndStoreReturnValue(result.value);
       return "stepOut";
     }
@@ -34896,18 +34911,11 @@ var Stepper = (function () {
     // TODO: make this list static
 
     if (result.value) {
-      this._retVal = result.value.value;
-
       frameProps.forEach(function (prop) {
         if (result.value.hasOwnProperty(prop)) {
           frame[prop] = result.value[prop];
         }
       });
-
-      // TODO: check result.value.value before assigning line
-      if (result.value.hasOwnProperty("trueLine")) {
-        frame.line = result.value.trueLine;
-      }
 
       if (result.value.breakpoint) {
         this._paused = true;
@@ -34926,16 +34934,19 @@ var Stepper = (function () {
 
     var result = this._step();
     while (!result.done) {
-      if (result.value.gen) {
-        if (this._isGenerator(result.value.gen)) {
-          this._runScope(result.value.gen);
+      var value = result.value.value;
+      if (result.value.value) {
+        if (this._isGenerator(value)) {
+          this._runScope(value);
         } else {
-          this._retVal = result.value.gen;
+          this._retVal = value;
         }
       }
       result = this._step();
     }
 
+    // when the generator is done, result.value contains the return value
+    // of the generator function
     this._popAndStoreReturnValue(result.value);
   };
 
@@ -35343,28 +35354,9 @@ var transform = function (code, _context, options) {
         node.body = bodyList.toArray();
       } else if (node.type === "CallExpression" || node.type === "NewExpression") {
         obj = {
-          gen: node.type === "NewExpression" ? callInstantiate(node) : node,
-          line: node.loc.start.line
+          value: node.type === "NewExpression" ? callInstantiate(node) : node,
+          stepAgain: true
         };
-
-        // TODO: obj.line is the current line, but we should actually be passing next node's line
-        // TODO: handle this in when the ForStatement is parsed where we have more information
-
-        // We add an extra property to differentiate function calls
-        // that are followed by a statment from those that aren't.
-        // The former requires taking an extra _step() to get the
-        // next line.
-        if (parent._parent.type === "ExpressionStatement" || parent.type === "ExpressionStatement") {
-          obj.stepAgain = true;
-        }
-
-        // TODO: should also check to make sure that it's not part another kind of loop
-        // this function call is part of a variable declaration but not part of a "ForStatement"
-        if (parent.type === "VariableDeclarator" && parent._parent._parent.type !== "ForStatement") {
-          obj.stepAgain = true;
-        } else if (parent._parent._parent.type === "ForStatement") {
-          obj.stepAgain = false;
-        }
 
         var expr = b.yieldExpression(objectExpression(obj));
         expr.loc = node.loc;
@@ -35387,21 +35379,9 @@ var transform = function (code, _context, options) {
         // TODO: if the body of a ForStatement isn't a BlockStatement, convert it to one
         // TODO: write tests with programs that don't use a BlockStatement with a for loop
 
-        node.body.body.shift(); // remove the first yield... this will be covered by the test node
-
         // loop back to the update
         // do this first because we replace node.update and it loses its location info
-        // TODO: maintain location informtion
-        var lastChild = node.body.body[node.body.body.length - 1];
-        if (lastChild.type === "ExpressionStatement" && lastChild.expression.type === "YieldExpression") {
-          lastChild.expression.argument.properties.forEach(function (prop) {
-            if (prop.key.name === "line") {
-              prop.value = b.literal(node.update.loc.start.line);
-            }
-          });
-        } else {
-          node.body.body.push(yieldObject({ line: node.update.loc.start.line }));
-        }
+        node.body.body.push(yieldObject({ line: node.update.loc.start.line }));
 
         // TODO: come up with a set of tests that check all of these cases
         if (node.init.type === "SequenceExpression") {
@@ -35424,15 +35404,6 @@ var transform = function (code, _context, options) {
             value: node.init,
             line: node.test.loc.start.line
           };
-
-          // TODO: this is brittle, need to a better way to make sure only those calls that need it get to stepAgain
-          if (obj.value.type === "AssignmentExpression" && obj.value.right.type === "YieldExpression") {
-            obj.value.right.argument.properties.forEach(function (prop) {
-              if (prop.key.name === "stepAgain") {
-                prop.value = b.literal(true);
-              }
-            });
-          }
           node.init = b.yieldExpression(objectExpression(obj));
         }
 
@@ -35456,47 +35427,14 @@ var transform = function (code, _context, options) {
             value: node.update,
             line: node.test.loc.start.line
           };
-
-          // TODO: this is brittle, need to a better way to make sure only those calls that need it get to stepAgain
-          if (obj.value.type === "AssignmentExpression" && obj.value.right.type === "YieldExpression") {
-            obj.value.right.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-          }
           node.update = b.yieldExpression(objectExpression(obj));
         }
 
-        // process the test node last because both init and update
-        // jump to test so they need to know its location
         if (node.test !== null) {
-          var trueLine, falseLine;
-
-          var body = node.body;
-          if (body.type === "BlockStatement") {
-            trueLine = body.body[0].loc.start.line;
-          } else {
-            trueLine = body.loc.start.line;
-          }
-
-          // TODO: handle cases where there isn't a statement that follows
-          // we could add a yield statement with the line set to be the
-          // end of the block statement
-          if (node._index + 1 < node._parent.body.length) {
-            falseLine = node._parent.body[node._index + 1].loc.start.line;
-          } else {
-            falseLine = 0;
-            console.error("we don't handle loops that aren't followed by a statement yet");
-          }
-
           obj = {
-            type: "branch",
             value: node.test,
-            trueLine: trueLine,
-            falseLine: falseLine
+            stepAgain: true
           };
-
-          if (obj.value.type === "YieldExpression") {
-            obj.value.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-          }
-
           node.test = b.yieldExpression(objectExpression(obj));
         }
       } else if (node.type === "VariableDeclaration" && parent.type === "ForStatement") {

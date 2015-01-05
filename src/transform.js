@@ -363,28 +363,9 @@ var transform = function(code, _context, options) {
                 node.body = bodyList.toArray();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
                 obj = {
-                    gen: node.type === "NewExpression" ? callInstantiate(node) : node,
-                    line: node.loc.start.line
+                    value: node.type === "NewExpression" ? callInstantiate(node) : node,
+                    stepAgain: true
                 };
-
-                // TODO: obj.line is the current line, but we should actually be passing next node's line
-                // TODO: handle this in when the ForStatement is parsed where we have more information
-
-                // We add an extra property to differentiate function calls
-                // that are followed by a statment from those that aren't.
-                // The former requires taking an extra _step() to get the
-                // next line.
-                if (parent._parent.type === "ExpressionStatement" || parent.type === "ExpressionStatement") {
-                    obj.stepAgain = true;
-                }
-
-                // TODO: should also check to make sure that it's not part another kind of loop
-                // this function call is part of a variable declaration but not part of a "ForStatement"
-                if (parent.type === "VariableDeclarator" && parent._parent._parent.type !== "ForStatement") {
-                    obj.stepAgain = true;
-                } else if (parent._parent._parent.type === "ForStatement") {
-                    obj.stepAgain = false;
-                }
 
                 var expr = b.yieldExpression(objectExpression(obj));
                 expr.loc = node.loc;
@@ -407,22 +388,10 @@ var transform = function(code, _context, options) {
                 
                 // TODO: if the body of a ForStatement isn't a BlockStatement, convert it to one
                 // TODO: write tests with programs that don't use a BlockStatement with a for loop
-                
-                node.body.body.shift(); // remove the first yield... this will be covered by the test node
 
                 // loop back to the update
                 // do this first because we replace node.update and it loses its location info
-                // TODO: maintain location informtion
-                var lastChild = node.body.body[node.body.body.length - 1];
-                if (lastChild.type === "ExpressionStatement" && lastChild.expression.type === "YieldExpression") {
-                    lastChild.expression.argument.properties.forEach(prop => {
-                        if (prop.key.name === "line") {
-                            prop.value = b.literal(node.update.loc.start.line);
-                        }
-                    });
-                } else {
-                    node.body.body.push(yieldObject({ line: node.update.loc.start.line }));
-                }
+                node.body.body.push(yieldObject({ line: node.update.loc.start.line }));
 
                 // TODO: come up with a set of tests that check all of these cases
                 if (node.init.type === "SequenceExpression") {
@@ -445,15 +414,6 @@ var transform = function(code, _context, options) {
                         value: node.init,
                         line: node.test.loc.start.line
                     };
-                    
-                    // TODO: this is brittle, need to a better way to make sure only those calls that need it get to stepAgain
-                    if (obj.value.type === "AssignmentExpression" && obj.value.right.type === "YieldExpression") {
-                        obj.value.right.argument.properties.forEach(prop => {
-                            if (prop.key.name === "stepAgain") {
-                                prop.value = b.literal(true);
-                            }
-                        });
-                    }
                     node.init = b.yieldExpression(objectExpression(obj));
                 }
 
@@ -477,47 +437,14 @@ var transform = function(code, _context, options) {
                         value: node.update,
                         line: node.test.loc.start.line
                     };
-                    
-                    // TODO: this is brittle, need to a better way to make sure only those calls that need it get to stepAgain
-                    if (obj.value.type === "AssignmentExpression" && obj.value.right.type === "YieldExpression") {
-                        obj.value.right.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-                    }
                     node.update = b.yieldExpression(objectExpression(obj));
                 }
 
-                // process the test node last because both init and update 
-                // jump to test so they need to know its location
                 if (node.test !== null) {
-                    var trueLine, falseLine;
-                    
-                    var body = node.body;
-                    if (body.type === "BlockStatement") {
-                        trueLine = body.body[0].loc.start.line;
-                    } else {
-                        trueLine = body.loc.start.line;
-                    }
-                    
-                    // TODO: handle cases where there isn't a statement that follows
-                    // we could add a yield statement with the line set to be the 
-                    // end of the block statement
-                    if (node._index + 1 < node._parent.body.length) {
-                        falseLine = node._parent.body[node._index + 1].loc.start.line;
-                    } else {
-                        falseLine = 0;
-                        console.error("we don't handle loops that aren't followed by a statement yet");
-                    }
-                    
                     obj = {
-                        type: "branch",
                         value: node.test,
-                        trueLine: trueLine,
-                        falseLine: falseLine
+                        stepAgain: true
                     };
-                    
-                    if (obj.value.type === "YieldExpression") {
-                        obj.value.argument.properties.push(b.property("init", b.identifier("stepAgain"), b.literal(true)));
-                    }
-
                     node.test = b.yieldExpression(objectExpression(obj));
                 }
 

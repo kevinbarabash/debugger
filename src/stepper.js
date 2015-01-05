@@ -36,22 +36,27 @@ class Stepper {
     stepIn() {
         var result;
         if (result = this._step()) {
-            if (result.value && result.value.hasOwnProperty('gen')) {
-                if (this._isGenerator(result.value.gen)) {
+            if (result.value && result.value.hasOwnProperty("value")) {
+                var value = result.value.value;
+                
+                if (this._isGenerator(value)) {
                     this.stack.push({
-                        gen: result.value.gen,
+                        gen: value,
                         line: this.line
                     });
                     this.stepIn();
                     return "stepIn";
                 } else {
-                    this._retVal = result.value.gen;
+                    this._retVal = value;
                     if (result.value.stepAgain) {
-                        result = this._step();
+                        return this.stepIn();
                     }
                 }
             }
+
             if (result.done) {
+                // when the generator is done, result.value contains the return value
+                // of the generator function
                 this._popAndStoreReturnValue(result.value);
                 return "stepOut";
             }
@@ -62,21 +67,26 @@ class Stepper {
     stepOver() {
         var result;
         if (result = this._step()) {
-            if (result.value && result.value.hasOwnProperty('gen')) {
-                if (this._isGenerator(result.value.gen)) {
-                    this._runScope(result.value.gen);
+            if (result.value && result.value.hasOwnProperty("value")) {
+                var value = result.value.value;
+
+                if (this._isGenerator(value)) {
+                    this._runScope(value);
                     if (result.value.stepAgain) {
                         this.stepOver();
                     }
                     return "stepOver";
                 } else {
-                    this._retVal = result.value.gen;
+                    this._retVal = value;
                     if (result.value.stepAgain) {
-                        result = this._step();
+                        return this.stepOver();
                     }
                 }
             }
+
             if (result.done) {
+                // when the generator is done, result.value contains the return value
+                // of the generator function
                 this._popAndStoreReturnValue(result.value);
                 return "stepOut";
             }
@@ -88,15 +98,20 @@ class Stepper {
         var result;
         if (result = this._step()) {
             while (!result.done) {
-                if (result.value.hasOwnProperty('gen')) {
-                    if (this._isGenerator(result.value.gen)) {
-                        this._runScope(result.value.gen);
+                if (result.value.hasOwnProperty("value")) {
+                    var value = result.value.value;
+
+                    if (this._isGenerator(value)) {
+                        this._runScope(value);
                     } else {
-                        this._retVal = result.value.gen;
+                        this._retVal = value;
                     }
                 }
                 result = this._step();
             }
+
+            // when the generator is done, result.value contains the return value
+            // of the generator function
             this._popAndStoreReturnValue(result.value);
             return "stepOut";
         }
@@ -168,18 +183,11 @@ class Stepper {
         // TODO: make this list static
         
         if (result.value) {
-            this._retVal = result.value.value;
-            
             frameProps.forEach(prop => {
                 if (result.value.hasOwnProperty(prop)) {
                     frame[prop] = result.value[prop];
                 }
             });
-            
-            // TODO: check result.value.value before assigning line
-            if (result.value.hasOwnProperty("trueLine")) {
-                frame.line = result.value.trueLine;
-            }
 
             if (result.value.breakpoint) {
                 this._paused = true;
@@ -198,16 +206,19 @@ class Stepper {
 
         var result = this._step();
         while (!result.done) {
-            if (result.value.gen) {
-                if (this._isGenerator(result.value.gen)) {
-                    this._runScope(result.value.gen);
+            var value = result.value.value;
+            if (result.value.value) {
+                if (this._isGenerator(value)) {
+                    this._runScope(value);
                 } else {
-                    this._retVal = result.value.gen;
+                    this._retVal = value;
                 }
             }
             result = this._step();
         }
 
+        // when the generator is done, result.value contains the return value
+        // of the generator function
         this._popAndStoreReturnValue(result.value);
     }
 

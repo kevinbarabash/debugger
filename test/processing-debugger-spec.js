@@ -33,7 +33,8 @@
             };
 
             _debugger = new ProcessingDebugger({
-                nativeGenerators: nativeGenerators
+                nativeGenerators: nativeGenerators,
+                //debug: true
             });
             _debugger.context = context;
         });

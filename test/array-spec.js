@@ -24,7 +24,8 @@
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                context: context
+                context: context,
+                //debug: true
             });
         });
 
