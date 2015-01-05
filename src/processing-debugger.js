@@ -16,6 +16,11 @@ class ProcessingDebugger extends Debugger {
         this._repeater = null;
     }
 
+    stop() {
+        super.stop();
+        this._repeater.stop();
+    }
+
     onMainStart() {
         if (this._repeater) {
             this._repeater.stop();

@@ -116,7 +116,6 @@ class Debugger {
 
     queueGenerator(gen) {
         if (!this.done) {
-            // TODO: add a test to verify that variables from the context are accessible
             var stepper = this._createStepper(gen(this.context));
             this.scheduler.addTask(stepper);
         }
@@ -147,11 +146,10 @@ class Debugger {
         }
     }
 
-    // used by tests right now to stop execution
-    // TODO: clear the scheduler's queue
     // TODO: use this in the demo to exit debug mode
     stop() {
         this.done = true;
+        this.scheduler.clear();
     }
 
     get paused() {

@@ -594,6 +594,7 @@ var Debugger = (function () {
 
   Debugger.prototype.stop = function () {
     this.done = true;
+    this.scheduler.clear();
   };
 
   Debugger.prototype.setBreakpoint = function (line) {

@@ -29,6 +29,11 @@ var ProcessingDebugger = (function (Debugger) {
 
   _extends(ProcessingDebugger, Debugger);
 
+  ProcessingDebugger.prototype.stop = function () {
+    Debugger.prototype.stop.call(this);
+    this._repeater.stop();
+  };
+
   ProcessingDebugger.prototype.onMainStart = function () {
     var _this = this;
     if (this._repeater) {

@@ -80,11 +80,17 @@
                 var check = function () {
                     if (context.x > 3) {
                         expect(context.x > 3).to.be(true);
+                        var x = context.x;
 
                         _debugger.stop();
-                        done();
+
+                        setTimeout(function () {
+                            expect(context.x).to.be(x);
+
+                            done();
+                        }, 75);
                     } else {
-                        setTimeout(check, 50);
+                        setTimeout(check, 75);
                     }
                 };
 
