@@ -38,6 +38,7 @@ class Debugger {
     // TODO: add debug messages flag
     constructor(options) {
         this.context = options.context || {};
+        this.debug = options.debug;
         this.onBreakpoint = options.onBreakpoint || function () {};
         this.onFunctionDone = options.onFunctionDone || function () {};
         this.nativeGenerators = options.nativeGenerators && canUseNativeGenerators();
@@ -99,7 +100,11 @@ class Debugger {
     }
 
     load(code) {
-        var debugFunction = transform(code, this.context, { nativeGenerators: this.nativeGenerators });
+        var options = {
+            nativeGenerators: this.nativeGenerators,
+            debug: this.debug
+        };
+        var debugFunction = transform(code, this.context, options);
         this.mainGeneratorFunction = debugFunction();
     }
 

@@ -31,7 +31,8 @@
             };
 
             _debugger = new Debugger({
-                nativeGenerators: nativeGenerators
+                nativeGenerators: nativeGenerators,
+                debug: true
             });
             _debugger.context = context;
         });
@@ -120,18 +121,23 @@
                 _debugger.load(code);
                 _debugger.start(true);
 
-                _debugger.stepOver(); // for(...)
-                _debugger.stepOver(); // numbers[0] = 0 + 1;
+                _debugger.stepOver();   // var i = 0;
+                _debugger.stepOver();   // i < 3;
+                _debugger.stepOver();   // numbers[i] = i + 1;
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(undefined);
                 expect(context.numbers[2]).to.be(undefined);
 
-                _debugger.stepOver(); // numbers[1] = 1 + 1;
+                _debugger.stepOver();   // i++; // TODO: test the value of i
+                _debugger.stepOver();   // i < 3;
+                _debugger.stepOver();   // numbers[i] = i + 1;
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(2);
                 expect(context.numbers[2]).to.be(undefined);
 
-                _debugger.stepOver(); // numbers[2] = 2 + 1;
+                _debugger.stepOver();   // i++; // TODO: test the value of i
+                _debugger.stepOver();   // i < 3;
+                _debugger.stepOver();   // numbers[i] = i + 1;
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(2);
                 expect(context.numbers[2]).to.be(3);
@@ -191,13 +197,24 @@
                     _debugger.start(true);
 
                     expect(_debugger.line).to.be(1);
-                    _debugger.stepOver();
+                    
+                    _debugger.stepOver();   // i = 0;
+                    _debugger.stepOver();   // i < 3;
                     expect(_debugger.line).to.be(2);
-                    _debugger.stepOver();
+                    _debugger.stepOver();   // rect(i * 100, 100, 50, 50);
+                    
+                    _debugger.stepOver();   // i++
+                    _debugger.stepOver();   // i < 3;
                     expect(_debugger.line).to.be(2);
-                    _debugger.stepOver();
+                    _debugger.stepOver();   // rect(i * 100, 100, 50, 50);
+
+                    _debugger.stepOver();   // i++
+                    _debugger.stepOver();   // i < 3;
                     expect(_debugger.line).to.be(2);
-                    _debugger.stepOver();
+                    _debugger.stepOver();   // rect(i * 100, 100, 50, 50);
+                    _debugger.stepOver();   // i++
+                    _debugger.stepOver();   // i < 3;
+                    _debugger.stepOver(); 
                     expect(_debugger.line).to.be(undefined);
                 });
 
@@ -319,23 +336,30 @@
                 _debugger.load("for(var i=0;i<3;i++){numbers[i]=i+1;}");
                 _debugger.start(true);
 
-                _debugger.stepOver(); // for
-                _debugger.stepOver(); // numbers[0] = 0 + 1;
+                _debugger.stepIn(); // var i = 0;
+                _debugger.stepIn(); // i < 3;
+                _debugger.stepIn(); // numbers[i] = i + 1;
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(undefined);
                 expect(context.numbers[2]).to.be(undefined);
 
-                _debugger.stepOver(); // numbers[1] = 1 + 1;
+                _debugger.stepIn(); // i++;
+                _debugger.stepIn(); // i < 3;
+                _debugger.stepIn(); // numbers[i] = i + 1;
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(2);
                 expect(context.numbers[2]).to.be(undefined);
 
-                _debugger.stepOver(); // numbers[2] = 2 + 1;
+                _debugger.stepIn(); // i++;
+                _debugger.stepIn(); // i < 3;
+                _debugger.stepIn(); // numbers[i] = i + 1;
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(2);
                 expect(context.numbers[2]).to.be(3);
-
-                _debugger.stepOver();
+                
+                _debugger.stepIn(); // i++;
+                _debugger.stepIn(); // i < 3;
+                _debugger.stepIn();
                 expect(_debugger.line).to.be(undefined);
             });
 
@@ -1432,7 +1456,6 @@
             });
 
             describe("for loops", function () {
-                // TODO: yield on init, test, and update parts of the ForExpression
                 it.skip("should step over each part of the ForStatement separately", function () {
                     var code = getFunctionBody(function () {
                         for (var i = 0; i < 2; i++) {
@@ -1490,18 +1513,18 @@
                     _debugger.stepOver();
                     expect(_debugger.line).to.be(10);  // cmp(i);
                     _debugger.stepOver();
-                    expect(_debugger.line).to.be(10);  // i = inc(i);
-                    _debugger.stepOver();
                     expect(_debugger.line).to.be(11);  // x = i + 1;
                     _debugger.stepOver();
                     expect(context.x).to.be(1);
-                    expect(_debugger.line).to.be(10);  // cmp(i);
-                    _debugger.stepOver();
                     expect(_debugger.line).to.be(10);  // i = inc(i);
+                    _debugger.stepOver();
+                    expect(_debugger.line).to.be(10);  // cmp(i);
                     _debugger.stepOver();
                     expect(_debugger.line).to.be(11);  // x = i + 1;
                     _debugger.stepOver();
                     expect(context.x).to.be(2);
+                    expect(_debugger.line).to.be(10);  // i = inc(i);
+                    _debugger.stepOver();
                 });
             });
         });
@@ -1854,6 +1877,19 @@
                 _debugger.start();
 
                 expect(_debugger.paused).to.be(false);
+            });
+        });
+        
+        describe("better loops", function () {
+            it("should do something", function () {
+                code = getFunctionBody(function () {
+                    for (var i = 0, j = 0; i * j < 10; i++, j += 1) {
+                        console.log(i + " * " + j + " = " + (i*j));
+                    }
+                    console.log("after loop");
+                });
+
+                _debugger.load(code);
             });
         });
     });

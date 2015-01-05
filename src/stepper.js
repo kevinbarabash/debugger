@@ -168,11 +168,18 @@ class Stepper {
         // TODO: make this list static
         
         if (result.value) {
+            this._retVal = result.value.value;
+            
             frameProps.forEach(prop => {
                 if (result.value.hasOwnProperty(prop)) {
                     frame[prop] = result.value[prop];
                 }
             });
+            
+            // TODO: check result.value.value before assigning line
+            if (result.value.hasOwnProperty("trueLine")) {
+                frame.line = result.value.trueLine;
+            }
 
             if (result.value.breakpoint) {
                 this._paused = true;
