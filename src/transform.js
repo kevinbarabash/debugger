@@ -17,7 +17,7 @@ var assignmentStatement = function(left, right, loc) {
 };
 
 
-var rewriteVariableDeclarations = function(bodyList, scopeStack, context) {
+var rewriteVariableDeclarations = function(bodyList) {
     var nodes = [];
     bodyList.forEachNode(listNode => {
         if (listNode.value.type === "VariableDeclaration") {
@@ -30,10 +30,11 @@ var rewriteVariableDeclarations = function(bodyList, scopeStack, context) {
 
         node.value.declarations.forEach(decl => {
             if (decl.init !== null) {
-                var scopeName = getScopeName(scopeStack, context, decl.id.name);
+                var name = decl.id.name;
+                var scopeName = scopeNameForName(name);
                 if (scopeName) {
                     replacements.push(assignmentStatement(
-                        memberExpression(scopeName, decl.id.name), decl.init, decl.loc
+                        memberExpression(scopeName, name), decl.init, decl.loc
                     ));
                 }
             }
@@ -143,22 +144,21 @@ var assignmentForDeclarator = function(scopeName, decl) {
 };
 
 
-var hasProperty = function(context, key) {
+var contextHasProperty = function(key) {
     return context[key] !== undefined || context.hasOwnProperty(key);
 };
 
 
-var getScopeName = function(scopeStack, context, name) {
+var scopeNameForName = function(name) {
     var scopes = scopeStack.items;
 
-    // TODO: store the scope names in the scope variables so they're easier to retrieve
     for (var i = scopes.length - 1; i > -1; i--) {
         var scope = scopes[i];
         if (scope.hasOwnProperty(name)) {
             return "$scope$" + i;
         }
     }
-    if (hasProperty(context, name)) {
+    if (contextHasProperty(name)) {
         return contextName;
     }
 };
@@ -211,7 +211,7 @@ var yieldObject = function(obj) {
 };
 
 
-var addScopeDict = function(scopeStack, bodyList) {
+var addScopeDict = function(bodyList) {
     var scopeName = "$scope$" + (scopeStack.size - 1);
     var scope = scopeStack.peek();
 
@@ -271,18 +271,20 @@ var compile = function(ast, options) {
 };
 
 
-// randomized global
+var context;
 var contextName;
+var scopeStack;
 
 
-var transform = function(code, context, options) {
-    var ast, scopeManager, scopeStack;
+var transform = function(code, _context, options) {
+    var ast, scopeManager;
     
     ast = esprima.parse(code, { loc: true });
     scopeManager = escope.analyze(ast);
     scopeManager.attach();
     
     scopeStack = new Stack();
+    context = _context;
     contextName = "context" + Date.now();
 
     estraverse.replace(ast, {
@@ -293,7 +295,7 @@ var transform = function(code, context, options) {
                 
                 node.__$escope$__.variables.forEach(variable => {
                     // don't include variables from the context in the root scope
-                    if (isRoot && hasProperty(context, variable.name)) {
+                    if (isRoot && contextHasProperty(variable.name)) {
                         return;
                     }
 
@@ -326,7 +328,7 @@ var transform = function(code, context, options) {
                 var bodyList = LinkedList.fromArray(node.body);
                 
                 // rewrite variable declarations first
-                rewriteVariableDeclarations(bodyList, scopeStack, context);
+                rewriteVariableDeclarations(bodyList);
                 
                 // insert yield statements between each statement 
                 insertYields(bodyList);
@@ -343,7 +345,7 @@ var transform = function(code, context, options) {
                         b.property("init", b.identifier("name"), b.literal(functionName))
                     );
 
-                    addScopeDict(scopeStack, bodyList);
+                    addScopeDict(bodyList);
                     scopeStack.pop();
                 }
 
@@ -379,7 +381,7 @@ var transform = function(code, context, options) {
                 });
             } else if (node.type === "Identifier" && parent.type !== "FunctionExpression" && parent.type !== "FunctionDeclaration") {
                 if (isReference(node, parent)) {
-                    var scopeName = getScopeName(scopeStack, context, node.name);
+                    var scopeName = scopeNameForName(node.name);
                     if (scopeName) {
                         return memberExpression(scopeName, node.name);
                     }
@@ -388,7 +390,7 @@ var transform = function(code, context, options) {
                 var replacements = [];
                 node.declarations.forEach(decl => {
                     if (decl.init !== null) {
-                        var scopeName = getScopeName(scopeStack, context, decl.id.name);
+                        var scopeName = scopeNameForName(decl.id.name);
                         if (scopeName) {
                             replacements.push(assignmentForDeclarator(scopeName, decl));
                         }
