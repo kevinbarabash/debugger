@@ -13,20 +13,19 @@ require("./runtime/runtime");
 
 var canUseNativeGenerators = function() {
     try {
-        var code = "\n" +
-            "var generator = (function* () {\n" +
-            "  yield* (function* () {\n" +
-            "    yield 5; yield 6;\n" +
-            "  }());\n" +
-            "}());\n" +
-            "\n" +
-            "var item = generator.next();\n" +
-            "var passed = item.value === 5 && item.done === false;\n" +
-            "item = generator.next();\n" +
-            "passed &= item.value === 6 && item.done === false;\n" +
-            "item = generator.next();\n" +
-            "passed &= item.value === undefined && item.done === true;\n" +
-            "return passed;";
+        var code = `var generator = (function* () {
+                        yield* (function* () {
+                            yield 5; yield 6;
+                        }());
+                    }());
+                    
+                    var item = generator.next();
+                    var passed = item.value === 5 && item.done === false;
+                    item = generator.next();
+                    passed &= item.value === 6 && item.done === false;
+                    item = generator.next();
+                    passed &= item.value === undefined && item.done === true;
+                    return passed;`;
         return Function(code)()
     } catch(e) {
         return false;
@@ -35,7 +34,18 @@ var canUseNativeGenerators = function() {
 
 class Debugger {
 
-    // TODO: add debug messages flag
+    /**
+     * Create a new Debugger instance.
+     *
+     * @param {object} options
+     * 
+     * The options parameter can include the following keys:
+     * - context: dictionary containing variables to appear as globals
+     * - onBreakpoint: callback triggered when a breakpoint is hit
+     * - onFunctionDone: callback triggered when the last function in the call
+     *   stack is done executing.  Used by the debugger UI to disable step in,
+     *   out, over controls.
+     */
     constructor(options) {
         this.context = options.context || {};
         this.debug = options.debug;
@@ -77,26 +87,14 @@ class Debugger {
         return this._context;
     }
 
+    // TODO: deprecate
+    /**
+     * Since all ES5 compliant browsers are supported this always returns true.
+     * @deprecated
+     * @returns {boolean}
+     */
     static isBrowserSupported() {
-        try {
-            var code = "\n" +
-                "var generator = (function* () {\n" +
-                "  yield* (function* () {\n" +
-                "    yield 5; yield 6;\n" +
-                "  }());\n" +
-                "}());\n" +
-                "\n" +
-                "var item = generator.next();\n" +
-                "var passed = item.value === 5 && item.done === false;\n" +
-                "item = generator.next();\n" +
-                "passed &= item.value === 6 && item.done === false;\n" +
-                "item = generator.next();\n" +
-                "passed &= item.value === undefined && item.done === true;\n" +
-                "return passed;";
-            return Function(code)()
-        } catch(e) {
-            return false;
-        }
+        return true;
     }
 
     load(code) {
@@ -161,6 +159,7 @@ class Debugger {
         return this._paused;
     }
 
+    // TODO: rename to callstack
     get currentStack() {
         var stepper = this._currentStepper;
         if (stepper !== null) {
@@ -176,6 +175,7 @@ class Debugger {
         }
     }
 
+    // TODO: rename to scope
     get currentScope() {
         var stepper = this._currentStepper;
         if (stepper) {
@@ -187,6 +187,10 @@ class Debugger {
         return null;
     }
 
+    /**
+     * @deprecated
+     * @returns {number}
+     */
     get currentLine() {
         if (this._paused) {
             return this._currentStepper.line;

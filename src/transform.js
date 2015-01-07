@@ -93,7 +93,7 @@ var stringForId = function(node) {
     } else if (node.type === "ThisExpression") {
         name = "this";
     } else {
-        throw "can't call stringForId on nodes of type '" + node.type + "'";
+        throw "can't call stringForId on nodes of type '${node.type}'";
     }
     return name;
 };
@@ -153,7 +153,7 @@ var contextHasProperty = function(key) {
 var scopeNameForName = function(name) {
     var scopes = scopeStack.items;
 
-    for (var i = scopes.length - 1; i > -1; i--) {
+    for (let i = scopes.length - 1; i > -1; i--) {
         var scope = scopes[i];
         if (scope.hasOwnProperty(name)) {
             return "$scope$" + i;
@@ -197,12 +197,8 @@ var memberExpression = function(objName, propName) {
 
 var objectExpression = function(obj) {
     return b.objectExpression(Object.keys(obj).map(key => {
-        var val = obj[key];
-        if (typeof val === "object") {
-            return b.property("init", b.identifier(key), val);
-        } else {
-            return b.property("init", b.identifier(key), b.literal(obj[key]));
-        }
+        var val = typeof obj[key] === "object" ? obj[key] : b.literal(obj[key]);
+        return b.property("init", b.identifier(key), val);
     }));
 };
 
@@ -249,8 +245,7 @@ var addScopeDict = function(bodyList) {
     );
 
     var scopeDict = b.objectExpression(Object.keys(scope).map(name => {
-        var type = scope[name].type;
-        var value = type === "Parameter" ? name : "undefined";
+        var value = scope[name].type === "Parameter" ? name : "undefined";
         return b.property("init", b.identifier(name), b.identifier(value));
     }));
 
@@ -273,7 +268,9 @@ var compile = function(ast, options) {
     var debugCode, generator;
     
     if (options.nativeGenerators) {
-        debugCode = "return function*(" + contextName + "){\n" + escodegen.generate(ast) + "\n}";
+        debugCode = `return function*(${contextName}) {
+            ${escodegen.generate(ast)}
+        }`;
 
         generator = new Function(debugCode);
     } else {
@@ -306,10 +303,8 @@ var scopeStack;
 
 
 var transform = function(code, _context, options) {
-    var ast, scopeManager;
-    
-    ast = esprima.parse(code, { loc: true });
-    scopeManager = escope.analyze(ast);
+    let ast = esprima.parse(code, { loc: true });
+    let scopeManager = escope.analyze(ast);
     scopeManager.attach();
     
     scopeStack = new Stack();
@@ -319,8 +314,8 @@ var transform = function(code, _context, options) {
     estraverse.replace(ast, {
         enter: (node, parent) => {
             if (node.__$escope$__) {
-                var scope = {};
-                var isRoot = scopeStack.size === 0;
+                let scope = {};
+                let isRoot = scopeStack.size === 0;
                 
                 node.__$escope$__.variables.forEach(variable => {
                     // don't include variables from the context in the root scope
@@ -345,14 +340,12 @@ var transform = function(code, _context, options) {
             node._parent = parent;
         },
         leave: (node, parent) => {
-            var obj, replacements;
-            
             if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 // convert all user defined functions to generators
                 node.generator = true;
                 
                 if (node.type === "FunctionDeclaration") {
-                    scopeName = "$scope$" + (scopeStack.size - 1);
+                    let scopeName = "$scope$" + (scopeStack.size - 1);
                     return assignmentStatement(
                         memberExpression(scopeName, node.id.name),
                         b.functionExpression(null, node.params, node.body, true, false),
@@ -360,7 +353,7 @@ var transform = function(code, _context, options) {
                     );
                 }
             } else if (node.type === "Program" || node.type === "BlockStatement") {
-                var bodyList = LinkedList.fromArray(node.body);
+                let bodyList = LinkedList.fromArray(node.body);
                 
                 // rewrite variable declarations first
                 rewriteVariableDeclarations(bodyList);
@@ -372,7 +365,7 @@ var transform = function(code, _context, options) {
                     bodyList.push_back(yieldObject({ line: node.loc.end.line }, node.loc));
                 }
 
-                var functionName = getFunctionName(node, parent);
+                let functionName = getFunctionName(node, parent);
                 if (functionName) {
                     // modify the first yield statement so that the object
                     // returned contains the function's name
@@ -386,12 +379,12 @@ var transform = function(code, _context, options) {
 
                 node.body = bodyList.toArray();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                obj = {
+                let obj = {
                     value: node.type === "NewExpression" ? callInstantiate(node) : node,
                     stepAgain: true
                 };
 
-                var expr = b.yieldExpression(objectExpression(obj));
+                let expr = b.yieldExpression(objectExpression(obj));
                 expr.loc = node.loc;
                 return expr;
             } else if (node.type === "DebuggerStatement") {
@@ -401,7 +394,7 @@ var transform = function(code, _context, options) {
                 }, node.loc);
             } else if (node.type === "Identifier" && parent.type !== "FunctionExpression" && parent.type !== "FunctionDeclaration") {
                 if (isReference(node, parent)) {
-                    var scopeName = scopeNameForName(node.name);
+                    let scopeName = scopeNameForName(node.name);
                     if (scopeName) {
                         return memberExpression(scopeName, node.name);
                     }
@@ -437,7 +430,7 @@ var transform = function(code, _context, options) {
                     node.test = wrapExpression(node.test);
                 }
             } else if (node.type === "VariableDeclaration" && parent.type === "ForStatement") {
-                replacements = [];
+                let replacements = [];
                 node.declarations.forEach(decl => {
                     if (decl.init !== null) {
                         var scopeName = scopeNameForName(decl.id.name);
