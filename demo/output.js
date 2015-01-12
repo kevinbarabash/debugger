@@ -6,18 +6,19 @@ var processing = new Processing(canvas);
 // init canvas
 processing.size(400,400);
 processing.resetMatrix();
+processing.usingDebugger = true;
 
 var poster = new Poster(window.parent);
-var debugr = new ProcessingDebugger(
-    processing,
-    function () {
+var debugr = new ProcessingDebugger({
+    context: processing,
+    onBreakpoint: function () {
         var scope = gehry.deconstruct(debugr.currentScope);
         poster.post("break", debugr.currentLine, debugr.currentStack, scope);
     },
-    function () {
+    onFunctionDone: function () {
         poster.post("done");
     }
-);
+});
 
 // TODO: remote procedure calling
 // TODO: remote object proxying
@@ -26,6 +27,8 @@ poster.listen("load", function (code) {
 });
 
 poster.listen("start", function () {
+    processing.size(400,400);
+    processing.resetMatrix();
     debugr.start();
 });
 
@@ -57,6 +60,10 @@ poster.listen("setBreakpoint", function (line) {
 
 poster.listen("clearBreakpoint", function (line) {
     debugr.clearBreakpoint(line);
+});
+
+poster.listen("setBreakpoints", function (breakpoints) {
+    debugr.breakpoints = breakpoints; 
 });
 
 iframeOverlay.createRelay(canvas);

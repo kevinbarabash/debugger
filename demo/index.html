@@ -11,91 +11,61 @@
   <script src="../libs/object-browser/object-browser.js"></script>
   <script src="index.js" async></script>
   <link rel="stylesheet" href="../libs/object-browser/object-browser.css"/>
-  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-<div id="container">
-  <div id="editor-container">
-    <div class="header">
-      <span class="tab">sketch_01.js</span>
+<div id="wrapper">
+  
+  <div id="header">
+    <div id="select">
+      Select a program to debug: 
+      <select id="programSelect">
+        <option value="paint.js">Paint</option>
+        <option value="keyboard.js">Keyboard</option>
+      </select>
     </div>
-    <div id="editor">background(255);
-noStroke();
-
-var a = {};
-var b = {};
-a.b = b;
-b.a = a;
-
-var randomColor = function () {
-    var r;
-    r = random(255);
-    var g = random(255);
-    var b = random(255);
-    fill(r,g,b);
-};
-
-for (var i = 0; i < 3; i++) {
-    randomColor();
-    ellipse(random(400),random(400),75,75);
-}
-
-draw = function () {
-    randomColor();
-    var p = new PVector(random(100), random(100));
-    ellipse(p.x, p.y, 25, 25);
-};
-
-mouseClicked = function () {
-    randomColor();
-    ellipse(mouseX, mouseY, 75, 75);
-};
-
-keyPressed = function () {
-    console.log("keyPressed, keyCode = " + keyCode + ", key = " + key);
-};
-
-keyReleased = function () {
-    console.log("keyReleased, keyCode = " + keyCode + ", key = " + key);
-};
-
-keyTyped = function () {
-    console.log("__keyTyped__");
-};
-
-</div>
-  </div>
-
-  <div id="side">
-    <div class="header">
-      <span class="tab">canvas: 01</span>
-    </div>
-    <iframe width="400" height="400" src="output.html"></iframe>
-
-    <div class="header">
-      <span class="tab">Debugger</span>
-    </div>
-    <div class="button header">
-      <span class="tab button" id="startButton">Start</span>
-      <span class="tab button" id="continueButton">Continue</span>
-      <span class="tab button" id="stepInButton">In</span>
-      <span class="tab button" id="stepOverButton">Over</span>
-      <span class="tab button" id="stepOutButton">Out</span>
-    </div>
-    <div id="inspector" class="ace_editor">
-      <div class="column">
-        <div class="section_header">Call Stack</div>
-        <div id="callStack"></div>
-      </div>
-      <div class="column">
-        <div class="section_header">Local Variables</div>
-        <div id="variableList" class="object-browser"></div>
-      </div>
+    <div id="title">
+      debugger.js
     </div>
   </div>
 
+  <div id="container">
+
+    <div id="editor-container">
+      <div id="editor"></div>
+    </div>
+
+    <div id="side">
+      <iframe width="400" height="400" src="output.html"></iframe>
+
+      <div id="inspector-container">
+
+        <div class="button-menu">
+          <span class="button" id="startButton">Start</span>
+          <span class="button" id="continueButton">Continue</span>
+          <span class="button" id="stepInButton">In</span>
+          <span class="button" id="stepOverButton">Over</span>
+          <span class="button" id="stepOutButton">Out</span>
+        </div>
+        <div id="inspector" class="ace_editor">
+          <div class="column">
+            <div class="section_header">Call Stack</div>
+            <div id="callStack"></div>
+          </div>
+          <div class="column">
+            <div class="section_header">Local Variables</div>
+            <div id="variableList" class="object-browser"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
 </div>
+
 
 </body>
 </html>

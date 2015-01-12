@@ -16,6 +16,17 @@ var overlay = iframeOverlay.createOverlay(iframe);
 // which throws away the contentWindow and probably forces it to reload
 var poster = new Poster(iframe.contentWindow);
 
+var paused = false;
+var editorContainer = $("#editor-container").get(0);
+editorContainer.addEventListener("mousedown", function (e) {
+    if (paused) {
+        var elem = document.elementAtPoint(e.pageX, e.pageY);
+        if (!$(elem).hasClass("ace_gutter-cell")) {
+            e.stopPropagation();
+        }
+    }
+}, true);
+
 poster.listen("break", function (line, stackValues, scope) {
     enableButtons();
     if (line > 0) {
@@ -23,9 +34,12 @@ poster.listen("break", function (line, stackValues, scope) {
         updateView(line);
         updateCallStack(stackValues);
         updateLocals(gehry.reconstruct(scope));
-    } else {
-        disableButtons();
-        editor.setHighlightActiveLine(false);
+        
+        // disable editing
+        editor.setReadOnly(true);
+        $(".ace_cursor").hide();
+        paused = true;
+        $("#editor-container").attr("disabled", "");
     }
 });
 
@@ -38,13 +52,30 @@ poster.listen("done", function () {
     updateCallStack([]);
     updateLocals();
     overlay.resume();
+
+    // enabled editing again
+    editor.setReadOnly(false);
+    paused = false;
+    $(".ace_cursor").show();
+    $("#editor-container").removeAttr("disabled");
 });
 
-$("#startButton").click(function (e) {
+function start() {
     overlay.resume();
     var code = session.getValue();
+
+    var breakpoints = {};
+    editor.session.getBreakpoints().forEach(function (value, index) {
+        breakpoints[index + 1] = true;
+    });
+
+    poster.post("setBreakpoints", breakpoints);
     poster.post("load", code);
     poster.post("start");
+}
+
+$("#startButton").click(function (e) {
+    start();
 });
 
 $("#continueButton").click(function () {
@@ -93,6 +124,41 @@ editor.on("guttermousedown", function(e){
     e.stop();
 });
 
+// Based on:
+// https://github.com/ajaxorg/cloud9/blob/master/plugins-client/ext.debugger/breakpoints.js#L170
+session.on("change", function(e) {
+    if (!session.$breakpoints.length) {
+        return;
+    }
+
+    var delta = e.data;
+    var range = delta.range;
+    if (range.end.row == range.start.row) {
+        return;
+    }
+
+    var len, firstRow;
+    len = range.end.row - range.start.row;
+
+    if (delta.action == "insertText") {
+        firstRow = range.start.column ? range.start.row + 1 : range.start.row;
+    } else {
+        firstRow = range.start.row;
+    }
+
+    if (delta.action === "insertText" || delta.action === "insertLines") {
+        var args = new Array(len);
+        args.unshift(firstRow, 0);
+        Array.prototype.splice.apply(session.$breakpoints, args);
+    } else {
+        if (range.start.column === 0 && range.end.column === 0) {
+            session.$breakpoints.splice(firstRow, len);
+        } else {
+            session.$breakpoints.splice(firstRow + 1, len);
+        }
+    }
+});
+
 function updateView(line) {
     editor.gotoLine(line);
     editor.setHighlightActiveLine(true);
@@ -112,9 +178,12 @@ function updateCallStack(stackValues) {
 
     var $ul = $("<ul></ul>");
     stackValues.forEach(function (frame) {
-        var $name = $("<span></span>").text(frame.name);
-        var $line = $("<span></span>").text(frame.line).css({ float: "right" });
-        $ul.prepend($("<li></li>").append($name, $line));
+        if (frame.name !== undefined) {
+            var name = frame.name.replace(/context[0-9]+./, "");
+            var $name = $("<span></span>").text(name);
+            var $line = $("<span></span>").text(frame.line).css({ float: "right" });
+            $ul.prepend($("<li></li>").append($name, $line));
+        }
     });
     $callStack.append($ul);
 }
@@ -128,3 +197,34 @@ poster.listen("ready", function () {
     poster.post("load", code);
     poster.post("start");
 });
+
+var cache = {};
+
+function loadProgram(name) {
+    if (!cache[name]) {
+        var path = "examples/" + name;
+
+        $.ajax(path, {
+            type: 'GET',
+            dataType: 'text',
+            contentType: "application/javascript",
+            success: function(response) {
+                cache[name] = response;
+                session.setValue(response);
+                start();
+            }
+        });
+    } else {
+        session.setValue(cache[name]);
+        start();
+    }
+}
+
+loadProgram("paint.js");
+
+$("#programSelect").change(function () {
+    loadProgram($(this).val());
+});
+
+// TODO: preserve breakpoints on reload
+// TODO: preserve code changes on reload
