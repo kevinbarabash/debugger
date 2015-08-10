@@ -274,17 +274,18 @@ var compile = function(ast, options) {
 
         generator = new Function(debugCode);
     } else {
-        // regenerator likes functions so wrap the code in a function
-        var entry = b.functionDeclaration(
-            b.identifier("entry"),
-            [b.identifier(contextName)],
-            b.blockStatement(ast.body),
-            true,   // generator 
-            false   // expression
-        );
+        var entry = {
+            type: "Program",
+            body: [b.functionDeclaration(
+                b.identifier("entry"),
+                [b.identifier(contextName)],
+                b.blockStatement(ast.body),
+                true,   // generator 
+                false   // expression
+            )]
+        };
 
-        regenerator.transform(entry);
-        debugCode = escodegen.generate(entry);
+        debugCode = escodegen.generate(regenerator.transform(entry));
 
         generator = new Function(debugCode + "\n" + "return entry;");
     }
