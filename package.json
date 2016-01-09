@@ -4,7 +4,10 @@
   "description": "Debug JavaScript using JavaScript",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/testee test/runner.html --browsers firefox"
+    "test": "./node_modules/.bin/testee test/runner.html --browsers firefox",
+    "build": "browserify ./src/debugger.js -o ./build/debugger.js -s Debugger -t [ babelify --presets [ es2015 ] ]",
+    "watch": "watchify ./src/debugger.js -o ./build/debugger.js -s Debugger -v -t [ babelify --presets [ es2015 ] ]",
+    "processing": "browserify ./src/processing-debugger.js -o ./build/processing-debugger.js --exclude ./src/debugger.js -s ProcessingDebugger -t [ babelify --presets [ es2015 ] ]"
   },
   "repository": {
     "type": "git",
@@ -17,7 +20,7 @@
   },
   "homepage": "https://github.com/kevinb7/js-step",
   "devDependencies": {
-    "6to5ify": "^2.0.0",
+    "babelify": "^7.2.0",
     "browserify": "^8.0.1",
     "expect.js": "^0.3.1",
     "gehry": "0.1.0",
@@ -25,7 +28,8 @@
     "jquery": "^2.1.1",
     "mocha": "^2.0.1",
     "poster": "git://github.com/kevinb7/poster.git",
-    "testee": "^0.1.7"
+    "testee": "^0.1.7",
+    "watchify": "^3.6.1"
   },
   "dependencies": {
     "ast-types": "~0.6.1",
