@@ -18,7 +18,7 @@ var canUseNativeGenerators = function() {
                             yield 5; yield 6;
                         }());
                     }());
-                    
+
                     var item = generator.next();
                     var passed = item.value === 5 && item.done === false;
                     item = generator.next();
@@ -38,7 +38,7 @@ class Debugger {
      * Create a new Debugger instance.
      *
      * @param {object} options
-     * 
+     *
      * The options parameter can include the following keys:
      * - context: dictionary containing variables to appear as globals
      * - onBreakpoint: callback triggered when a breakpoint is hit
@@ -52,28 +52,43 @@ class Debugger {
         this.onBreakpoint = options.onBreakpoint || function () {};
         this.onFunctionDone = options.onFunctionDone || function () {};
         this.nativeGenerators = options.nativeGenerators && canUseNativeGenerators();
-        
+
         this.scheduler = new Scheduler();
         this.breakpoints = {};
         // TODO: replace with this.enableBreakpoints()/this.disableBreakpoints()?
         this.breakpointsEnabled = true;
-        
+
         this._paused = false;
     }
 
     set context(context) {
         this._context = context;
         this._context.__instantiate__ = (classFn, className, ...args) => {
-            var obj = Object.create(classFn.prototype);
+            var obj = Object.create(this._context.__getPrototype__(classFn));
             var gen = classFn.apply(obj, args);
-
             this.onNewObject(classFn, className, obj, args);
-
             if (gen) {
                 gen.obj = obj;
                 return gen;
             } else {
                 return obj;
+            }
+        };
+        this._context.__getPrototype__ = classFn => {
+            if (classFn.prototype.hasOwnProperty('next')) {
+                if (!classFn.hasOwnProperty('__prototype__')) {
+                    classFn.__prototype__ = Object.create(Function.prototype);
+                }
+                return classFn.__prototype__;   // use a Symbol for this 
+            } else {
+                return classFn.prototype;  // handles regular functions too 
+            }
+        };
+        this._context.__assignPrototype__ = (left, right) => {
+            if (left.prototype.hasOwnProperty('next')) {
+                left.__prototype__ = right;
+            } else {
+                left.prototype = right;
             }
         };
         // TODO: figure out a better way to communicate the __schedule__ function to the runtime
@@ -82,7 +97,7 @@ class Debugger {
         };
         this._context.__usingDebugger = true;
     }
-    
+
     get context() {
         return this._context;
     }
@@ -104,6 +119,7 @@ class Debugger {
         };
         var debugFunction = transform(code, this.context, options);
         this.mainGeneratorFunction = debugFunction();
+        console.log(this.mainGeneratorFunction.toString());
     }
 
     start(paused) {
@@ -163,7 +179,7 @@ class Debugger {
     get currentStack() {
         var stepper = this._currentStepper;
         if (stepper !== null) {
-            
+
             return stepper.stack.toArray().map(frame => {
                 return {
                     name: frame.name,

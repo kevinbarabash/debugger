@@ -92,6 +92,12 @@ var stringForId = function(node) {
         }
     } else if (node.type === "ThisExpression") {
         name = "this";
+    } else if (node.type === "CallExpression") {
+        if (node.callee.type === "MemberExpression" && node.callee.property.type === "Identifier" && node.callee.property.name === "__getPrototype__") {
+            return stringForId(node.arguments[0]) + ".prototype";
+        } else {
+            return stringForId(node.callee) + "()";
+        }
     } else {
         throw "can't call stringForId on nodes of type '${node.type}'";
     }
@@ -266,7 +272,7 @@ var getFunctionName = function(node, parent) {
 
 var compile = function(ast, options) {
     var debugCode, generator;
-    
+
     if (options.nativeGenerators) {
         debugCode = `return function*(${contextName}) {
             ${escodegen.generate(ast)}
@@ -280,7 +286,7 @@ var compile = function(ast, options) {
                 b.identifier("entry"),
                 [b.identifier(contextName)],
                 b.blockStatement(ast.body),
-                true,   // generator 
+                true,   // generator
                 false   // expression
             )]
         };
@@ -289,11 +295,11 @@ var compile = function(ast, options) {
 
         generator = new Function(debugCode + "\n" + "return entry;");
     }
-    
+
     if (options.debug) {
         console.log(debugCode);
     }
-    
+
     return generator;
 };
 
@@ -307,7 +313,7 @@ var transform = function(code, _context, options) {
     let ast = esprima.parse(code, { loc: true });
     let scopeManager = escope.analyze(ast);
     scopeManager.attach();
-    
+
     scopeStack = new Stack();
     context = _context;
     contextName = "context" + Date.now();
@@ -317,7 +323,7 @@ var transform = function(code, _context, options) {
             if (node.__$escope$__) {
                 let scope = {};
                 let isRoot = scopeStack.size === 0;
-                
+
                 node.__$escope$__.variables.forEach(variable => {
                     // don't include variables from the context in the root scope
                     if (isRoot && contextHasProperty(variable.name)) {
@@ -333,18 +339,18 @@ var transform = function(code, _context, options) {
 
                 scopeStack.push(scope);
             }
-            
+
             if (node.type === "Program" || node.type === "BlockStatement") {
                 node.body.forEach((stmt, index) => stmt._index = index);
             }
-            
+
             node._parent = parent;
         },
         leave: (node, parent) => {
             if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 // convert all user defined functions to generators
                 node.generator = true;
-                
+
                 if (node.type === "FunctionDeclaration") {
                     let scopeName = "$scope$" + (scopeStack.size - 1);
                     return assignmentStatement(
@@ -355,11 +361,11 @@ var transform = function(code, _context, options) {
                 }
             } else if (node.type === "Program" || node.type === "BlockStatement") {
                 let bodyList = LinkedList.fromArray(node.body);
-                
+
                 // rewrite variable declarations first
                 rewriteVariableDeclarations(bodyList);
-                
-                // insert yield statements between each statement 
+
+                // insert yield statements between each statement
                 insertYields(bodyList);
 
                 if (bodyList.first === null) {
@@ -440,7 +446,7 @@ var transform = function(code, _context, options) {
                         }
                     }
                 });
-                
+
                 if (replacements.length === 1) {
                     return replacements[0];
                 } else if (replacements.length > 1) {
@@ -448,6 +454,19 @@ var transform = function(code, _context, options) {
                 } else {
                     return null;
                 }
+            } else if (node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.property.name === "prototype") { 
+                return b.callExpression( 
+                     memberExpression(contextName, "__getPrototype__"), 
+                     [node.object] 
+                ); 
+            } else if (node.type === "AssignmentExpression" && node.left.type === "CallExpression") {
+                return b.callExpression(
+                    memberExpression(contextName, "__assignPrototype__"),
+                    [
+                        node.left.arguments[0],
+                        node.right.argument.properties[0].value // access the yield statement to grab the right hand side
+                    ]
+                );
             }
 
             // clean up
@@ -455,7 +474,7 @@ var transform = function(code, _context, options) {
             delete node._index;
         }
     });
- 
+
     return compile(ast, options);
 };
 

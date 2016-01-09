@@ -197,12 +197,12 @@
                     _debugger.start(true);
 
                     expect(_debugger.line).to.be(1);
-                    
+
                     _debugger.stepOver();   // i = 0;
                     _debugger.stepOver();   // i < 3;
                     expect(_debugger.line).to.be(2);
                     _debugger.stepOver();   // rect(i * 100, 100, 50, 50);
-                    
+
                     _debugger.stepOver();   // i++
                     _debugger.stepOver();   // i < 3;
                     expect(_debugger.line).to.be(2);
@@ -214,7 +214,7 @@
                     _debugger.stepOver();   // rect(i * 100, 100, 50, 50);
                     _debugger.stepOver();   // i++
                     _debugger.stepOver();   // i < 3;
-                    _debugger.stepOver(); 
+                    _debugger.stepOver();
                     expect(_debugger.line).to.be(undefined);
                 });
 
@@ -356,7 +356,7 @@
                 expect(context.numbers[0]).to.be(1);
                 expect(context.numbers[1]).to.be(2);
                 expect(context.numbers[2]).to.be(3);
-                
+
                 _debugger.stepIn(); // i++;
                 _debugger.stepIn(); // i < 3;
                 _debugger.stepIn();
@@ -993,13 +993,13 @@
                     y = 10;
                     p = new Vector(x,y);
                 });
-                
+
                 _debugger.load(code);
                 _debugger.start();
-                
+
                 expect(_debugger.line).to.be(2);
                 _debugger.resume();
-                
+
                 expect(context.x).to.be(5);
                 expect(context.y).to.be(10);
                 expect(context.p.x).to.be(5);
@@ -1195,18 +1195,18 @@
             it("should inject a __usingDebugger variable into the context", function () {
                 expect(context.__usingDebugger).to.be(true);
             });
-            
+
             it("should work with mulitple variables declarations + instantiation on the same line", function () {
                 code = getFunctionBody(function () {
                     var a = 5, b = 10;
                     x = a;
                     y = b;
                 });
-                
+
                 _debugger.load(code);
                 _debugger.setBreakpoint(2);
                 _debugger.start();
-                
+
                 var scope = _debugger.currentScope;
                 expect(scope.a).to.be(5);
                 expect(scope.b).to.be(10);
@@ -1879,7 +1879,7 @@
                 expect(_debugger.paused).to.be(false);
             });
         });
-        
+
         describe("better loops", function () {
             it("should do something", function () {
                 code = getFunctionBody(function () {
