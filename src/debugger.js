@@ -32,6 +32,10 @@ var canUseNativeGenerators = function() {
     }
 };
 
+var isGeneratorFunction = function(classFn) {
+    return classFn.isGenerator && classFn.isGenerator() || classFn.prototype.toString() === "[object Generator]";
+};
+
 class Debugger {
 
     /**
@@ -75,7 +79,7 @@ class Debugger {
             }
         };
         this._context.__getPrototype__ = classFn => {
-            if (classFn.prototype.hasOwnProperty('next')) {
+            if (isGeneratorFunction(classFn)) {
                 if (!classFn.hasOwnProperty('__prototype__')) {
                     classFn.__prototype__ = Object.create(Function.prototype);
                 }
@@ -85,7 +89,7 @@ class Debugger {
             }
         };
         this._context.__assignPrototype__ = (left, right) => {
-            if (left.prototype.hasOwnProperty('next')) {
+            if (isGeneratorFunction(left)) {
                 left.__prototype__ = right;
             } else {
                 left.prototype = right;
@@ -119,7 +123,6 @@ class Debugger {
         };
         var debugFunction = transform(code, this.context, options);
         this.mainGeneratorFunction = debugFunction();
-        console.log(this.mainGeneratorFunction.toString());
     }
 
     start(paused) {

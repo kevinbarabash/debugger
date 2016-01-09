@@ -10,7 +10,7 @@ class Stepper {
         // TODO: align these names with the callback names on Debugger
         this.breakCallback = options.breakCallback || function () {};
         this.doneCallback = options.doneCallback || function () {};
-        
+
         this._breakpoints = options.breakpoints || {};
         this.breakpointsEnabled = true;
         this.nativeGenerators = !!options.nativeGenerators;
@@ -38,7 +38,7 @@ class Stepper {
         if (result = this._step()) {
             if (result.value && result.value.hasOwnProperty("value")) {
                 var value = result.value.value;
-                
+
                 if (this._isGenerator(value)) {
                     this.stack.push({
                         gen: value,
@@ -181,7 +181,7 @@ class Stepper {
         // if the result.value contains scope information add it to the
         // current stack frame
         // TODO: make this list static
-        
+
         if (result.value) {
             frameProps.forEach(prop => {
                 if (result.value.hasOwnProperty(prop)) {
@@ -227,12 +227,12 @@ class Stepper {
         this._retVal = frame.gen.obj || value;
 
         // Handle a non user code call site.
-        // This happens when stepping out of our resuming execution when paused 
+        // This happens when stepping out of our resuming execution when paused
         // inside a callback to Array.prototype.map, reduce, etc.
         // we don't want to the debugger to stop inside of our custom implementation
         // of those methods.
         // The reason why we call stepIn() is because if we're at the end of the
-        // callback there's a possibility that the callback should be called 
+        // callback there's a possibility that the callback should be called
         // again because we haven't finished iterating.
         // If it is the last iteration and we call stepIn(), we'll be returned
         // immediately because the generator for Array.prototype.map, reduce,
@@ -248,14 +248,9 @@ class Stepper {
             }
         }
     }
-    
+
     _isGenerator(obj) {
-        if (this.nativeGenerators) {
-            return obj instanceof Object && obj.toString() === "[object Generator]"
-        } else {
-            // TODO: figure out a better check
-            return obj && typeof(obj.next) === "function";
-        }
+        return obj instanceof Object && obj.toString() === "[object Generator]";
     };
 }
 

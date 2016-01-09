@@ -697,6 +697,10 @@ var canUseNativeGenerators = function () {
   }
 };
 
+var isGeneratorFunction = function (classFn) {
+  return classFn.isGenerator && classFn.isGenerator() || classFn.prototype.toString() === "[object Generator]";
+};
+
 var Debugger = (function () {
   var Debugger =
 
@@ -738,7 +742,6 @@ var Debugger = (function () {
     };
     var debugFunction = transform(code, this.context, options);
     this.mainGeneratorFunction = debugFunction();
-    console.log(this.mainGeneratorFunction.toString());
   };
 
   Debugger.prototype.start = function (paused) {
@@ -844,7 +847,7 @@ var Debugger = (function () {
           }
         };
         this._context.__getPrototype__ = function (classFn) {
-          if (classFn.prototype.hasOwnProperty("next")) {
+          if (isGeneratorFunction(classFn)) {
             if (!classFn.hasOwnProperty("__prototype__")) {
               classFn.__prototype__ = Object.create(Function.prototype);
             }
@@ -854,7 +857,7 @@ var Debugger = (function () {
           }
         };
         this._context.__assignPrototype__ = function (left, right) {
-          if (left.prototype.hasOwnProperty("next")) {
+          if (isGeneratorFunction(left)) {
             left.__prototype__ = right;
           } else {
             left.prototype = right;
@@ -51620,12 +51623,7 @@ var Stepper = (function () {
   };
 
   Stepper.prototype._isGenerator = function (obj) {
-    if (this.nativeGenerators) {
-      return obj instanceof Object && obj.toString() === "[object Generator]";
-    } else {
-      // TODO: figure out a better check
-      return obj && typeof (obj.next) === "function";
-    }
+    return obj instanceof Object && obj.toString() === "[object Generator]";
   };
 
   _classProps(Stepper, null, {

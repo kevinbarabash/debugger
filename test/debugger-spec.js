@@ -32,7 +32,7 @@
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                //debug: true
+                debug: true
             });
             _debugger.context = context;
         });
@@ -848,8 +848,7 @@
                 expect(context.y).to.be(10);
             });
 
-            // TODO: change how the code is transformed to handle this case
-            it.skip("should objects with a next method", function () {
+            it("should objects with a next method", function () {
                 var code = getFunctionBody(function () {
                     var Iterator = function() {
                         this.value = 0;
@@ -1729,8 +1728,7 @@
                 expect(context.x).to.be(5);
             });
 
-            // TODO: fix the stepper so that this test case passes
-            it.skip("should work with methods defined on 'this' (function declaration constructor)", function () {
+            it("should work with methods defined on 'this' (function declaration constructor)", function () {
                 var code = getFunctionBody(function () {
                     function Foo() {
                         this.bar = function () {
