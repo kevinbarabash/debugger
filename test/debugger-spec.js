@@ -1,9 +1,22 @@
+var self = typeof window !== "undefined" ? window : global;
+
+if (typeof require !== "undefined") {
+    var sinon = require("sinon");
+    var expect = require("expect.js");
+    require("../node_modules/regenerator/runtime.js");
+
+    var Debugger = require("../build/debugger.js");
+    var getFunctionBody = require("./test_utils.js").getFunctionBody;
+}
+
 /*global describe, it, beforeEach, afterEach */
 
 [false, true].forEach(function (nativeGenerators) {
     var title = nativeGenerators ?
         "Debugger (Native Generators)" :
         "Debugger (Regenerator Generators)";
+
+    var fill, rect, print, image;
 
     describe(title, function () {
 
@@ -32,7 +45,7 @@
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                debug: true
+                debug: false
             });
             _debugger.context = context;
         });
@@ -41,12 +54,12 @@
             beforeEach(function () {
                 _debugger.load("fill(255,0,0);x=5;console.log('hello');_test_global='apple';var z=23;");
                 sinon.stub(console, "log");
-                window._test_global = "";
+                self._test_global = "";
             });
 
             afterEach(function () {
                 console.log.restore();
-                delete window._test_global;
+                delete self._test_global;
             });
 
             it("should call functions in the context", function () {
@@ -72,7 +85,7 @@
 
             it("should set global variables", function () {
                 _debugger.start();
-                expect(window._test_global).to.be("apple");
+                expect(self._test_global).to.be("apple");
             });
 
             it("shouldn't set local variables on the context", function () {
@@ -548,7 +561,7 @@
                 _debugger.stepOver();
 
                 _debugger.stepIn();
-                expect(_debugger.line).to.be(2); // for();
+                expect(_debugger.line).to.be(2); // first line of foo();
                 _debugger.stepOut();
                 expect(_debugger.line).to.be(10);
                 _debugger.stepOver();
@@ -1196,7 +1209,7 @@
             });
 
             it("should work with mulitple variables declarations + instantiation on the same line", function () {
-                code = getFunctionBody(function () {
+                var code = getFunctionBody(function () {
                     var a = 5, b = 10;
                     x = a;
                     y = b;
@@ -1880,7 +1893,7 @@
 
         describe("better loops", function () {
             it("should do something", function () {
-                code = getFunctionBody(function () {
+                var code = getFunctionBody(function () {
                     for (var i = 0, j = 0; i * j < 10; i++, j += 1) {
                         console.log(i + " * " + j + " = " + (i*j));
                     }

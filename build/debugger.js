@@ -50404,7 +50404,7 @@ var canUseNativeGenerators = function canUseNativeGenerators() {
 };
 
 var isGeneratorFunction = function isGeneratorFunction(classFn) {
-    return classFn.isGenerator && classFn.isGenerator() || classFn.prototype.toString() === "[object Generator]";
+    return classFn.constructor.name === "GeneratorFunction";
 };
 
 var Debugger = function () {
@@ -51036,6 +51036,7 @@ exports.every = every;
 exports.some = some;
 
 },{}],140:[function(require,module,exports){
+(function (global){
 "use strict";
 
 var array = require("./array");
@@ -51054,10 +51055,12 @@ methods.forEach(function (methodName) {
     };
 });
 
-var originalSetTimeout = window.setTimeout;
-var originalSetInterval = window.setInterval;
+var self = typeof window !== "undefined" ? window : global;
 
-window.setTimeout = function (callback, delay) {
+var originalSetTimeout = self.setTimeout;
+var originalSetInterval = self.setInterval;
+
+self.setTimeout = function (callback, delay) {
     if (_isGeneratorFunction(callback)) {
         return originalSetTimeout(function () {
             __schedule__(callback);
@@ -51067,7 +51070,7 @@ window.setTimeout = function (callback, delay) {
     }
 };
 
-window.setInterval = function (callback, delay) {
+self.setInterval = function (callback, delay) {
     if (_isGeneratorFunction(callback)) {
         return originalSetInterval(function () {
             __schedule__(callback);
@@ -51077,6 +51080,7 @@ window.setInterval = function (callback, delay) {
     }
 };
 
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./array":139}],141:[function(require,module,exports){
 "use strict";
 

@@ -1,10 +1,19 @@
+if (typeof require !== "undefined") {
+    var sinon = require("sinon");
+    var expect = require("expect.js");
+    require("../node_modules/regenerator/runtime.js");
+
+    var Debugger = require("../build/debugger.js");
+    var getFunctionBody = require("./test_utils.js").getFunctionBody;
+}
+
 [false, true].forEach(function (nativeGenerators) {
     var title = nativeGenerators ?
         "Array.prototype Runtime (Native Generators)" :
         "Array.prototype Runtime (Regenerator Generators)";
 
     describe(title, function () {
-        
+
         var _debugger, context;
 
         var runTest = function(options) {
@@ -51,7 +60,7 @@
                     var a = [1,4,9];
                     var b = a.map(Math.sqrt);
                 });
-                
+
                 _debugger.load(code);
                 _debugger.start();
 
@@ -71,7 +80,7 @@
                 _debugger.load(code);
                 _debugger.setBreakpoint(3);
                 _debugger.start();
-                
+
                 expect(_debugger.line).to.be(3);
                 _debugger.resume();
                 expect(_debugger.line).to.be(3);
@@ -87,7 +96,7 @@
                         return val * val;
                     });
                 });
-                
+
                 _debugger.load(code);
                 _debugger.setBreakpoint(3);
                 _debugger.start();
@@ -99,7 +108,7 @@
                 expect(_debugger.currentScope.val).to.be(3);
                 _debugger.resume();
             });
-            
+
             it("should step out of the callback to the main program", function () {
                 var code = getFunctionBody(function () {
                     var a = [1,2,3];
@@ -108,7 +117,7 @@
                     });
                     print("end of line");
                 });
-                
+
                 _debugger.load(code);
                 _debugger.setBreakpoint(3);
                 _debugger.start();
@@ -150,11 +159,11 @@
                 },
                 test: function () {
                     _debugger.start();
-            
+
                     expect(context.b).to.be(6);
                 }
             });
-            
+
             runTest({
                 title: "can break inside the callback",
                 code: function () {
@@ -166,7 +175,7 @@
                 test: function () {
                     _debugger.setBreakpoint(3);
                     _debugger.start();
-            
+
                     expect(_debugger.line).to.be(3);
                     _debugger.resume();
                     expect(_debugger.line).to.be(3);
@@ -175,7 +184,7 @@
                     _debugger.resume();
                 }
             });
-            
+
             runTest({
                 title: "reports scope variables inside the callback",
                 code: function () {
@@ -187,7 +196,7 @@
                 test: function () {
                     _debugger.setBreakpoint(3);
                     _debugger.start();
-            
+
                     expect(_debugger.currentScope.previousVal).to.be(0);
                     expect(_debugger.currentScope.currentVal).to.be(1);
                     _debugger.resume();
@@ -347,7 +356,7 @@
                         print(val)
                     });
                 });
-                
+
                 _debugger.load(code);
                 _debugger.start();
 
@@ -362,7 +371,7 @@
                     var a = [1,2,3];
                     a.forEach(print);
                 });
-                
+
                 _debugger.load(code);
                 _debugger.start();
 
@@ -379,7 +388,7 @@
                         print(val)
                     });
                 });
-                
+
                 _debugger.load(code);
                 _debugger.setBreakpoint(3);
                 _debugger.start();
@@ -399,7 +408,7 @@
                         print(val)
                     });
                 });
-                
+
                 _debugger.load(code);
                 _debugger.setBreakpoint(3);
                 _debugger.start();

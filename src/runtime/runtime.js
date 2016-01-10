@@ -14,11 +14,12 @@ methods.forEach(function (methodName) {
     }
 });
 
+var self = typeof window !== "undefined" ? window : global;
 
-var originalSetTimeout = window.setTimeout;
-var originalSetInterval = window.setInterval;
+var originalSetTimeout = self.setTimeout;
+var originalSetInterval = self.setInterval;
 
-window.setTimeout = function(callback, delay) {
+self.setTimeout = function(callback, delay) {
     if (_isGeneratorFunction(callback)) {
         return originalSetTimeout(function() {
             __schedule__(callback);
@@ -28,7 +29,7 @@ window.setTimeout = function(callback, delay) {
     }
 };
 
-window.setInterval = function(callback, delay) {
+self.setInterval = function(callback, delay) {
     if (_isGeneratorFunction(callback)) {
         return originalSetInterval(function () {
             __schedule__(callback);

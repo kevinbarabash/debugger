@@ -4,7 +4,7 @@
   "description": "Debug JavaScript using JavaScript",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/testee test/runner.html --browsers firefox",
+    "test": "mocha ./test/*-spec.js",
     "build": "browserify ./src/debugger.js -o ./build/debugger.js -s Debugger -t [ babelify --presets [ es2015 ] ]",
     "watch": "watchify ./src/debugger.js -o ./build/debugger.js -s Debugger -v -t [ babelify --presets [ es2015 ] ]",
     "processing": "browserify ./src/processing-debugger.js -o ./build/processing-debugger.js --exclude ./src/debugger.js -s ProcessingDebugger -t [ babelify --presets [ es2015 ] ]"
@@ -28,6 +28,7 @@
     "jquery": "^2.1.1",
     "mocha": "^2.0.1",
     "poster": "git://github.com/kevinb7/poster.git",
+    "sinon": "^1.17.2",
     "testee": "^0.1.7",
     "watchify": "^3.6.1"
   },

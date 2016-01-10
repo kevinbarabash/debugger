@@ -4,3 +4,9 @@ var getFunctionBody = function(func) {
     var end = funcString.lastIndexOf("}");
     return funcString.substring(start, end);
 };
+
+if (typeof module !== "undefined") {
+    module.exports = {
+        getFunctionBody
+    };
+}

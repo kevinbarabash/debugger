@@ -1,9 +1,23 @@
+var self = typeof window !== "undefined" ? window : global;
+
+if (typeof require !== "undefined") {
+    var sinon = require("sinon");
+    var expect = require("expect.js");
+    require("../node_modules/regenerator/runtime.js");
+
+    self.Debugger = require("../build/debugger.js");
+    var ProcessingDebugger = require("../build/processing-debugger.js");
+    var getFunctionBody = require("./test_utils.js").getFunctionBody;
+}
+
 /*global describe, it, beforeEach, afterEach */
 
 [false, true].forEach(function (nativeGenerators) {
     var title = nativeGenerators ?
         "Processing Debugger (Native Generators)" :
         "Processing Debugger (Regenerator Generators)";
+
+    var fill, rect, print, image;
 
     describe(title, function () {
 

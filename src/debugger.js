@@ -33,7 +33,7 @@ var canUseNativeGenerators = function() {
 };
 
 var isGeneratorFunction = function(classFn) {
-    return classFn.isGenerator && classFn.isGenerator() || classFn.prototype.toString() === "[object Generator]";
+    return classFn.constructor.name === "GeneratorFunction";
 };
 
 class Debugger {
