@@ -1468,7 +1468,7 @@ if (typeof require !== "undefined") {
             });
 
             describe("for loops", function () {
-                it.skip("should step over each part of the ForStatement separately", function () {
+                it("should step over each part of the ForStatement separately", function () {
                     var code = getFunctionBody(function () {
                         for (var i = 0; i < 2; i++) {
                             x = i + 1;
@@ -1482,15 +1482,15 @@ if (typeof require !== "undefined") {
                     _debugger.stepOver();
                     expect(_debugger.line).to.be(1);   // i < 2
                     _debugger.stepOver();
+                    expect(_debugger.line).to.be(2);   // x = i + 1
+                    _debugger.stepOver();
                     expect(_debugger.line).to.be(1);   // i++
+                    _debugger.stepOver();
+                    expect(_debugger.line).to.be(1);   // i < 2
                     _debugger.stepOver();
                     expect(_debugger.line).to.be(2);   // x = i + 1
                     _debugger.stepOver();
                     expect(_debugger.line).to.be(1);   // i < 2
-                    _debugger.stepOver();
-                    expect(_debugger.line).to.be(1);   // i++
-                    _debugger.stepOver();
-                    expect(_debugger.line).to.be(2);   // x = i + 1
                     _debugger.stepOver();
 
                     expect(context.x).to.be(2);
