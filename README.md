@@ -1,6 +1,5 @@
-[![Build Status](https://travis-ci.org/kevinb7/debugger.svg?branch=master)](https://travis-ci.org/kevinb7/debugger)
-
 # debugger #
+[![Build Status](https://travis-ci.org/kevinbarabash/debugger.svg)](https://travis-ci.org/kevinbarabash/debugger)
 
 Debug JavaScript code using JavaScript.
 
