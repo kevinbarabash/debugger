@@ -63,6 +63,25 @@ var isBreakpoint = function(node) {
 };
 
 
+var makeLocNode = function(loc) {
+    // TODO: create a function to handle creating nested object expressions
+    // differentiate from objectExpression which assumes that properties
+    // that are objects are already AST nodes
+    var start = b.objectExpression([
+        b.property("init", b.identifier("line"), b.literal(loc.start.line)),
+        b.property("init", b.identifier("column"), b.literal(loc.start.column))
+    ]);
+    var end = b.objectExpression([
+        b.property("init", b.identifier("line"), b.literal(loc.end.line)),
+        b.property("init", b.identifier("column"), b.literal(loc.end.column))
+    ]);
+
+    return b.objectExpression([
+        b.property("init", b.identifier("start"), start),
+        b.property("init", b.identifier("end"), end)
+    ]);
+};
+
 var insertYields = function(bodyList) {
     bodyList.forEachNode(listNode => {
         var astNode = listNode.value;
@@ -71,8 +90,7 @@ var insertYields = function(bodyList) {
         }
 
         var loc = astNode.loc;
-        var line = loc.start.line;
-        bodyList.insertBeforeNode(listNode, yieldObject({ line: line }, loc));
+        bodyList.insertBeforeNode(listNode, yieldObject({ loc: makeLocNode(loc) }, loc));
     });
 };
 
@@ -223,7 +241,7 @@ var wrapExpression = function(expr, nextExpr) {
         value: expr
     };
     if (nextExpr) {
-        obj.line = nextExpr.loc.start.line
+        obj.loc = makeLocNode(nextExpr.loc);
     } else {
         obj.stepAgain = true;
     }
@@ -369,7 +387,7 @@ var transform = function(code, _context, options) {
                 insertYields(bodyList);
 
                 if (bodyList.first === null) {
-                    bodyList.push_back(yieldObject({ line: node.loc.end.line }, node.loc));
+                    bodyList.push_back(yieldObject({ loc: makeLocNode(node.loc) }, node.loc));
                 }
 
                 let functionName = getFunctionName(node, parent);
@@ -396,7 +414,7 @@ var transform = function(code, _context, options) {
                 return expr;
             } else if (node.type === "DebuggerStatement") {
                 return yieldObject({
-                    line: node.loc.start.line,
+                    loc: makeLocNode(node.loc),
                     breakpoint: true
                 }, node.loc);
             } else if (node.type === "Identifier" && parent.type !== "FunctionExpression" && parent.type !== "FunctionDeclaration") {
@@ -413,7 +431,7 @@ var transform = function(code, _context, options) {
 
                 // loop back to the update
                 // do this first because we replace node.update and it loses its location info
-                node.body.body.push(yieldObject({line: node.update.loc.start.line}));
+                node.body.body.push(yieldObject({ loc: makeLocNode(node.update.loc) }));
 
                 // TODO: come up with a set of tests that check all of these cases
                 if (node.init.type === "SequenceExpression") {
@@ -432,7 +450,7 @@ var transform = function(code, _context, options) {
                     node.test = wrapExpression(node.test);
                 }
             } else if (node.type === "WhileStatement" || node.type === "DoWhileStatement") {
-                node.body.body.push(yieldObject({line: node.test.loc.start.line}));
+                node.body.body.push(yieldObject({ loc: makeLocNode(node.test.loc) }));
                 if (node.test !== null) {
                     node.test = wrapExpression(node.test);
                 }

@@ -3,7 +3,7 @@
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 var Task = require("../external/scheduler/lib/task");
 
-var frameProps = ["scope", "name", "line", "stepInAgain"];
+var frameProps = ["scope", "name", "loc", "stepInAgain"];
 
 class Stepper {
     constructor(genObj, options) {
@@ -163,10 +163,18 @@ class Stepper {
     }
 
     get line() {
-        if (!this._stopped) {
-            return this.stack.peek().line;
+        if (!this._stopped && this.stack.peek().loc) {
+            return this.stack.peek().loc.start.line;
         } else {
             return -1;
+        }
+    }
+
+    get loc() {
+        if (!this._stopped && this.stack.peek().loc) {
+            return this.stack.peek().loc;
+        } else {
+            return null;
         }
     }
 
