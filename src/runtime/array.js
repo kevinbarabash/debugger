@@ -8,7 +8,7 @@ var map = function *(callback, _this) {
     var result = [];
     for (var i = 0; i < this.length; i++) {
         result.push(yield {
-            value: callback.call(this, this[i], i, _this),
+            value: callback.call(_this, this[i], i, this),
             stepInAgain: true   // non user code call site
         });
     }
@@ -22,7 +22,7 @@ var reduce = function *(callback, initialValue) {
         if (this.length === 0) {
             throw new TypeError("empty array and no initial value");
         }
-        initialValue = this[0]; 
+        initialValue = this[0];
     }
     var result = initialValue;
     for (var i = start; i < this.length; i++) {
@@ -56,7 +56,7 @@ var filter = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
         var value = this[i];
         var cond = yield {
-            value: callback.call(this, value, i, _this)
+            value: callback.call(_this, value, i, this)
         };
         if (cond) {
             result.push(value);
@@ -68,7 +68,7 @@ var filter = function *(callback, _this) {
 var forEach = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
         yield {
-            value: callback.call(this, this[i], i, _this)
+            value: callback.call(_this, this[i], i, this)
         };
     }
 };
@@ -76,7 +76,7 @@ var forEach = function *(callback, _this) {
 var every = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
         var cond = yield {
-            value: callback.call(this, this[i], i, _this)
+            value: callback.call(_this, this[i], i, this)
         };
         if (!cond) {
             return false;
@@ -88,7 +88,7 @@ var every = function *(callback, _this) {
 var some = function *(callback, _this) {
     for (var i = 0; i < this.length; i++) {
         var cond = yield {
-            value: callback.call(this, this[i], i, _this)
+            value: callback.call(_this, this[i], i, this)
         };
         if (cond) {
             return true;

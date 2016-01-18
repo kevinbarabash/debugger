@@ -34,7 +34,7 @@ if (typeof require !== "undefined") {
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
                 context: context,
-                //debug: true
+                debug: false
             });
         });
 
@@ -43,7 +43,11 @@ if (typeof require !== "undefined") {
                 var code = getFunctionBody(function () {
                     var a = [1,2,3];
                     var b = a.map(function (val) {
-                        return val * val;
+                        return this.square(val);
+                    }, {
+                        square: function(val) {
+                            return val * val;
+                        }
                     });
                 });
 
@@ -293,7 +297,11 @@ if (typeof require !== "undefined") {
                 code: function () {
                     var a = [1,2,3];
                     var b = a.filter(function (val) {
-                        return val % 2 === 1;
+                        return this.isOdd(val);
+                    }, {
+                        isOdd: function(val) {
+                            return val % 2 === 1;
+                        }
                     });
                 },
                 test: function () {
@@ -353,7 +361,11 @@ if (typeof require !== "undefined") {
                 var code = getFunctionBody(function () {
                     var a = [1,2,3];
                     a.forEach(function (val) {
-                        print(val)
+                        this.print(val)
+                    }, {
+                        print: function(val) {
+                            print(val);
+                        }
                     });
                 });
 
@@ -430,7 +442,11 @@ if (typeof require !== "undefined") {
                         return val > 1;
                     });
                     var b = [1,2,3].every(function (val) {
-                        return val > 0;
+                        return this.isPositive(val);
+                    }, {
+                        isPositive: function(val) {
+                            return val > 0;
+                        }
                     });
                 },
                 test: function () {
@@ -496,7 +512,11 @@ if (typeof require !== "undefined") {
                 title: "runs correctly",
                 code: function () {
                     var a = [1,2,3].some(function (val) {
-                        return val > 1;
+                        return this.greaterThan(val, 1);
+                    }, {
+                        greaterThan: function(val, num) {
+                            return val > num;
+                        }
                     });
                     var b = [1,2,3].some(function (val) {
                         return val > 3;

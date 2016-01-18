@@ -50712,7 +50712,7 @@ var map = regeneratorRuntime.mark(function map(callback, _this) {
                     _context.t0 = result;
                     _context.next = 6;
                     return {
-                        value: callback.call(this, this[i], i, _this),
+                        value: callback.call(_this, this[i], i, this),
                         stepInAgain: true // non user code call site
                     };
 
@@ -50879,7 +50879,7 @@ var filter = regeneratorRuntime.mark(function filter(callback, _this) {
                     value = this[i];
                     _context4.next = 6;
                     return {
-                        value: callback.call(this, value, i, _this)
+                        value: callback.call(_this, value, i, this)
                     };
 
                 case 6:
@@ -50921,7 +50921,7 @@ var forEach = regeneratorRuntime.mark(function forEach(callback, _this) {
 
                     _context5.next = 4;
                     return {
-                        value: callback.call(this, this[i], i, _this)
+                        value: callback.call(_this, this[i], i, this)
                     };
 
                 case 4:
@@ -50953,7 +50953,7 @@ var every = regeneratorRuntime.mark(function every(callback, _this) {
 
                     _context6.next = 4;
                     return {
-                        value: callback.call(this, this[i], i, _this)
+                        value: callback.call(_this, this[i], i, this)
                     };
 
                 case 4:
@@ -50998,7 +50998,7 @@ var some = regeneratorRuntime.mark(function some(callback, _this) {
 
                     _context7.next = 4;
                     return {
-                        value: callback.call(this, this[i], i, _this)
+                        value: callback.call(_this, this[i], i, this)
                     };
 
                 case 4:
