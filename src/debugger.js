@@ -6,7 +6,7 @@
  */
 
 var Stepper = require("./stepper");
-var Scheduler = require("../external/scheduler/lib/scheduler");
+var Scheduler = require("./scheduler");
 var transform = require("./transform");
 
 require("./runtime/runtime");
