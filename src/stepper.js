@@ -178,28 +178,71 @@ class Stepper {
         }
     }
 
+    propError(e) {
+        while (!this.stack.isEmpty) {
+            this.stack.pop();
+            var frame = this.stack.peek();
+
+            try {
+                var result = frame.gen.throw(e);
+                return result;
+            } catch (e2) {
+                e = e2;
+            }
+        }
+        // TODO: communicate uncaught errors to the debugger
+        //return {
+        //    done: true
+        //};
+    }
+
     _step() {
         if (this.stack.isEmpty) {
             return;
         }
-        var frame = this.stack.peek();
-        var result = frame.gen.next(this._retVal);
-        this._retVal = undefined;
+        try {
+            var frame = this.stack.peek();
+            var result = frame.gen.next(this._retVal);
+            this._retVal = undefined;
 
-        // if the result.value contains scope information add it to the
-        // current stack frame
-        // TODO: make this list static
+            // if the result.value contains scope information add it to the
+            // current stack frame
+            // TODO: make this list static
 
-        if (result.value) {
-            frameProps.forEach(prop => {
-                if (result.value.hasOwnProperty(prop)) {
-                    frame[prop] = result.value[prop];
+            if (result.value) {
+                frameProps.forEach(prop => {
+                    if (result.value.hasOwnProperty(prop)) {
+                        frame[prop] = result.value[prop];
+                    }
+                });
+
+                if (result.value.breakpoint) {
+                    this._paused = true;
+                    this.breakCallback();
                 }
-            });
+            }
+        } catch(e) {
+            var result = this.propError(e);
+            if (result) {
+                var frame = this.stack.peek();
+                this._retVal = undefined;
 
-            if (result.value.breakpoint) {
-                this._paused = true;
-                this.breakCallback();
+                // if the result.value contains scope information add it to the
+                // current stack frame
+                // TODO: make this list static
+
+                if (result.value) {
+                    frameProps.forEach(prop => {
+                        if (result.value.hasOwnProperty(prop)) {
+                            frame[prop] = result.value[prop];
+                        }
+                    });
+
+                    if (result.value.breakpoint) {
+                        this._paused = true;
+                        this.breakCallback();
+                    }
+                }
             }
         }
 

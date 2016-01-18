@@ -1892,6 +1892,7 @@ if (typeof require !== "undefined") {
         });
 
         describe("better loops", function () {
+            // TODO: finish writing these tests
             it("should do something", function () {
                 var code = getFunctionBody(function () {
                     for (var i = 0, j = 0; i * j < 10; i++, j += 1) {
@@ -1901,6 +1902,134 @@ if (typeof require !== "undefined") {
                 });
 
                 _debugger.load(code);
+            });
+        });
+
+        describe("error handling", function () {
+            it("should transform try/catch blocks", function () {
+                var code = getFunctionBody(function () {
+                    try {
+                        print("hello");
+                        throw "world";
+                    } catch(e) {
+                        print(e);
+                    }
+                });
+
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.print.calledWith("hello")).to.be(true);
+                expect(context.print.calledWith("world")).to.be(true);
+            });
+
+            it("should handle try/catches within functions", function () {
+                var code = getFunctionBody(function () {
+                    var foo = function() {
+                        try {
+                            print("hello");
+                            throw "world";
+                        } catch(e) {
+                            print(e);
+                        }
+                    };
+                    foo();
+                });
+
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.print.calledWith("hello")).to.be(true);
+                expect(context.print.calledWith("world")).to.be(true);
+            });
+
+            it("should propagate exceptions up a level", function () {
+                var code = getFunctionBody(function () {
+                    var foo = function() {
+                        print("hello");
+                        throw "world";
+                    };
+                    try {
+                        foo();
+                    } catch (e) {
+                        print(e);
+                    }
+                });
+
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.print.calledWith("hello")).to.be(true);
+                expect(context.print.calledWith("world")).to.be(true);
+            });
+
+            it("should propagate exceptions up multiple levels", function () {
+                var code = getFunctionBody(function () {
+                    var foo = function() {
+                        print("hello");
+                        throw "world";
+                    };
+                    var bar = function() {
+                        foo();
+                    };
+                    try {
+                        bar();
+                    } catch (e) {
+                        print(e);
+                    }
+                });
+
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.print.calledWith("hello")).to.be(true);
+                expect(context.print.calledWith("world")).to.be(true);
+            });
+
+            it("should handle finally", function () {
+                var code = getFunctionBody(function () {
+                    var foo = function() {
+                        print("hello");
+                        throw "world";
+                    };
+                    var bar = function() {
+                        foo();
+                    };
+                    try {
+                        bar();
+                    } catch (e) {
+                        print(e);
+                    } finally {
+                        print("finally");
+                    }
+                });
+
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.print.calledWith("hello")).to.be(true);
+                expect(context.print.calledWith("world")).to.be(true);
+                expect(context.print.calledWith("finally")).to.be(true);
+            });
+
+
+            it("should handle code that doesn't catch exceptions", function () {
+                var code = getFunctionBody(function () {
+                    var foo = function() {
+                        print("hello");
+                        throw "world";
+                    };
+                    var bar = function() {
+                        foo();
+                    };
+                    bar();
+                });
+
+                _debugger.load(code);
+                _debugger.start();
+
+                expect(context.print.calledWith("hello")).to.be(true);
+                expect(context.print.calledWith("world")).to.be(false);
             });
         });
     });

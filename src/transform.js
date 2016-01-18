@@ -145,6 +145,8 @@ var isReference = function(node, parent) {
     // we're a property key so we aren't referenced
     if (parent.type === "Property" && parent.key === node) return false;
 
+    if (parent.type === "CatchClause" && parent.param === node) return false;
+
     // we're a variable declarator id so we aren't referenced
     if (parent.type === "VariableDeclarator" && parent.id === node) return false;
 
@@ -349,9 +351,11 @@ var transform = function(code, _context, options) {
                     }
 
                     if (variable.defs.length > 0) {
-                        scope[variable.name] = {
-                            type: variable.defs[0].type
-                        };
+                        if (variable.defs.every(def => def.type !== "CatchClause")) {
+                            scope[variable.name] = {
+                                type: variable.defs[0].type
+                            };
+                        }
                     }
                 });
 
@@ -387,7 +391,7 @@ var transform = function(code, _context, options) {
                 insertYields(bodyList);
 
                 if (bodyList.first === null) {
-                    bodyList.push_back(yieldObject({ loc: makeLocNode(node.loc) }, node.loc));
+                    bodyList.push_back(yieldObject({loc: makeLocNode(node.loc)}, node.loc));
                 }
 
                 let functionName = getFunctionName(node, parent);
@@ -403,6 +407,8 @@ var transform = function(code, _context, options) {
                 }
 
                 node.body = bodyList.toArray();
+            } else if (node.type === "CatchClause") {
+                scopeStack.pop();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
                 let obj = {
                     value: node.type === "NewExpression" ? callInstantiate(node) : node,

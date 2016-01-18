@@ -51257,29 +51257,73 @@ var Stepper = function () {
             delete this._breakpoints[line];
         }
     }, {
+        key: "propError",
+        value: function propError(e) {
+            while (!this.stack.isEmpty) {
+                this.stack.pop();
+                var frame = this.stack.peek();
+
+                try {
+                    var result = frame.gen.throw(e);
+                    return result;
+                } catch (e2) {
+                    e = e2;
+                }
+            }
+            // TODO: communicate uncaught errors to the debugger
+            //return {
+            //    done: true
+            //};
+        }
+    }, {
         key: "_step",
         value: function _step() {
             if (this.stack.isEmpty) {
                 return;
             }
-            var frame = this.stack.peek();
-            var result = frame.gen.next(this._retVal);
-            this._retVal = undefined;
+            try {
+                var frame = this.stack.peek();
+                var result = frame.gen.next(this._retVal);
+                this._retVal = undefined;
 
-            // if the result.value contains scope information add it to the
-            // current stack frame
-            // TODO: make this list static
+                // if the result.value contains scope information add it to the
+                // current stack frame
+                // TODO: make this list static
 
-            if (result.value) {
-                frameProps.forEach(function (prop) {
-                    if (result.value.hasOwnProperty(prop)) {
-                        frame[prop] = result.value[prop];
+                if (result.value) {
+                    frameProps.forEach(function (prop) {
+                        if (result.value.hasOwnProperty(prop)) {
+                            frame[prop] = result.value[prop];
+                        }
+                    });
+
+                    if (result.value.breakpoint) {
+                        this._paused = true;
+                        this.breakCallback();
                     }
-                });
+                }
+            } catch (e) {
+                var result = this.propError(e);
+                if (result) {
+                    var frame = this.stack.peek();
+                    this._retVal = undefined;
 
-                if (result.value.breakpoint) {
-                    this._paused = true;
-                    this.breakCallback();
+                    // if the result.value contains scope information add it to the
+                    // current stack frame
+                    // TODO: make this list static
+
+                    if (result.value) {
+                        frameProps.forEach(function (prop) {
+                            if (result.value.hasOwnProperty(prop)) {
+                                frame[prop] = result.value[prop];
+                            }
+                        });
+
+                        if (result.value.breakpoint) {
+                            this._paused = true;
+                            this.breakCallback();
+                        }
+                    }
                 }
             }
 
@@ -51510,6 +51554,8 @@ var isReference = function isReference(node, parent) {
     // we're a property key so we aren't referenced
     if (parent.type === "Property" && parent.key === node) return false;
 
+    if (parent.type === "CatchClause" && parent.param === node) return false;
+
     // we're a variable declarator id so we aren't referenced
     if (parent.type === "VariableDeclarator" && parent.id === node) return false;
 
@@ -51679,9 +51725,13 @@ var transform = function transform(code, _context, options) {
                         }
 
                         if (variable.defs.length > 0) {
-                            scope[variable.name] = {
-                                type: variable.defs[0].type
-                            };
+                            if (variable.defs.every(function (def) {
+                                return def.type !== "CatchClause";
+                            })) {
+                                scope[variable.name] = {
+                                    type: variable.defs[0].type
+                                };
+                            }
                         }
                     });
 
@@ -51730,6 +51780,8 @@ var transform = function transform(code, _context, options) {
                 }
 
                 node.body = bodyList.toArray();
+            } else if (node.type === "CatchClause") {
+                scopeStack.pop();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
                 var obj = {
                     value: node.type === "NewExpression" ? callInstantiate(node) : node,
