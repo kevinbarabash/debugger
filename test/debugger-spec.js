@@ -1767,6 +1767,39 @@ if (typeof require !== "undefined") {
 
                 expect(context.x).to.be(5);
             });
+
+            it("should have the correct line numbers on all stack frames", function () {
+                var code = getFunctionBody(function () {
+                    function foo() {
+                        bar();
+                    }
+                    function bar() {
+                        print('bar');
+                    }
+                    foo();
+                });
+
+                _debugger.load(code);
+                _debugger.start(true);
+
+                _debugger.stepOver();
+                _debugger.stepOver();
+                _debugger.stepIn();
+                _debugger.stepIn();
+
+                var stack = _debugger.currentStack;
+
+                expect(stack[0].name).to.equal('<PROGRAM>');
+                expect(stack[0].line).to.equal(7);
+
+                expect(stack[1].name).to.equal('foo');
+                expect(stack[1].line).to.equal(2);
+
+                expect(stack[2].name).to.equal('bar');
+                expect(stack[2].line).to.equal(5);
+
+                _debugger.resume();
+            });
         });
 
         describe("lifecyle", function () {

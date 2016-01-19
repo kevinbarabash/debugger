@@ -55,7 +55,6 @@ class Scheduler {
         var _scheduler = this;
         var _delay = delay;
 
-        // TODO: replace setTimeout with setInterval and clearInterval
         function repeatFunc() {
             if (!_repeat) {
                 return;

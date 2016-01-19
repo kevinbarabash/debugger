@@ -1,7 +1,6 @@
 /*global recast, esprima, escodegen, injector */
 
 var Stack = require("../node_modules/basic-ds/lib/Stack");
-var Task = require("../external/scheduler/lib/task");
 
 var frameProps = ["scope", "name", "loc", "stepInAgain"];
 
@@ -215,6 +214,11 @@ class Stepper {
                         frame[prop] = result.value[prop];
                     }
                 });
+
+                // TODO: think about use locations in stack trace instead
+                if (result.value.hasOwnProperty("loc")) {
+                    frame.line = result.value.loc.start.line;
+                }
 
                 if (result.value.breakpoint) {
                     this._paused = true;

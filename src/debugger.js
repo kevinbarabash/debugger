@@ -106,16 +106,6 @@ class Debugger {
         return this._context;
     }
 
-    // TODO: deprecate
-    /**
-     * Since all ES5 compliant browsers are supported this always returns true.
-     * @deprecated
-     * @returns {boolean}
-     */
-    static isBrowserSupported() {
-        return true;
-    }
-
     load(code) {
         var options = {
             nativeGenerators: this.nativeGenerators,
