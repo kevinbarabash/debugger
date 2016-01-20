@@ -51555,17 +51555,20 @@ var stringForId = function stringForId(node) {
     return name;
 };
 
-var getNameForFunctionExpression = function getNameForFunctionExpression(node) {
+var getNameForFunctionExpression = function getNameForFunctionExpression(node, path) {
     var name = "";
-    if (node._parent.type === "Property") {
-        name = node._parent.key.name;
-        if (node._parent._parent.type === "ObjectExpression") {
-            name = getNameForFunctionExpression(node._parent._parent) + "." + name;
+    var parent = path[path.length - 1];
+    var grandparent = path[path.length - 2];
+
+    if (parent.type === "Property") {
+        name = parent.key.name;
+        if (grandparent.type === "ObjectExpression") {
+            name = getNameForFunctionExpression(grandparent, path.slice(0, path.length - 2)) + "." + name;
         }
-    } else if (node._parent.type === "AssignmentExpression") {
-        name = stringForId(node._parent.left);
-    } else if (node._parent.type === "VariableDeclarator") {
-        name = stringForId(node._parent.id);
+    } else if (parent.type === "AssignmentExpression") {
+        name = stringForId(parent.left);
+    } else if (parent.type === "VariableDeclarator") {
+        name = stringForId(parent.id);
     } else {
         name = "<anonymous>"; // TODO: test anonymous callbacks
     }
@@ -51683,13 +51686,15 @@ var addScopeDict = function addScopeDict(bodyList) {
     bodyList.push_front(declareVariable(scopeName, scopeDict));
 };
 
-var getFunctionName = function getFunctionName(node, parent) {
-    if (parent.type === "FunctionDeclaration") {
+var getFunctionName = function getFunctionName(node, path) {
+    var parent = path[path.length - 1];
+
+    if (node.type === "Program") {
+        return "<PROGRAM>";
+    } else if (parent.type === "FunctionDeclaration") {
         return stringForId(parent.id);
     } else if (parent.type === "FunctionExpression") {
-        return getNameForFunctionExpression(parent);
-    } else if (node.type === "Program") {
-        return "<PROGRAM>";
+        return getNameForFunctionExpression(parent, path.slice(0, path.length - 1));
     }
 };
 
@@ -51723,6 +51728,7 @@ var compile = function compile(ast, options) {
 var context;
 var contextName;
 var scopeStack;
+var path;
 
 var transform = function transform(code, _context, options) {
     var ast = esprima.parse(code, { loc: true });
@@ -51732,6 +51738,7 @@ var transform = function transform(code, _context, options) {
     scopeStack = new Stack();
     context = _context;
     contextName = "context" + Date.now();
+    path = [];
 
     estraverse.replace(ast, {
         enter: function enter(node, parent) {
@@ -51767,9 +51774,11 @@ var transform = function transform(code, _context, options) {
                 });
             }
 
-            node._parent = parent;
+            path.push(node);
         },
         leave: function leave(node, parent) {
+            path.pop();
+
             if (node.type === "FunctionExpression" || node.type === "FunctionDeclaration") {
                 // convert all user defined functions to generators
                 node.generator = true;
@@ -51791,7 +51800,7 @@ var transform = function transform(code, _context, options) {
                     bodyList.push_back(yieldObject({ loc: makeLocNode(node.loc) }, node.loc));
                 }
 
-                var functionName = getFunctionName(node, parent);
+                var functionName = getFunctionName(node, path);
                 if (functionName) {
                     // modify the first yield statement so that the object
                     // returned contains the function's name
@@ -51891,7 +51900,6 @@ var transform = function transform(code, _context, options) {
             }
 
             // clean up
-            delete node._parent;
             delete node._index;
         }
     });
