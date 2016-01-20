@@ -45,7 +45,7 @@ if (typeof require !== "undefined") {
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                debug: false
+                debug: true
             });
             _debugger.context = context;
         });
@@ -73,7 +73,7 @@ if (typeof require !== "undefined") {
                 expect(context.fill.callCount).to.be(2);
             });
 
-            it("should set variables in the context", function () {
+            it.only("should set variables in the context", function () {
                 _debugger.start();
                 expect(context.x).to.equal(5);
             });
@@ -1128,6 +1128,37 @@ if (typeof require !== "undefined") {
 
                 expect(context.x).to.be(5);
                 expect(context.y).to.be(10);
+            });
+
+            it.only("should allow for using the same variable name in different scopes", function () {
+                var code = getFunctionBody(function () {
+                    var x = 5;
+                    var y = 10;
+
+                    function foo() {
+                        var x = 10;
+                        var y = 20;
+                        print("x = " + x + ",  y = " + y);
+                    }
+
+                    foo();
+                });
+
+                _debugger.load(code);
+                _debugger.start(true);
+
+                _debugger.stepOver();
+                _debugger.stepOver();
+                _debugger.stepOver();
+                _debugger.stepIn();
+                _debugger.stepOver();
+                _debugger.stepOver();
+
+                expect(context.x).to.be(5);
+                expect(context.y).to.be(10);
+
+                expect(scope.x).to.be(10);
+                expect(scope.y).to.be(20);
             });
 
             it("should work handle simple cases", function () {
