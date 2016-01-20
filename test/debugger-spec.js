@@ -1130,7 +1130,7 @@ if (typeof require !== "undefined") {
                 expect(context.y).to.be(10);
             });
 
-            it.only("should allow for using the same variable name in different scopes", function () {
+            it("should allow for using the same variable name in different scopes", function () {
                 var code = getFunctionBody(function () {
                     var x = 5;
                     var y = 10;
@@ -1156,6 +1156,8 @@ if (typeof require !== "undefined") {
 
                 expect(context.x).to.be(5);
                 expect(context.y).to.be(10);
+
+                var scope = _debugger.currentScope;
 
                 expect(scope.x).to.be(10);
                 expect(scope.y).to.be(20);
