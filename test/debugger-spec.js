@@ -45,7 +45,7 @@ if (typeof require !== "undefined") {
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                debug: true
+                debug: false
             });
             _debugger.context = context;
         });
@@ -73,7 +73,7 @@ if (typeof require !== "undefined") {
                 expect(context.fill.callCount).to.be(2);
             });
 
-            it.only("should set variables in the context", function () {
+            it("should set variables in the context", function () {
                 _debugger.start();
                 expect(context.x).to.equal(5);
             });
