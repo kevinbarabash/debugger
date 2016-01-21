@@ -1,6 +1,5 @@
 var LinkedList = require("basic-ds").LinkedList;
 var Stack = require("basic-ds").Stack;
-var b = require("ast-types").builders;
 var escodegen = require("escodegen");
 var escope = require("escope");
 var esprima = require("esprima-fb");
@@ -8,14 +7,69 @@ var estraverse = require("estraverse");
 var regenerator = require("regenerator");
 
 
+var expressionStatement = function(expression) {
+    return {
+        type: "ExpressionStatement",
+        expression: expression
+    };
+};
+
+var yieldExpression = function(expression) {
+    return {
+        type: "YieldExpression",
+        argument: expression
+    };
+};
+
+var assignmentExpression = function(operator, left, right) {
+    return {
+        type: "AssignmentExpression",
+        operator: operator,
+        left: left,
+        right: right
+    };
+};
+
 var assignmentStatement = function(left, right, loc) {
-    var stmt = b.expressionStatement(
-        b.assignmentExpression("=", left, right)
+    var stmt = expressionStatement(
+        assignmentExpression("=", left, right)
     );
     stmt.loc = loc;
     return stmt;
 };
 
+var functionDeclaration = function(id, params, body, generator) {
+    return {
+        type: "FunctionDeclaration",
+        id: id,
+        params: params,
+        body: body,
+        generator: generator
+    }
+};
+
+var functionExpression = function(params, body, generator) {
+    return {
+        type: "FunctionExpression",
+        params: params,
+        body: body,
+        generator: generator
+    }
+};
+
+var blockStatement = function(body) {
+    return {
+        type: "BlockStatement",
+        body: body
+    };
+};
+
+var sequenceExpression = function(expressions) {
+    return {
+        type: "SequenceExpression",
+        expressions: expressions
+    };
+};
 
 var rewriteVariableDeclarations = function(bodyList) {
     var nodes = [];
@@ -34,7 +88,7 @@ var rewriteVariableDeclarations = function(bodyList) {
                 var scopeName = scopeNameForName(name);
                 if (scopeName) {
                     replacements.push(assignmentStatement(
-                        memberExpression(scopeName, name), decl.init, decl.loc
+                        memberExpression(identifier(scopeName), identifier(name)), decl.init, decl.loc
                     ));
                 }
             }
@@ -45,7 +99,6 @@ var rewriteVariableDeclarations = function(bodyList) {
         }
     });
 };
-
 
 var isBreakpoint = function(node) {
     if (node.type === "ExpressionStatement") {
@@ -62,23 +115,22 @@ var isBreakpoint = function(node) {
     return false;
 };
 
-
 var makeLocNode = function(loc) {
     // TODO: create a function to handle creating nested object expressions
     // differentiate from objectExpression which assumes that properties
     // that are objects are already AST nodes
-    var start = b.objectExpression([
-        b.property("init", b.identifier("line"), b.literal(loc.start.line)),
-        b.property("init", b.identifier("column"), b.literal(loc.start.column))
+    var start = objectExpression([
+        property(identifier("line"), literal(loc.start.line)),
+        property(identifier("column"), literal(loc.start.column))
     ]);
-    var end = b.objectExpression([
-        b.property("init", b.identifier("line"), b.literal(loc.end.line)),
-        b.property("init", b.identifier("column"), b.literal(loc.end.column))
+    var end = objectExpression([
+        property(identifier("line"), literal(loc.end.line)),
+        property(identifier("column"), literal(loc.end.column))
     ]);
 
-    return b.objectExpression([
-        b.property("init", b.identifier("start"), start),
-        b.property("init", b.identifier("end"), end)
+    return objectExpression([
+        property(identifier("start"), start),
+        property(identifier("end"), end)
     ]);
 };
 
@@ -93,7 +145,6 @@ var insertYields = function(bodyList) {
         bodyList.insertBeforeNode(listNode, yieldObject({ loc: makeLocNode(loc) }, loc));
     });
 };
-
 
 var stringForId = function(node) {
     var name = "";
@@ -122,7 +173,6 @@ var stringForId = function(node) {
     return name;
 };
 
-
 var getNameForFunctionExpression = function(node, path) {
     var name = "";
     var parent = path[path.length - 1];
@@ -142,7 +192,6 @@ var getNameForFunctionExpression = function(node, path) {
     }
     return name;
 };
-
 
 var isReference = function(node, parent) {
     // we're a property key so we aren't referenced
@@ -165,19 +214,16 @@ var isReference = function(node, parent) {
     return !isMemberExpression || isComputedProperty || isObject;
 };
 
-
 var assignmentForDeclarator = function(scopeName, decl) {
-    var ae = b.assignmentExpression(
-        "=", memberExpression(scopeName, decl.id.name), decl.init);
+    var ae = assignmentExpression(
+        "=", memberExpression(identifier(scopeName), identifier(decl.id.name)), decl.init);
     ae.loc = decl.loc;
     return ae;
 };
 
-
 var contextHasProperty = function(key) {
     return context[key] !== undefined || context.hasOwnProperty(key);
 };
-
 
 var scopeNameForName = function(name) {
     var scopes = scopeStack.items;
@@ -193,53 +239,102 @@ var scopeNameForName = function(name) {
     }
 };
 
+var callExpression = function(callee, args) {
+    return {
+        type: "CallExpression",
+        callee: callee,
+        arguments: args
+    };
+};
 
 var callInstantiate = function(node) {
     var name = stringForId(node.callee);
-    node.arguments.unshift(b.literal(name));    // constructor name
+    node.arguments.unshift(literal(name));    // constructor name
     node.arguments.unshift(node.callee);        // constructor
-    return b.callExpression(
-        memberExpression(contextName, "__instantiate__"), node.arguments
+    return callExpression(
+        memberExpression(identifier(contextName), identifier("__instantiate__")),
+        node.arguments
     );
 };
 
+var variableDeclaration = function(declarations, kind = "var") {
+    return {
+        type: "VariableDeclaration",
+        declarations: declarations,
+        kind: kind
+    };
+};
+
+var variableDeclarator = function(id, init = null) {
+    return {
+        type: "VariableDeclarator",
+        id: id,
+        init: init
+    };
+};
 
 var declareVariable = function(name, value) {
-    return b.variableDeclaration(
-        "var",
-        [b.variableDeclarator(
-            b.identifier(name),
+    return variableDeclaration(
+        [variableDeclarator(
+            identifier(name),
             value
         )]
     );
 };
 
-
-var memberExpression = function(objName, propName) {
-    return b.memberExpression(
-        b.identifier(objName),
-        b.identifier(propName),
-        false
-    );
+var memberExpression = function(object, property, computed = false) {
+    return {
+        type: "MemberExpression",
+        object: object,
+        property: property,
+        computed: computed
+    };
 };
 
+var identifier = function(name) {
+    return {
+        type: "Identifier",
+        name: name
+    };
+};
 
-var objectExpression = function(obj) {
-    return b.objectExpression(Object.keys(obj).map(key => {
-        var val = typeof obj[key] === "object" ? obj[key] : b.literal(obj[key]);
-        return b.property("init", b.identifier(key), val);
+var literal = function(value) {
+    return {
+        type: "Literal",
+        value: value
+    };
+};
+
+var property = function(key, value, kind = "init") {
+    return {
+        type: "Property",
+        key: key,
+        value: value,
+        kind: kind
+    };
+};
+
+var objectExpression = function(properties) {
+    return {
+        type: "ObjectExpression",
+        properties: properties
+    }
+};
+
+var shallowObjectExpression = function(obj) {
+    return objectExpression(Object.keys(obj).map(key => {
+        var val = typeof obj[key] === "object" ? obj[key] : literal(obj[key]);
+        return property(identifier(key), val);
     }));
 };
 
-
 var yieldObject = function(obj, loc) {
-    var stmt = b.expressionStatement(b.yieldExpression(objectExpression(obj)));
+    var stmt = expressionStatement(yieldExpression(shallowObjectExpression(obj)));
     if (loc) {
         stmt.loc = loc;
     }
     return stmt;
 };
-
 
 var wrapExpression = function(expr, nextExpr) {
     var obj = {
@@ -250,7 +345,7 @@ var wrapExpression = function(expr, nextExpr) {
     } else {
         obj.stepAgain = true;
     }
-    return b.yieldExpression(objectExpression(obj));
+    return yieldExpression(shallowObjectExpression(obj));
 };
 
 
@@ -270,12 +365,12 @@ var addScopeDict = function(bodyList) {
     var scope = scopeStack.peek();
 
     bodyList.first.value.expression.argument.properties.push(
-        b.property("init", b.identifier("scope"), b.identifier(scopeName))
+        property(identifier("scope"), identifier(scopeName))
     );
 
-    var scopeDict = b.objectExpression(Object.keys(scope).map(name => {
+    var scopeDict = objectExpression(Object.keys(scope).map(name => {
         var value = scope[name].type === "Parameter" ? name : "undefined";
-        return b.property("init", b.identifier(name), b.identifier(value));
+        return property(identifier(name), identifier(value));
     }));
 
     bodyList.push_front(declareVariable(scopeName, scopeDict));
@@ -307,12 +402,11 @@ var compile = function(ast, options) {
     } else {
         var entry = {
             type: "Program",
-            body: [b.functionDeclaration(
-                b.identifier("entry"),
-                [b.identifier(contextName)],
-                b.blockStatement(ast.body),
-                true,   // generator
-                false   // expression
+            body: [functionDeclaration(
+                identifier("entry"),
+                [identifier(contextName)],
+                blockStatement(ast.body),
+                true
             )]
         };
 
@@ -384,8 +478,8 @@ var transform = function(code, _context, options) {
                 if (node.type === "FunctionDeclaration") {
                     let scopeName = "$scope$" + (scopeStack.size - 1);
                     return assignmentStatement(
-                        memberExpression(scopeName, node.id.name),
-                        b.functionExpression(null, node.params, node.body, true, false),
+                        memberExpression(identifier(scopeName), identifier(node.id.name)),
+                        functionExpression(node.params, node.body, true),
                         node.loc
                     );
                 }
@@ -407,7 +501,7 @@ var transform = function(code, _context, options) {
                     // modify the first yield statement so that the object
                     // returned contains the function's name
                     bodyList.first.value.expression.argument.properties.push(
-                        b.property("init", b.identifier("name"), b.literal(functionName))
+                        property(identifier("name"), literal(functionName))
                     );
 
                     addScopeDict(bodyList);
@@ -418,12 +512,12 @@ var transform = function(code, _context, options) {
             } else if (node.type === "CatchClause") {
                 scopeStack.pop();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                let obj = {
-                    value: node.type === "NewExpression" ? callInstantiate(node) : node,
-                    stepAgain: true
-                };
+                let properties = [
+                    property(identifier("value"), node.type === "NewExpression" ? callInstantiate(node) : node),
+                    property(identifier("stepAgain"), literal(true))
+                ];
 
-                let expr = b.yieldExpression(objectExpression(obj));
+                let expr = yieldExpression(objectExpression(properties));
                 expr.loc = node.loc;
                 return expr;
             } else if (node.type === "DebuggerStatement") {
@@ -435,7 +529,7 @@ var transform = function(code, _context, options) {
                 if (isReference(node, parent)) {
                     let scopeName = scopeNameForName(node.name);
                     if (scopeName) {
-                        return memberExpression(scopeName, node.name);
+                        return memberExpression(identifier(scopeName), identifier(node.name));
                     }
                 }
 
@@ -482,18 +576,18 @@ var transform = function(code, _context, options) {
                 if (replacements.length === 1) {
                     return replacements[0];
                 } else if (replacements.length > 1) {
-                    return b.sequenceExpression(replacements);
+                    return sequenceExpression(replacements);
                 } else {
                     return null;
                 }
             } else if (node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.property.name === "prototype") { 
-                return b.callExpression( 
-                     memberExpression(contextName, "__getPrototype__"), 
+                return callExpression( 
+                     memberExpression(identifier(contextName), identifier("__getPrototype__")), 
                      [node.object] 
                 ); 
             } else if (node.type === "AssignmentExpression" && node.left.type === "CallExpression") {
-                return b.callExpression(
-                    memberExpression(contextName, "__assignPrototype__"),
+                return callExpression(
+                    memberExpression(identifier(contextName), identifier("__assignPrototype__")),
                     [
                         node.left.arguments[0],
                         node.right.argument.properties[0].value // access the yield statement to grab the right hand side

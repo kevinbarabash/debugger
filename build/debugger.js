@@ -45,7 +45,7 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
     module.exports = alter;
 }
 
-},{"assert":3,"stable":114}],2:[function(require,module,exports){
+},{"assert":3,"stable":100}],2:[function(require,module,exports){
 (function (process,__filename){
 /** vim: et:ts=4:sw=4:sts=4
  * @license amdefine 1.0.0 Copyright (c) 2011-2015, The Dojo Foundation All Rights Reserved.
@@ -350,7 +350,7 @@ function amdefine(module, requireFn) {
 module.exports = amdefine;
 
 }).call(this,require('_process'),"/node_modules/amdefine/amdefine.js")
-},{"_process":54,"path":51}],3:[function(require,module,exports){
+},{"_process":40,"path":37}],3:[function(require,module,exports){
 // http://wiki.commonjs.org/wiki/Unit_Testing/1.0
 //
 // THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
@@ -711,7 +711,7 @@ var objectKeys = Object.keys || function (obj) {
   return keys;
 };
 
-},{"util/":121}],4:[function(require,module,exports){
+},{"util/":107}],4:[function(require,module,exports){
 function traverse(root, options) {
     "use strict";
 
@@ -761,3538 +761,6 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
 }
 
 },{}],5:[function(require,module,exports){
-var types = require("../lib/types");
-var Type = types.Type;
-var def = Type.def;
-var or = Type.or;
-var builtin = types.builtInTypes;
-var isString = builtin.string;
-var isNumber = builtin.number;
-var isBoolean = builtin.boolean;
-var isRegExp = builtin.RegExp;
-var shared = require("../lib/shared");
-var defaults = shared.defaults;
-var geq = shared.geq;
-
-// Abstract supertype of all syntactic entities that are allowed to have a
-// .loc field.
-def("Printable")
-    .field("loc", or(
-        def("SourceLocation"),
-        null
-    ), defaults["null"], true);
-
-def("Node")
-    .bases("Printable")
-    .field("type", isString)
-    .field("comments", or(
-        [def("Comment")],
-        null
-    ), defaults["null"], true);
-
-def("SourceLocation")
-    .build("start", "end", "source")
-    .field("start", def("Position"))
-    .field("end", def("Position"))
-    .field("source", or(isString, null), defaults["null"]);
-
-def("Position")
-    .build("line", "column")
-    .field("line", geq(1))
-    .field("column", geq(0));
-
-def("Program")
-    .bases("Node")
-    .build("body")
-    .field("body", [def("Statement")]);
-
-def("Function")
-    .bases("Node")
-    .field("id", or(def("Identifier"), null), defaults["null"])
-    .field("params", [def("Pattern")])
-    .field("body", or(def("BlockStatement"), def("Expression")));
-
-def("Statement").bases("Node");
-
-// The empty .build() here means that an EmptyStatement can be constructed
-// (i.e. it's not abstract) but that it needs no arguments.
-def("EmptyStatement").bases("Statement").build();
-
-def("BlockStatement")
-    .bases("Statement")
-    .build("body")
-    .field("body", [def("Statement")]);
-
-// TODO Figure out how to silently coerce Expressions to
-// ExpressionStatements where a Statement was expected.
-def("ExpressionStatement")
-    .bases("Statement")
-    .build("expression")
-    .field("expression", def("Expression"));
-
-def("IfStatement")
-    .bases("Statement")
-    .build("test", "consequent", "alternate")
-    .field("test", def("Expression"))
-    .field("consequent", def("Statement"))
-    .field("alternate", or(def("Statement"), null), defaults["null"]);
-
-def("LabeledStatement")
-    .bases("Statement")
-    .build("label", "body")
-    .field("label", def("Identifier"))
-    .field("body", def("Statement"));
-
-def("BreakStatement")
-    .bases("Statement")
-    .build("label")
-    .field("label", or(def("Identifier"), null), defaults["null"]);
-
-def("ContinueStatement")
-    .bases("Statement")
-    .build("label")
-    .field("label", or(def("Identifier"), null), defaults["null"]);
-
-def("WithStatement")
-    .bases("Statement")
-    .build("object", "body")
-    .field("object", def("Expression"))
-    .field("body", def("Statement"));
-
-def("SwitchStatement")
-    .bases("Statement")
-    .build("discriminant", "cases", "lexical")
-    .field("discriminant", def("Expression"))
-    .field("cases", [def("SwitchCase")])
-    .field("lexical", isBoolean, defaults["false"]);
-
-def("ReturnStatement")
-    .bases("Statement")
-    .build("argument")
-    .field("argument", or(def("Expression"), null));
-
-def("ThrowStatement")
-    .bases("Statement")
-    .build("argument")
-    .field("argument", def("Expression"));
-
-def("TryStatement")
-    .bases("Statement")
-    .build("block", "handler", "finalizer")
-    .field("block", def("BlockStatement"))
-    .field("handler", or(def("CatchClause"), null), function() {
-        return this.handlers && this.handlers[0] || null;
-    })
-    .field("handlers", [def("CatchClause")], function() {
-        return this.handler ? [this.handler] : [];
-    }, true) // Indicates this field is hidden from eachField iteration.
-    .field("guardedHandlers", [def("CatchClause")], defaults.emptyArray)
-    .field("finalizer", or(def("BlockStatement"), null), defaults["null"]);
-
-def("CatchClause")
-    .bases("Node")
-    .build("param", "guard", "body")
-    .field("param", def("Pattern"))
-    .field("guard", or(def("Expression"), null), defaults["null"])
-    .field("body", def("BlockStatement"));
-
-def("WhileStatement")
-    .bases("Statement")
-    .build("test", "body")
-    .field("test", def("Expression"))
-    .field("body", def("Statement"));
-
-def("DoWhileStatement")
-    .bases("Statement")
-    .build("body", "test")
-    .field("body", def("Statement"))
-    .field("test", def("Expression"));
-
-def("ForStatement")
-    .bases("Statement")
-    .build("init", "test", "update", "body")
-    .field("init", or(
-        def("VariableDeclaration"),
-        def("Expression"),
-        null))
-    .field("test", or(def("Expression"), null))
-    .field("update", or(def("Expression"), null))
-    .field("body", def("Statement"));
-
-def("ForInStatement")
-    .bases("Statement")
-    .build("left", "right", "body", "each")
-    .field("left", or(
-        def("VariableDeclaration"),
-        def("Expression")))
-    .field("right", def("Expression"))
-    .field("body", def("Statement"))
-    .field("each", isBoolean);
-
-def("DebuggerStatement").bases("Statement").build();
-
-def("Declaration").bases("Statement");
-
-def("FunctionDeclaration")
-    .bases("Function", "Declaration")
-    .build("id", "params", "body")
-    .field("id", def("Identifier"));
-
-def("FunctionExpression")
-    .bases("Function", "Expression")
-    .build("id", "params", "body");
-
-def("VariableDeclaration")
-    .bases("Declaration")
-    .build("kind", "declarations")
-    .field("kind", or("var", "let", "const"))
-    .field("declarations", [or(
-        def("VariableDeclarator"),
-        def("Identifier") // TODO Esprima deviation.
-    )]);
-
-def("VariableDeclarator")
-    .bases("Node")
-    .build("id", "init")
-    .field("id", def("Pattern"))
-    .field("init", or(def("Expression"), null));
-
-// TODO Are all Expressions really Patterns?
-def("Expression").bases("Node", "Pattern");
-
-def("ThisExpression").bases("Expression").build();
-
-def("ArrayExpression")
-    .bases("Expression")
-    .build("elements")
-    .field("elements", [or(def("Expression"), null)]);
-
-def("ObjectExpression")
-    .bases("Expression")
-    .build("properties")
-    .field("properties", [def("Property")]);
-
-// TODO Not in the Mozilla Parser API, but used by Esprima.
-def("Property")
-    .bases("Node") // Want to be able to visit Property Nodes.
-    .build("kind", "key", "value")
-    .field("kind", or("init", "get", "set"))
-    .field("key", or(def("Literal"), def("Identifier")))
-    // esprima allows Pattern
-    .field("value", or(def("Expression"), def("Pattern")));
-
-def("SequenceExpression")
-    .bases("Expression")
-    .build("expressions")
-    .field("expressions", [def("Expression")]);
-
-var UnaryOperator = or(
-    "-", "+", "!", "~",
-    "typeof", "void", "delete");
-
-def("UnaryExpression")
-    .bases("Expression")
-    .build("operator", "argument", "prefix")
-    .field("operator", UnaryOperator)
-    .field("argument", def("Expression"))
-    // TODO Esprima doesn't bother with this field, presumably because
-    // it's always true for unary operators.
-    .field("prefix", isBoolean, defaults["true"]);
-
-var BinaryOperator = or(
-    "==", "!=", "===", "!==",
-    "<", "<=", ">", ">=",
-    "<<", ">>", ">>>",
-    "+", "-", "*", "/", "%",
-    "&", // TODO Missing from the Parser API.
-    "|", "^", "in",
-    "instanceof", "..");
-
-def("BinaryExpression")
-    .bases("Expression")
-    .build("operator", "left", "right")
-    .field("operator", BinaryOperator)
-    .field("left", def("Expression"))
-    .field("right", def("Expression"));
-
-var AssignmentOperator = or(
-    "=", "+=", "-=", "*=", "/=", "%=",
-    "<<=", ">>=", ">>>=",
-    "|=", "^=", "&=");
-
-def("AssignmentExpression")
-    .bases("Expression")
-    .build("operator", "left", "right")
-    .field("operator", AssignmentOperator)
-    .field("left", def("Pattern"))
-    .field("right", def("Expression"));
-
-var UpdateOperator = or("++", "--");
-
-def("UpdateExpression")
-    .bases("Expression")
-    .build("operator", "argument", "prefix")
-    .field("operator", UpdateOperator)
-    .field("argument", def("Expression"))
-    .field("prefix", isBoolean);
-
-var LogicalOperator = or("||", "&&");
-
-def("LogicalExpression")
-    .bases("Expression")
-    .build("operator", "left", "right")
-    .field("operator", LogicalOperator)
-    .field("left", def("Expression"))
-    .field("right", def("Expression"));
-
-def("ConditionalExpression")
-    .bases("Expression")
-    .build("test", "consequent", "alternate")
-    .field("test", def("Expression"))
-    .field("consequent", def("Expression"))
-    .field("alternate", def("Expression"));
-
-def("NewExpression")
-    .bases("Expression")
-    .build("callee", "arguments")
-    .field("callee", def("Expression"))
-    // The Mozilla Parser API gives this type as [or(def("Expression"),
-    // null)], but null values don't really make sense at the call site.
-    // TODO Report this nonsense.
-    .field("arguments", [def("Expression")]);
-
-def("CallExpression")
-    .bases("Expression")
-    .build("callee", "arguments")
-    .field("callee", def("Expression"))
-    // See comment for NewExpression above.
-    .field("arguments", [def("Expression")]);
-
-def("MemberExpression")
-    .bases("Expression")
-    .build("object", "property", "computed")
-    .field("object", def("Expression"))
-    .field("property", or(def("Identifier"), def("Expression")))
-    .field("computed", isBoolean);
-
-def("Pattern").bases("Node");
-
-def("ObjectPattern")
-    .bases("Pattern")
-    .build("properties")
-    // TODO File a bug to get PropertyPattern added to the interfaces API.
-    // esprima uses Property
-    .field("properties", [or(def("PropertyPattern"), def("Property"))]);
-
-def("PropertyPattern")
-    .bases("Pattern")
-    .build("key", "pattern")
-    .field("key", or(def("Literal"), def("Identifier")))
-    .field("pattern", def("Pattern"));
-
-def("ArrayPattern")
-    .bases("Pattern")
-    .build("elements")
-    .field("elements", [or(def("Pattern"), null)]);
-
-def("SwitchCase")
-    .bases("Node")
-    .build("test", "consequent")
-    .field("test", or(def("Expression"), null))
-    .field("consequent", [def("Statement")]);
-
-def("Identifier")
-    // But aren't Expressions and Patterns already Nodes? TODO Report this.
-    .bases("Node", "Expression", "Pattern")
-    .build("name")
-    .field("name", isString);
-
-def("Literal")
-    // But aren't Expressions already Nodes? TODO Report this.
-    .bases("Node", "Expression")
-    .build("value")
-    .field("value", or(
-        isString,
-        isBoolean,
-        null, // isNull would also work here.
-        isNumber,
-        isRegExp
-    ));
-
-// Abstract (non-buildable) comment supertype. Not a Node.
-def("Comment")
-    .bases("Printable")
-    .field("value", isString)
-    // A .leading comment comes before the node, whereas a .trailing
-    // comment comes after it. These two fields should not both be true,
-    // but they might both be false when the comment falls inside a node
-    // and the node has no children for the comment to lead or trail,
-    // e.g. { /*dangling*/ }.
-    .field("leading", isBoolean, defaults["true"])
-    .field("trailing", isBoolean, defaults["false"]);
-
-// Block comment. The .type really should be BlockComment rather than
-// Block, but that's what we're stuck with for now.
-def("Block")
-    .bases("Comment")
-    .build("value", /*optional:*/ "leading", "trailing");
-
-// Single line comment. The .type really should be LineComment rather than
-// Line, but that's what we're stuck with for now.
-def("Line")
-    .bases("Comment")
-    .build("value", /*optional:*/ "leading", "trailing");
-
-},{"../lib/shared":16,"../lib/types":17}],6:[function(require,module,exports){
-require("./core");
-var types = require("../lib/types");
-var def = types.Type.def;
-var or = types.Type.or;
-var builtin = types.builtInTypes;
-var isString = builtin.string;
-var isBoolean = builtin.boolean;
-
-// Note that none of these types are buildable because the Mozilla Parser
-// API doesn't specify any builder functions, and nobody uses E4X anymore.
-
-def("XMLDefaultDeclaration")
-    .bases("Declaration")
-    .field("namespace", def("Expression"));
-
-def("XMLAnyName").bases("Expression");
-
-def("XMLQualifiedIdentifier")
-    .bases("Expression")
-    .field("left", or(def("Identifier"), def("XMLAnyName")))
-    .field("right", or(def("Identifier"), def("Expression")))
-    .field("computed", isBoolean);
-
-def("XMLFunctionQualifiedIdentifier")
-    .bases("Expression")
-    .field("right", or(def("Identifier"), def("Expression")))
-    .field("computed", isBoolean);
-
-def("XMLAttributeSelector")
-    .bases("Expression")
-    .field("attribute", def("Expression"));
-
-def("XMLFilterExpression")
-    .bases("Expression")
-    .field("left", def("Expression"))
-    .field("right", def("Expression"));
-
-def("XMLElement")
-    .bases("XML", "Expression")
-    .field("contents", [def("XML")]);
-
-def("XMLList")
-    .bases("XML", "Expression")
-    .field("contents", [def("XML")]);
-
-def("XML").bases("Node");
-
-def("XMLEscape")
-    .bases("XML")
-    .field("expression", def("Expression"));
-
-def("XMLText")
-    .bases("XML")
-    .field("text", isString);
-
-def("XMLStartTag")
-    .bases("XML")
-    .field("contents", [def("XML")]);
-
-def("XMLEndTag")
-    .bases("XML")
-    .field("contents", [def("XML")]);
-
-def("XMLPointTag")
-    .bases("XML")
-    .field("contents", [def("XML")]);
-
-def("XMLName")
-    .bases("XML")
-    .field("contents", or(isString, [def("XML")]));
-
-def("XMLAttribute")
-    .bases("XML")
-    .field("value", isString);
-
-def("XMLCdata")
-    .bases("XML")
-    .field("contents", isString);
-
-def("XMLComment")
-    .bases("XML")
-    .field("contents", isString);
-
-def("XMLProcessingInstruction")
-    .bases("XML")
-    .field("target", isString)
-    .field("contents", or(isString, null));
-
-},{"../lib/types":17,"./core":5}],7:[function(require,module,exports){
-require("./core");
-var types = require("../lib/types");
-var def = types.Type.def;
-var or = types.Type.or;
-var builtin = types.builtInTypes;
-var isBoolean = builtin.boolean;
-var isObject = builtin.object;
-var isString = builtin.string;
-var defaults = require("../lib/shared").defaults;
-
-def("Function")
-    .field("generator", isBoolean, defaults["false"])
-    .field("expression", isBoolean, defaults["false"])
-    .field("defaults", [or(def("Expression"), null)], defaults.emptyArray)
-    // TODO This could be represented as a SpreadElementPattern in .params.
-    .field("rest", or(def("Identifier"), null), defaults["null"]);
-
-def("FunctionDeclaration")
-    .build("id", "params", "body", "generator", "expression");
-
-def("FunctionExpression")
-    .build("id", "params", "body", "generator", "expression");
-
-// TODO The Parser API calls this ArrowExpression, but Esprima uses
-// ArrowFunctionExpression.
-def("ArrowFunctionExpression")
-    .bases("Function", "Expression")
-    .build("params", "body", "expression")
-    // The forced null value here is compatible with the overridden
-    // definition of the "id" field in the Function interface.
-    .field("id", null, defaults["null"])
-    // The current spec forbids arrow generators, so I have taken the
-    // liberty of enforcing that. TODO Report this.
-    .field("generator", false, defaults["false"]);
-
-def("YieldExpression")
-    .bases("Expression")
-    .build("argument", "delegate")
-    .field("argument", or(def("Expression"), null))
-    .field("delegate", isBoolean, defaults["false"]);
-
-def("GeneratorExpression")
-    .bases("Expression")
-    .build("body", "blocks", "filter")
-    .field("body", def("Expression"))
-    .field("blocks", [def("ComprehensionBlock")])
-    .field("filter", or(def("Expression"), null));
-
-def("ComprehensionExpression")
-    .bases("Expression")
-    .build("body", "blocks", "filter")
-    .field("body", def("Expression"))
-    .field("blocks", [def("ComprehensionBlock")])
-    .field("filter", or(def("Expression"), null));
-
-def("ComprehensionBlock")
-    .bases("Node")
-    .build("left", "right", "each")
-    .field("left", def("Pattern"))
-    .field("right", def("Expression"))
-    .field("each", isBoolean);
-
-def("ModuleSpecifier")
-    .bases("Literal")
-    .build("value")
-    .field("value", isString);
-
-def("Property")
-    // Esprima extensions not mentioned in the Mozilla Parser API:
-    .field("key", or(def("Literal"), def("Identifier"), def("Expression")))
-    .field("method", isBoolean, defaults["false"])
-    .field("shorthand", isBoolean, defaults["false"])
-    .field("computed", isBoolean, defaults["false"]);
-
-def("PropertyPattern")
-    .field("key", or(def("Literal"), def("Identifier"), def("Expression")))
-    .field("computed", isBoolean, defaults["false"]);
-
-def("MethodDefinition")
-    .bases("Declaration")
-    .build("kind", "key", "value")
-    .field("kind", or("init", "get", "set", ""))
-    .field("key", or(def("Literal"), def("Identifier"), def("Expression")))
-    .field("value", def("Function"))
-    .field("computed", isBoolean, defaults["false"]);
-
-def("SpreadElement")
-    .bases("Node")
-    .build("argument")
-    .field("argument", def("Expression"));
-
-def("ArrayExpression")
-    .field("elements", [or(def("Expression"), def("SpreadElement"), null)]);
-
-def("NewExpression")
-    .field("arguments", [or(def("Expression"), def("SpreadElement"))]);
-
-def("CallExpression")
-    .field("arguments", [or(def("Expression"), def("SpreadElement"))]);
-
-def("SpreadElementPattern")
-    .bases("Pattern")
-    .build("argument")
-    .field("argument", def("Pattern"));
-
-def("ArrayPattern")
-    .field("elements", [or(
-        def("Pattern"),
-        null,
-        // used by esprima
-        def("SpreadElement")
-    )]);
-
-var ClassBodyElement = or(
-    def("MethodDefinition"),
-    def("VariableDeclarator"),
-    def("ClassPropertyDefinition"),
-    def("ClassProperty")
-);
-
-def("ClassProperty")
-  .bases("Declaration")
-  .build("key")
-  .field("key", or(def("Literal"), def("Identifier"), def("Expression")))
-  .field("computed", isBoolean, defaults["false"]);
-
-def("ClassPropertyDefinition") // static property
-    .bases("Declaration")
-    .build("definition")
-    // Yes, Virginia, circular definitions are permitted.
-    .field("definition", ClassBodyElement);
-
-def("ClassBody")
-    .bases("Declaration")
-    .build("body")
-    .field("body", [ClassBodyElement]);
-
-def("ClassDeclaration")
-    .bases("Declaration")
-    .build("id", "body", "superClass")
-    .field("id", def("Identifier"))
-    .field("body", def("ClassBody"))
-    .field("superClass", or(def("Expression"), null), defaults["null"]);
-
-def("ClassExpression")
-    .bases("Expression")
-    .build("id", "body", "superClass")
-    .field("id", or(def("Identifier"), null), defaults["null"])
-    .field("body", def("ClassBody"))
-    .field("superClass", or(def("Expression"), null), defaults["null"])
-    .field("implements", [def("ClassImplements")], defaults.emptyArray);
-
-def("ClassImplements")
-    .bases("Node")
-    .build("id")
-    .field("id", def("Identifier"))
-    .field("superClass", or(def("Expression"), null), defaults["null"]);
-
-// Specifier and NamedSpecifier are abstract non-standard types that I
-// introduced for definitional convenience.
-def("Specifier").bases("Node");
-def("NamedSpecifier")
-    .bases("Specifier")
-    // Note: this abstract type is intentionally not buildable.
-    .field("id", def("Identifier"))
-    .field("name", or(def("Identifier"), null), defaults["null"]);
-
-// Like NamedSpecifier, except type:"ExportSpecifier" and buildable.
-// export {<id [as name]>} [from ...];
-def("ExportSpecifier")
-    .bases("NamedSpecifier")
-    .build("id", "name");
-
-// export <*> from ...;
-def("ExportBatchSpecifier")
-    .bases("Specifier")
-    .build();
-
-// Like NamedSpecifier, except type:"ImportSpecifier" and buildable.
-// import {<id [as name]>} from ...;
-def("ImportSpecifier")
-    .bases("NamedSpecifier")
-    .build("id", "name");
-
-// import <* as id> from ...;
-def("ImportNamespaceSpecifier")
-    .bases("Specifier")
-    .build("id")
-    .field("id", def("Identifier"));
-
-// import <id> from ...;
-def("ImportDefaultSpecifier")
-    .bases("Specifier")
-    .build("id")
-    .field("id", def("Identifier"));
-
-def("ExportDeclaration")
-    .bases("Declaration")
-    .build("default", "declaration", "specifiers", "source")
-    .field("default", isBoolean)
-    .field("declaration", or(
-        def("Declaration"),
-        def("Expression"), // Implies default.
-        null
-    ))
-    .field("specifiers", [or(
-        def("ExportSpecifier"),
-        def("ExportBatchSpecifier")
-    )], defaults.emptyArray)
-    .field("source", or(def("ModuleSpecifier"), null), defaults["null"]);
-
-def("ImportDeclaration")
-    .bases("Declaration")
-    .build("specifiers", "source")
-    .field("specifiers", [or(
-        def("ImportSpecifier"),
-        def("ImportNamespaceSpecifier"),
-        def("ImportDefaultSpecifier")
-    )], defaults.emptyArray)
-    .field("source", def("ModuleSpecifier"));
-
-def("TaggedTemplateExpression")
-    .bases("Expression")
-    .field("tag", def("Expression"))
-    .field("quasi", def("TemplateLiteral"));
-
-def("TemplateLiteral")
-    .bases("Expression")
-    .build("quasis", "expressions")
-    .field("quasis", [def("TemplateElement")])
-    .field("expressions", [def("Expression")]);
-
-def("TemplateElement")
-    .bases("Node")
-    .build("value", "tail")
-    .field("value", {"cooked": isString, "raw": isString})
-    .field("tail", isBoolean);
-
-},{"../lib/shared":16,"../lib/types":17,"./core":5}],8:[function(require,module,exports){
-require("./core");
-var types = require("../lib/types");
-var def = types.Type.def;
-var or = types.Type.or;
-var builtin = types.builtInTypes;
-var isBoolean = builtin.boolean;
-var defaults = require("../lib/shared").defaults;
-
-def("Function")
-    .field("async", isBoolean, defaults["false"]);
-
-def("SpreadProperty")
-    .bases("Node")
-    .build("argument")
-    .field("argument", def("Expression"));
-
-def("ObjectExpression")
-    .field("properties", [or(def("Property"), def("SpreadProperty"))]);
-
-def("SpreadPropertyPattern")
-    .bases("Pattern")
-    .build("argument")
-    .field("argument", def("Pattern"));
-
-def("ObjectPattern")
-    .field("properties", [or(
-        def("PropertyPattern"),
-        def("SpreadPropertyPattern"),
-        // used by esprima
-        def("Property"),
-        def("SpreadProperty")
-    )]);
-
-def("AwaitExpression")
-    .bases("Expression")
-    .build("argument", "all")
-    .field("argument", or(def("Expression"), null))
-    .field("all", isBoolean, defaults["false"]);
-
-},{"../lib/shared":16,"../lib/types":17,"./core":5}],9:[function(require,module,exports){
-require("./core");
-var types = require("../lib/types");
-var def = types.Type.def;
-var or = types.Type.or;
-var builtin = types.builtInTypes;
-var isString = builtin.string;
-var isBoolean = builtin.boolean;
-var defaults = require("../lib/shared").defaults;
-
-def("XJSAttribute")
-    .bases("Node")
-    .build("name", "value")
-    .field("name", or(def("XJSIdentifier"), def("XJSNamespacedName")))
-    .field("value", or(
-        def("Literal"), // attr="value"
-        def("XJSExpressionContainer"), // attr={value}
-        null // attr= or just attr
-    ), defaults["null"]);
-
-def("XJSIdentifier")
-    .bases("Node")
-    .build("name")
-    .field("name", isString);
-
-def("XJSNamespacedName")
-    .bases("Node")
-    .build("namespace", "name")
-    .field("namespace", def("XJSIdentifier"))
-    .field("name", def("XJSIdentifier"));
-
-def("XJSMemberExpression")
-    .bases("MemberExpression")
-    .build("object", "property")
-    .field("object", or(def("XJSIdentifier"), def("XJSMemberExpression")))
-    .field("property", def("XJSIdentifier"))
-    .field("computed", isBoolean, defaults.false);
-
-var XJSElementName = or(
-    def("XJSIdentifier"),
-    def("XJSNamespacedName"),
-    def("XJSMemberExpression")
-);
-
-def("XJSSpreadAttribute")
-    .bases("Node")
-    .build("argument")
-    .field("argument", def("Expression"));
-
-var XJSAttributes = [or(
-    def("XJSAttribute"),
-    def("XJSSpreadAttribute")
-)];
-
-def("XJSExpressionContainer")
-    .bases("Expression")
-    .build("expression")
-    .field("expression", def("Expression"));
-
-def("XJSElement")
-    .bases("Expression")
-    .build("openingElement", "closingElement", "children")
-    .field("openingElement", def("XJSOpeningElement"))
-    .field("closingElement", or(def("XJSClosingElement"), null), defaults["null"])
-    .field("children", [or(
-        def("XJSElement"),
-        def("XJSExpressionContainer"),
-        def("XJSText"),
-        def("Literal") // TODO Esprima should return XJSText instead.
-    )], defaults.emptyArray)
-    .field("name", XJSElementName, function() {
-        // Little-known fact: the `this` object inside a default function
-        // is none other than the partially-built object itself, and any
-        // fields initialized directly from builder function arguments
-        // (like openingElement, closingElement, and children) are
-        // guaranteed to be available.
-        return this.openingElement.name;
-    })
-    .field("selfClosing", isBoolean, function() {
-        return this.openingElement.selfClosing;
-    })
-    .field("attributes", XJSAttributes, function() {
-        return this.openingElement.attributes;
-    });
-
-def("XJSOpeningElement")
-    .bases("Node") // TODO Does this make sense? Can't really be an XJSElement.
-    .build("name", "attributes", "selfClosing")
-    .field("name", XJSElementName)
-    .field("attributes", XJSAttributes, defaults.emptyArray)
-    .field("selfClosing", isBoolean, defaults["false"]);
-
-def("XJSClosingElement")
-    .bases("Node") // TODO Same concern.
-    .build("name")
-    .field("name", XJSElementName);
-
-def("XJSText")
-    .bases("Literal")
-    .build("value")
-    .field("value", isString);
-
-def("XJSEmptyExpression").bases("Expression").build();
-
-// Type Annotations
-def("Type")
-  .bases("Node");
-
-def("AnyTypeAnnotation")
-  .bases("Type");
-
-def("VoidTypeAnnotation")
-  .bases("Type");
-
-def("NumberTypeAnnotation")
-  .bases("Type");
-
-def("StringTypeAnnotation")
-  .bases("Type");
-
-def("StringLiteralTypeAnnotation")
-  .bases("Type")
-  .build("value", "raw")
-  .field("value", isString)
-  .field("raw", isString);
-
-def("BooleanTypeAnnotation")
-  .bases("Type");
-
-def("TypeAnnotation")
-  .bases("Node")
-  .build("typeAnnotation")
-  .field("typeAnnotation", def("Type"));
-
-def("NullableTypeAnnotation")
-  .bases("Type")
-  .build("typeAnnotation")
-  .field("typeAnnotation", def("Type"));
-
-def("FunctionTypeAnnotation")
-  .bases("Type")
-  .build("params", "returnType", "rest", "typeParameters")
-  .field("params", [def("FunctionTypeParam")])
-  .field("returnType", def("Type"))
-  .field("rest", or(def("FunctionTypeParam"), null))
-  .field("typeParameters", or(def("TypeParameterDeclaration"), null));
-
-def("FunctionTypeParam")
-  .bases("Node")
-  .build("name", "typeAnnotation", "optional")
-  .field("name", def("Identifier"))
-  .field("typeAnnotation", def("Type"))
-  .field("optional", isBoolean);
-  
-def("ArrayTypeAnnotation")
-  .bases("Type")
-  .build("elementType")
-  .field("elementType", def("Type"));
-
-def("ObjectTypeAnnotation")
-  .bases("Type")
-  .build("properties")
-  .field("properties", [def("ObjectTypeProperty")])
-  .field("indexers", [def("ObjectTypeIndexer")], defaults.emptyArray)
-  .field("callProperties", [def("ObjectTypeCallProperty")], defaults.emptyArray);
-
-def("ObjectTypeProperty")
-  .bases("Node")
-  .build("key", "value", "optional")
-  .field("key", or(def("Literal"), def("Identifier")))
-  .field("value", def("Type"))
-  .field("optional", isBoolean);
-
-def("ObjectTypeIndexer")
-  .bases("Node")
-  .build("id", "key", "value")
-  .field("id", def("Identifier"))
-  .field("key", def("Type"))
-  .field("value", def("Type"));
-
-def("ObjectTypeCallProperty")
-  .bases("Node")
-  .build("value")
-  .field("value", def("FunctionTypeAnnotation"))
-  .field("static", isBoolean, false);
-
-def("QualifiedTypeIdentifier")
-  .bases("Node")
-  .build("qualification", "id")
-  .field("qualification", or(def("Identifier"), def("QualifiedTypeIdentifier")))
-  .field("id", def("Identifier"));
-
-def("GenericTypeAnnotation")
-  .bases("Type")
-  .build("id", "typeParameters")
-  .field("id", or(def("Identifier"), def("QualifiedTypeIdentifier")))
-  .field("typeParameters", or(def("TypeParameterInstantiation"), null));
-
-def("MemberTypeAnnotation")
-  .bases("Type")
-  .build("object", "property")
-  .field("object", def("Identifier"))
-  .field("property", or(def("MemberTypeAnnotation"), def("GenericTypeAnnotation")));
-
-def("UnionTypeAnnotation")
-  .bases("Type")
-  .build("types")
-  .field("types", [def("Type")]);
-
-def("IntersectionTypeAnnotation")
-  .bases("Type")
-  .build("types")
-  .field("types", [def("Type")]);
-
-def("TypeofTypeAnnotation")
-  .bases("Type")
-  .build("argument")
-  .field("argument", def("Type"));
-
-def("Identifier")
-  .field("typeAnnotation", or(def("TypeAnnotation"), null), defaults["null"]);
-
-def("TypeParameterDeclaration")
-  .bases("Node")
-  .build("params")
-  .field("params", [def("Identifier")]);
-
-def("TypeParameterInstantiation")
-  .bases("Node")
-  .build("params")
-  .field("params", [def("Type")]);
-
-def("Function")
-  .field("returnType", or(def("TypeAnnotation"), null), defaults["null"])
-  .field("typeParameters", or(def("TypeParameterDeclaration"), null), defaults["null"]);
-
-def("ClassProperty")
-  .build("key", "typeAnnotation")
-  .field("typeAnnotation", def("TypeAnnotation"))
-  .field("static", isBoolean, false);
-
-def("ClassImplements")
-  .field("typeParameters", or(def("TypeParameterInstantiation"), null), defaults["null"]);
-
-def("InterfaceDeclaration")
-  .bases("Statement")
-  .build("id", "body", "extends")
-  .field("id", def("Identifier"))
-  .field("typeParameters", or(def("TypeParameterDeclaration"), null), defaults["null"])
-  .field("body", def("ObjectTypeAnnotation"))
-  .field("extends", [def("InterfaceExtends")]);
-
-def("InterfaceExtends")
-  .bases("Node")
-  .build("id")
-  .field("id", def("Identifier"))
-  .field("typeParameters", or(def("TypeParameterInstantiation"), null));
-
-def("TypeAlias")
-  .bases("Statement")
-  .build("id", "typeParameters", "right")
-  .field("id", def("Identifier"))
-  .field("typeParameters", or(def("TypeParameterDeclaration"), null))
-  .field("right", def("Type"));
-  
-def("TypeCastExpression")
-  .bases("Expression")
-  .build("expression", "typeAnnotation")
-  .field("expression", def("Expression"))
-  .field("typeAnnotation", def("TypeAnnotation"));
-
-def("TupleTypeAnnotation")
-  .bases("Type")
-  .build("types")
-  .field("types", [def("Type")]);
-
-def("DeclareVariable")
-  .bases("Statement")
-  .build("id")
-  .field("id", def("Identifier"));
-
-def("DeclareFunction")
-  .bases("Statement")
-  .build("id")
-  .field("id", def("Identifier"));
-
-def("DeclareClass")
-  .bases("InterfaceDeclaration")
-  .build("id");
-
-def("DeclareModule")
-  .bases("Statement")
-  .build("id", "body")
-  .field("id", or(def("Identifier"), def("Literal")))
-  .field("body", def("BlockStatement"));
-
-},{"../lib/shared":16,"../lib/types":17,"./core":5}],10:[function(require,module,exports){
-require("./core");
-var types = require("../lib/types");
-var def = types.Type.def;
-var or = types.Type.or;
-var geq = require("../lib/shared").geq;
-
-def("ForOfStatement")
-    .bases("Statement")
-    .build("left", "right", "body")
-    .field("left", or(
-        def("VariableDeclaration"),
-        def("Expression")))
-    .field("right", def("Expression"))
-    .field("body", def("Statement"));
-
-def("LetStatement")
-    .bases("Statement")
-    .build("head", "body")
-    // TODO Deviating from the spec by reusing VariableDeclarator here.
-    .field("head", [def("VariableDeclarator")])
-    .field("body", def("Statement"));
-
-def("LetExpression")
-    .bases("Expression")
-    .build("head", "body")
-    // TODO Deviating from the spec by reusing VariableDeclarator here.
-    .field("head", [def("VariableDeclarator")])
-    .field("body", def("Expression"));
-
-def("GraphExpression")
-    .bases("Expression")
-    .build("index", "expression")
-    .field("index", geq(0))
-    .field("expression", def("Literal"));
-
-def("GraphIndexExpression")
-    .bases("Expression")
-    .build("index")
-    .field("index", geq(0));
-
-},{"../lib/shared":16,"../lib/types":17,"./core":5}],11:[function(require,module,exports){
-var assert = require("assert");
-var types = require("../main");
-var getFieldNames = types.getFieldNames;
-var getFieldValue = types.getFieldValue;
-var isArray = types.builtInTypes.array;
-var isObject = types.builtInTypes.object;
-var isDate = types.builtInTypes.Date;
-var isRegExp = types.builtInTypes.RegExp;
-var hasOwn = Object.prototype.hasOwnProperty;
-
-function astNodesAreEquivalent(a, b, problemPath) {
-    if (isArray.check(problemPath)) {
-        problemPath.length = 0;
-    } else {
-        problemPath = null;
-    }
-
-    return areEquivalent(a, b, problemPath);
-}
-
-astNodesAreEquivalent.assert = function(a, b) {
-    var problemPath = [];
-    if (!astNodesAreEquivalent(a, b, problemPath)) {
-        if (problemPath.length === 0) {
-            assert.strictEqual(a, b);
-        } else {
-            assert.ok(
-                false,
-                "Nodes differ in the following path: " +
-                    problemPath.map(subscriptForProperty).join("")
-            );
-        }
-    }
-};
-
-function subscriptForProperty(property) {
-    if (/[_$a-z][_$a-z0-9]*/i.test(property)) {
-        return "." + property;
-    }
-    return "[" + JSON.stringify(property) + "]";
-}
-
-function areEquivalent(a, b, problemPath) {
-    if (a === b) {
-        return true;
-    }
-
-    if (isArray.check(a)) {
-        return arraysAreEquivalent(a, b, problemPath);
-    }
-
-    if (isObject.check(a)) {
-        return objectsAreEquivalent(a, b, problemPath);
-    }
-
-    if (isDate.check(a)) {
-        return isDate.check(b) && (+a === +b);
-    }
-
-    if (isRegExp.check(a)) {
-        return isRegExp.check(b) && (
-            a.source === b.source &&
-            a.global === b.global &&
-            a.multiline === b.multiline &&
-            a.ignoreCase === b.ignoreCase
-        );
-    }
-
-    return a == b;
-}
-
-function arraysAreEquivalent(a, b, problemPath) {
-    isArray.assert(a);
-    var aLength = a.length;
-
-    if (!isArray.check(b) || b.length !== aLength) {
-        if (problemPath) {
-            problemPath.push("length");
-        }
-        return false;
-    }
-
-    for (var i = 0; i < aLength; ++i) {
-        if (problemPath) {
-            problemPath.push(i);
-        }
-
-        if (i in a !== i in b) {
-            return false;
-        }
-
-        if (!areEquivalent(a[i], b[i], problemPath)) {
-            return false;
-        }
-
-        if (problemPath) {
-            assert.strictEqual(problemPath.pop(), i);
-        }
-    }
-
-    return true;
-}
-
-function objectsAreEquivalent(a, b, problemPath) {
-    isObject.assert(a);
-    if (!isObject.check(b)) {
-        return false;
-    }
-
-    // Fast path for a common property of AST nodes.
-    if (a.type !== b.type) {
-        if (problemPath) {
-            problemPath.push("type");
-        }
-        return false;
-    }
-
-    var aNames = getFieldNames(a);
-    var aNameCount = aNames.length;
-
-    var bNames = getFieldNames(b);
-    var bNameCount = bNames.length;
-
-    if (aNameCount === bNameCount) {
-        for (var i = 0; i < aNameCount; ++i) {
-            var name = aNames[i];
-            var aChild = getFieldValue(a, name);
-            var bChild = getFieldValue(b, name);
-
-            if (problemPath) {
-                problemPath.push(name);
-            }
-
-            if (!areEquivalent(aChild, bChild, problemPath)) {
-                return false;
-            }
-
-            if (problemPath) {
-                assert.strictEqual(problemPath.pop(), name);
-            }
-        }
-
-        return true;
-    }
-
-    if (!problemPath) {
-        return false;
-    }
-
-    // Since aNameCount !== bNameCount, we need to find some name that's
-    // missing in aNames but present in bNames, or vice-versa.
-
-    var seenNames = Object.create(null);
-
-    for (i = 0; i < aNameCount; ++i) {
-        seenNames[aNames[i]] = true;
-    }
-
-    for (i = 0; i < bNameCount; ++i) {
-        name = bNames[i];
-
-        if (!hasOwn.call(seenNames, name)) {
-            problemPath.push(name);
-            return false;
-        }
-
-        delete seenNames[name];
-    }
-
-    for (name in seenNames) {
-        problemPath.push(name);
-        break;
-    }
-
-    return false;
-}
-
-module.exports = astNodesAreEquivalent;
-
-},{"../main":18,"assert":3}],12:[function(require,module,exports){
-var assert = require("assert");
-var types = require("./types");
-var n = types.namedTypes;
-var b = types.builders;
-var isNumber = types.builtInTypes.number;
-var isArray = types.builtInTypes.array;
-var Path = require("./path");
-var Scope = require("./scope");
-
-function NodePath(value, parentPath, name) {
-    assert.ok(this instanceof NodePath);
-    Path.call(this, value, parentPath, name);
-}
-
-require("util").inherits(NodePath, Path);
-var NPp = NodePath.prototype;
-
-Object.defineProperties(NPp, {
-    node: {
-        get: function() {
-            Object.defineProperty(this, "node", {
-                configurable: true, // Enable deletion.
-                value: this._computeNode()
-            });
-
-            return this.node;
-        }
-    },
-
-    parent: {
-        get: function() {
-            Object.defineProperty(this, "parent", {
-                configurable: true, // Enable deletion.
-                value: this._computeParent()
-            });
-
-            return this.parent;
-        }
-    },
-
-    scope: {
-        get: function() {
-            Object.defineProperty(this, "scope", {
-                configurable: true, // Enable deletion.
-                value: this._computeScope()
-            });
-
-            return this.scope;
-        }
-    }
-});
-
-NPp.replace = function() {
-    delete this.node;
-    delete this.parent;
-    delete this.scope;
-    return Path.prototype.replace.apply(this, arguments);
-};
-
-NPp.prune = function() {
-    var remainingNodePath = this.parent;
-
-    this.replace();
-
-    return cleanUpNodesAfterPrune(remainingNodePath);
-};
-
-// The value of the first ancestor Path whose value is a Node.
-NPp._computeNode = function() {
-    var value = this.value;
-    if (n.Node.check(value)) {
-        return value;
-    }
-
-    var pp = this.parentPath;
-    return pp && pp.node || null;
-};
-
-// The first ancestor Path whose value is a Node distinct from this.node.
-NPp._computeParent = function() {
-    var value = this.value;
-    var pp = this.parentPath;
-
-    if (!n.Node.check(value)) {
-        while (pp && !n.Node.check(pp.value)) {
-            pp = pp.parentPath;
-        }
-
-        if (pp) {
-            pp = pp.parentPath;
-        }
-    }
-
-    while (pp && !n.Node.check(pp.value)) {
-        pp = pp.parentPath;
-    }
-
-    return pp || null;
-};
-
-// The closest enclosing scope that governs this node.
-NPp._computeScope = function() {
-    var value = this.value;
-    var pp = this.parentPath;
-    var scope = pp && pp.scope;
-
-    if (n.Node.check(value) &&
-        Scope.isEstablishedBy(value)) {
-        scope = new Scope(this, scope);
-    }
-
-    return scope || null;
-};
-
-NPp.getValueProperty = function(name) {
-    return types.getFieldValue(this.value, name);
-};
-
-/**
- * Determine whether this.node needs to be wrapped in parentheses in order
- * for a parser to reproduce the same local AST structure.
- *
- * For instance, in the expression `(1 + 2) * 3`, the BinaryExpression
- * whose operator is "+" needs parentheses, because `1 + 2 * 3` would
- * parse differently.
- *
- * If assumeExpressionContext === true, we don't worry about edge cases
- * like an anonymous FunctionExpression appearing lexically first in its
- * enclosing statement and thus needing parentheses to avoid being parsed
- * as a FunctionDeclaration with a missing name.
- */
-NPp.needsParens = function(assumeExpressionContext) {
-    var pp = this.parentPath;
-    if (!pp) {
-        return false;
-    }
-
-    var node = this.value;
-
-    // Only expressions need parentheses.
-    if (!n.Expression.check(node)) {
-        return false;
-    }
-
-    // Identifiers never need parentheses.
-    if (node.type === "Identifier") {
-        return false;
-    }
-
-    while (!n.Node.check(pp.value)) {
-        pp = pp.parentPath;
-        if (!pp) {
-            return false;
-        }
-    }
-
-    var parent = pp.value;
-
-    switch (node.type) {
-    case "UnaryExpression":
-    case "SpreadElement":
-    case "SpreadProperty":
-        return parent.type === "MemberExpression"
-            && this.name === "object"
-            && parent.object === node;
-
-    case "BinaryExpression":
-    case "LogicalExpression":
-        switch (parent.type) {
-        case "CallExpression":
-            return this.name === "callee"
-                && parent.callee === node;
-
-        case "UnaryExpression":
-        case "SpreadElement":
-        case "SpreadProperty":
-            return true;
-
-        case "MemberExpression":
-            return this.name === "object"
-                && parent.object === node;
-
-        case "BinaryExpression":
-        case "LogicalExpression":
-            var po = parent.operator;
-            var pp = PRECEDENCE[po];
-            var no = node.operator;
-            var np = PRECEDENCE[no];
-
-            if (pp > np) {
-                return true;
-            }
-
-            if (pp === np && this.name === "right") {
-                assert.strictEqual(parent.right, node);
-                return true;
-            }
-
-        default:
-            return false;
-        }
-
-    case "SequenceExpression":
-        switch (parent.type) {
-        case "ForStatement":
-            // Although parentheses wouldn't hurt around sequence
-            // expressions in the head of for loops, traditional style
-            // dictates that e.g. i++, j++ should not be wrapped with
-            // parentheses.
-            return false;
-
-        case "ExpressionStatement":
-            return this.name !== "expression";
-
-        default:
-            // Otherwise err on the side of overparenthesization, adding
-            // explicit exceptions above if this proves overzealous.
-            return true;
-        }
-
-    case "YieldExpression":
-        switch (parent.type) {
-        case "BinaryExpression":
-        case "LogicalExpression":
-        case "UnaryExpression":
-        case "SpreadElement":
-        case "SpreadProperty":
-        case "CallExpression":
-        case "MemberExpression":
-        case "NewExpression":
-        case "ConditionalExpression":
-        case "YieldExpression":
-            return true;
-
-        default:
-            return false;
-        }
-
-    case "Literal":
-        return parent.type === "MemberExpression"
-            && isNumber.check(node.value)
-            && this.name === "object"
-            && parent.object === node;
-
-    case "AssignmentExpression":
-    case "ConditionalExpression":
-        switch (parent.type) {
-        case "UnaryExpression":
-        case "SpreadElement":
-        case "SpreadProperty":
-        case "BinaryExpression":
-        case "LogicalExpression":
-            return true;
-
-        case "CallExpression":
-            return this.name === "callee"
-                && parent.callee === node;
-
-        case "ConditionalExpression":
-            return this.name === "test"
-                && parent.test === node;
-
-        case "MemberExpression":
-            return this.name === "object"
-                && parent.object === node;
-
-        default:
-            return false;
-        }
-
-    default:
-        if (parent.type === "NewExpression" &&
-            this.name === "callee" &&
-            parent.callee === node) {
-            return containsCallExpression(node);
-        }
-    }
-
-    if (assumeExpressionContext !== true &&
-        !this.canBeFirstInStatement() &&
-        this.firstInStatement())
-        return true;
-
-    return false;
-};
-
-function isBinary(node) {
-    return n.BinaryExpression.check(node)
-        || n.LogicalExpression.check(node);
-}
-
-function isUnaryLike(node) {
-    return n.UnaryExpression.check(node)
-        // I considered making SpreadElement and SpreadProperty subtypes
-        // of UnaryExpression, but they're not really Expression nodes.
-        || (n.SpreadElement && n.SpreadElement.check(node))
-        || (n.SpreadProperty && n.SpreadProperty.check(node));
-}
-
-var PRECEDENCE = {};
-[["||"],
- ["&&"],
- ["|"],
- ["^"],
- ["&"],
- ["==", "===", "!=", "!=="],
- ["<", ">", "<=", ">=", "in", "instanceof"],
- [">>", "<<", ">>>"],
- ["+", "-"],
- ["*", "/", "%"]
-].forEach(function(tier, i) {
-    tier.forEach(function(op) {
-        PRECEDENCE[op] = i;
-    });
-});
-
-function containsCallExpression(node) {
-    if (n.CallExpression.check(node)) {
-        return true;
-    }
-
-    if (isArray.check(node)) {
-        return node.some(containsCallExpression);
-    }
-
-    if (n.Node.check(node)) {
-        return types.someField(node, function(name, child) {
-            return containsCallExpression(child);
-        });
-    }
-
-    return false;
-}
-
-NPp.canBeFirstInStatement = function() {
-    var node = this.node;
-    return !n.FunctionExpression.check(node)
-        && !n.ObjectExpression.check(node);
-};
-
-NPp.firstInStatement = function() {
-    return firstInStatement(this);
-};
-
-function firstInStatement(path) {
-    for (var node, parent; path.parent; path = path.parent) {
-        node = path.node;
-        parent = path.parent.node;
-
-        if (n.BlockStatement.check(parent) &&
-            path.parent.name === "body" &&
-            path.name === 0) {
-            assert.strictEqual(parent.body[0], node);
-            return true;
-        }
-
-        if (n.ExpressionStatement.check(parent) &&
-            path.name === "expression") {
-            assert.strictEqual(parent.expression, node);
-            return true;
-        }
-
-        if (n.SequenceExpression.check(parent) &&
-            path.parent.name === "expressions" &&
-            path.name === 0) {
-            assert.strictEqual(parent.expressions[0], node);
-            continue;
-        }
-
-        if (n.CallExpression.check(parent) &&
-            path.name === "callee") {
-            assert.strictEqual(parent.callee, node);
-            continue;
-        }
-
-        if (n.MemberExpression.check(parent) &&
-            path.name === "object") {
-            assert.strictEqual(parent.object, node);
-            continue;
-        }
-
-        if (n.ConditionalExpression.check(parent) &&
-            path.name === "test") {
-            assert.strictEqual(parent.test, node);
-            continue;
-        }
-
-        if (isBinary(parent) &&
-            path.name === "left") {
-            assert.strictEqual(parent.left, node);
-            continue;
-        }
-
-        if (n.UnaryExpression.check(parent) &&
-            !parent.prefix &&
-            path.name === "argument") {
-            assert.strictEqual(parent.argument, node);
-            continue;
-        }
-
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Pruning certain nodes will result in empty or incomplete nodes, here we clean those nodes up.
- */
-function cleanUpNodesAfterPrune(remainingNodePath) {
-    if (n.VariableDeclaration.check(remainingNodePath.node)) {
-        var declarations = remainingNodePath.get('declarations').value;
-        if (!declarations || declarations.length === 0) {
-            return remainingNodePath.prune();
-        }
-    } else if (n.ExpressionStatement.check(remainingNodePath.node)) {
-        if (!remainingNodePath.get('expression').value) {
-            return remainingNodePath.prune();
-        }
-    } else if (n.IfStatement.check(remainingNodePath.node)) {
-        cleanUpIfStatementAfterPrune(remainingNodePath);
-    }
-
-    return remainingNodePath;
-}
-
-function cleanUpIfStatementAfterPrune(ifStatement) {
-    var testExpression = ifStatement.get('test').value;
-    var alternate = ifStatement.get('alternate').value;
-    var consequent = ifStatement.get('consequent').value;
-
-    if (!consequent && !alternate) {
-        var testExpressionStatement = b.expressionStatement(testExpression);
-
-        ifStatement.replace(testExpressionStatement);
-    } else if (!consequent && alternate) {
-        var negatedTestExpression = b.unaryExpression('!', testExpression, true);
-
-        if (n.UnaryExpression.check(testExpression) && testExpression.operator === '!') {
-            negatedTestExpression = testExpression.argument;
-        }
-
-        ifStatement.get("test").replace(negatedTestExpression);
-        ifStatement.get("consequent").replace(alternate);
-        ifStatement.get("alternate").replace();
-    }
-}
-
-module.exports = NodePath;
-
-},{"./path":14,"./scope":15,"./types":17,"assert":3,"util":121}],13:[function(require,module,exports){
-var assert = require("assert");
-var types = require("./types");
-var NodePath = require("./node-path");
-var Printable = types.namedTypes.Printable;
-var isArray = types.builtInTypes.array;
-var isObject = types.builtInTypes.object;
-var isFunction = types.builtInTypes.function;
-var hasOwn = Object.prototype.hasOwnProperty;
-var undefined;
-
-function PathVisitor() {
-    assert.ok(this instanceof PathVisitor);
-
-    // Permanent state.
-    this._reusableContextStack = [];
-
-    this._methodNameTable = computeMethodNameTable(this);
-    this._shouldVisitComments =
-        hasOwn.call(this._methodNameTable, "Block") ||
-        hasOwn.call(this._methodNameTable, "Line");
-
-    this.Context = makeContextConstructor(this);
-
-    // State reset every time PathVisitor.prototype.visit is called.
-    this._visiting = false;
-    this._changeReported = false;
-}
-
-function computeMethodNameTable(visitor) {
-    var typeNames = Object.create(null);
-
-    for (var methodName in visitor) {
-        if (/^visit[A-Z]/.test(methodName)) {
-            typeNames[methodName.slice("visit".length)] = true;
-        }
-    }
-
-    var supertypeTable = types.computeSupertypeLookupTable(typeNames);
-    var methodNameTable = Object.create(null);
-
-    var typeNames = Object.keys(supertypeTable);
-    var typeNameCount = typeNames.length;
-    for (var i = 0; i < typeNameCount; ++i) {
-        var typeName = typeNames[i];
-        methodName = "visit" + supertypeTable[typeName];
-        if (isFunction.check(visitor[methodName])) {
-            methodNameTable[typeName] = methodName;
-        }
-    }
-
-    return methodNameTable;
-}
-
-PathVisitor.fromMethodsObject = function fromMethodsObject(methods) {
-    if (methods instanceof PathVisitor) {
-        return methods;
-    }
-
-    if (!isObject.check(methods)) {
-        // An empty visitor?
-        return new PathVisitor;
-    }
-
-    function Visitor() {
-        assert.ok(this instanceof Visitor);
-        PathVisitor.call(this);
-    }
-
-    var Vp = Visitor.prototype = Object.create(PVp);
-    Vp.constructor = Visitor;
-
-    extend(Vp, methods);
-    extend(Visitor, PathVisitor);
-
-    isFunction.assert(Visitor.fromMethodsObject);
-    isFunction.assert(Visitor.visit);
-
-    return new Visitor;
-};
-
-function extend(target, source) {
-    for (var property in source) {
-        if (hasOwn.call(source, property)) {
-            target[property] = source[property];
-        }
-    }
-
-    return target;
-}
-
-PathVisitor.visit = function visit(node, methods) {
-    return PathVisitor.fromMethodsObject(methods).visit(node);
-};
-
-var PVp = PathVisitor.prototype;
-
-var recursiveVisitWarning = [
-    "Recursively calling visitor.visit(path) resets visitor state.",
-    "Try this.visit(path) or this.traverse(path) instead."
-].join(" ");
-
-PVp.visit = function() {
-    assert.ok(!this._visiting, recursiveVisitWarning);
-
-    // Private state that needs to be reset before every traversal.
-    this._visiting = true;
-    this._changeReported = false;
-    this._abortRequested = false;
-
-    var argc = arguments.length;
-    var args = new Array(argc)
-    for (var i = 0; i < argc; ++i) {
-        args[i] = arguments[i];
-    }
-
-    if (!(args[0] instanceof NodePath)) {
-        args[0] = new NodePath({ root: args[0] }).get("root");
-    }
-
-    // Called with the same arguments as .visit.
-    this.reset.apply(this, args);
-
-    try {
-        var root = this.visitWithoutReset(args[0]);
-        var didNotThrow = true;
-    } finally {
-        this._visiting = false;
-
-        if (!didNotThrow && this._abortRequested) {
-            // If this.visitWithoutReset threw an exception and
-            // this._abortRequested was set to true, return the root of
-            // the AST instead of letting the exception propagate, so that
-            // client code does not have to provide a try-catch block to
-            // intercept the AbortRequest exception.  Other kinds of
-            // exceptions will propagate without being intercepted and
-            // rethrown by a catch block, so their stacks will accurately
-            // reflect the original throwing context.
-            return args[0].value;
-        }
-    }
-
-    return root;
-};
-
-PVp.AbortRequest = function AbortRequest() {};
-PVp.abort = function() {
-    var visitor = this;
-    visitor._abortRequested = true;
-    var request = new visitor.AbortRequest();
-
-    // If you decide to catch this exception and stop it from propagating,
-    // make sure to call its cancel method to avoid silencing other
-    // exceptions that might be thrown later in the traversal.
-    request.cancel = function() {
-        visitor._abortRequested = false;
-    };
-
-    throw request;
-};
-
-PVp.reset = function(path/*, additional arguments */) {
-    // Empty stub; may be reassigned or overridden by subclasses.
-};
-
-PVp.visitWithoutReset = function(path) {
-    if (this instanceof this.Context) {
-        // Since this.Context.prototype === this, there's a chance we
-        // might accidentally call context.visitWithoutReset. If that
-        // happens, re-invoke the method against context.visitor.
-        return this.visitor.visitWithoutReset(path);
-    }
-
-    assert.ok(path instanceof NodePath);
-    var value = path.value;
-
-    var methodName = Printable.check(value) && this._methodNameTable[value.type];
-    if (methodName) {
-        var context = this.acquireContext(path);
-        try {
-            return context.invokeVisitorMethod(methodName);
-        } finally {
-            this.releaseContext(context);
-        }
-
-    } else {
-        // If there was no visitor method to call, visit the children of
-        // this node generically.
-        return visitChildren(path, this);
-    }
-};
-
-function visitChildren(path, visitor) {
-    assert.ok(path instanceof NodePath);
-    assert.ok(visitor instanceof PathVisitor);
-
-    var value = path.value;
-
-    if (isArray.check(value)) {
-        path.each(visitor.visitWithoutReset, visitor);
-    } else if (!isObject.check(value)) {
-        // No children to visit.
-    } else {
-        var childNames = types.getFieldNames(value);
-
-        // The .comments field of the Node type is hidden, so we only
-        // visit it if the visitor defines visitBlock or visitLine, and
-        // value.comments is defined.
-        if (visitor._shouldVisitComments &&
-            value.comments &&
-            childNames.indexOf("comments") < 0) {
-            childNames.push("comments");
-        }
-
-        var childCount = childNames.length;
-        var childPaths = [];
-
-        for (var i = 0; i < childCount; ++i) {
-            var childName = childNames[i];
-            if (!hasOwn.call(value, childName)) {
-                value[childName] = types.getFieldValue(value, childName);
-            }
-            childPaths.push(path.get(childName));
-        }
-
-        for (var i = 0; i < childCount; ++i) {
-            visitor.visitWithoutReset(childPaths[i]);
-        }
-    }
-
-    return path.value;
-}
-
-PVp.acquireContext = function(path) {
-    if (this._reusableContextStack.length === 0) {
-        return new this.Context(path);
-    }
-    return this._reusableContextStack.pop().reset(path);
-};
-
-PVp.releaseContext = function(context) {
-    assert.ok(context instanceof this.Context);
-    this._reusableContextStack.push(context);
-    context.currentPath = null;
-};
-
-PVp.reportChanged = function() {
-    this._changeReported = true;
-};
-
-PVp.wasChangeReported = function() {
-    return this._changeReported;
-};
-
-function makeContextConstructor(visitor) {
-    function Context(path) {
-        assert.ok(this instanceof Context);
-        assert.ok(this instanceof PathVisitor);
-        assert.ok(path instanceof NodePath);
-
-        Object.defineProperty(this, "visitor", {
-            value: visitor,
-            writable: false,
-            enumerable: true,
-            configurable: false
-        });
-
-        this.currentPath = path;
-        this.needToCallTraverse = true;
-
-        Object.seal(this);
-    }
-
-    assert.ok(visitor instanceof PathVisitor);
-
-    // Note that the visitor object is the prototype of Context.prototype,
-    // so all visitor methods are inherited by context objects.
-    var Cp = Context.prototype = Object.create(visitor);
-
-    Cp.constructor = Context;
-    extend(Cp, sharedContextProtoMethods);
-
-    return Context;
-}
-
-// Every PathVisitor has a different this.Context constructor and
-// this.Context.prototype object, but those prototypes can all use the
-// same reset, invokeVisitorMethod, and traverse function objects.
-var sharedContextProtoMethods = Object.create(null);
-
-sharedContextProtoMethods.reset =
-function reset(path) {
-    assert.ok(this instanceof this.Context);
-    assert.ok(path instanceof NodePath);
-
-    this.currentPath = path;
-    this.needToCallTraverse = true;
-
-    return this;
-};
-
-sharedContextProtoMethods.invokeVisitorMethod =
-function invokeVisitorMethod(methodName) {
-    assert.ok(this instanceof this.Context);
-    assert.ok(this.currentPath instanceof NodePath);
-
-    var result = this.visitor[methodName].call(this, this.currentPath);
-
-    if (result === false) {
-        // Visitor methods return false to indicate that they have handled
-        // their own traversal needs, and we should not complain if
-        // this.needToCallTraverse is still true.
-        this.needToCallTraverse = false;
-
-    } else if (result !== undefined) {
-        // Any other non-undefined value returned from the visitor method
-        // is interpreted as a replacement value.
-        this.currentPath = this.currentPath.replace(result)[0];
-
-        if (this.needToCallTraverse) {
-            // If this.traverse still hasn't been called, visit the
-            // children of the replacement node.
-            this.traverse(this.currentPath);
-        }
-    }
-
-    assert.strictEqual(
-        this.needToCallTraverse, false,
-        "Must either call this.traverse or return false in " + methodName
-    );
-
-    var path = this.currentPath;
-    return path && path.value;
-};
-
-sharedContextProtoMethods.traverse =
-function traverse(path, newVisitor) {
-    assert.ok(this instanceof this.Context);
-    assert.ok(path instanceof NodePath);
-    assert.ok(this.currentPath instanceof NodePath);
-
-    this.needToCallTraverse = false;
-
-    return visitChildren(path, PathVisitor.fromMethodsObject(
-        newVisitor || this.visitor
-    ));
-};
-
-sharedContextProtoMethods.visit =
-function visit(path, newVisitor) {
-    assert.ok(this instanceof this.Context);
-    assert.ok(path instanceof NodePath);
-    assert.ok(this.currentPath instanceof NodePath);
-
-    this.needToCallTraverse = false;
-
-    return PathVisitor.fromMethodsObject(
-        newVisitor || this.visitor
-    ).visitWithoutReset(path);
-};
-
-sharedContextProtoMethods.reportChanged = function reportChanged() {
-    this.visitor.reportChanged();
-};
-
-sharedContextProtoMethods.abort = function abort() {
-    this.needToCallTraverse = false;
-    this.visitor.abort();
-};
-
-module.exports = PathVisitor;
-
-},{"./node-path":12,"./types":17,"assert":3}],14:[function(require,module,exports){
-var assert = require("assert");
-var Op = Object.prototype;
-var hasOwn = Op.hasOwnProperty;
-var types = require("./types");
-var isArray = types.builtInTypes.array;
-var isNumber = types.builtInTypes.number;
-var Ap = Array.prototype;
-var slice = Ap.slice;
-var map = Ap.map;
-
-function Path(value, parentPath, name) {
-    assert.ok(this instanceof Path);
-
-    if (parentPath) {
-        assert.ok(parentPath instanceof Path);
-    } else {
-        parentPath = null;
-        name = null;
-    }
-
-    // The value encapsulated by this Path, generally equal to
-    // parentPath.value[name] if we have a parentPath.
-    this.value = value;
-
-    // The immediate parent Path of this Path.
-    this.parentPath = parentPath;
-
-    // The name of the property of parentPath.value through which this
-    // Path's value was reached.
-    this.name = name;
-
-    // Calling path.get("child") multiple times always returns the same
-    // child Path object, for both performance and consistency reasons.
-    this.__childCache = null;
-}
-
-var Pp = Path.prototype;
-
-function getChildCache(path) {
-    // Lazily create the child cache. This also cheapens cache
-    // invalidation, since you can just reset path.__childCache to null.
-    return path.__childCache || (path.__childCache = Object.create(null));
-}
-
-function getChildPath(path, name) {
-    var cache = getChildCache(path);
-    var actualChildValue = path.getValueProperty(name);
-    var childPath = cache[name];
-    if (!hasOwn.call(cache, name) ||
-        // Ensure consistency between cache and reality.
-        childPath.value !== actualChildValue) {
-        childPath = cache[name] = new path.constructor(
-            actualChildValue, path, name
-        );
-    }
-    return childPath;
-}
-
-// This method is designed to be overridden by subclasses that need to
-// handle missing properties, etc.
-Pp.getValueProperty = function getValueProperty(name) {
-    return this.value[name];
-};
-
-Pp.get = function get(name) {
-    var path = this;
-    var names = arguments;
-    var count = names.length;
-
-    for (var i = 0; i < count; ++i) {
-        path = getChildPath(path, names[i]);
-    }
-
-    return path;
-};
-
-Pp.each = function each(callback, context) {
-    var childPaths = [];
-    var len = this.value.length;
-    var i = 0;
-
-    // Collect all the original child paths before invoking the callback.
-    for (var i = 0; i < len; ++i) {
-        if (hasOwn.call(this.value, i)) {
-            childPaths[i] = this.get(i);
-        }
-    }
-
-    // Invoke the callback on just the original child paths, regardless of
-    // any modifications made to the array by the callback. I chose these
-    // semantics over cleverly invoking the callback on new elements because
-    // this way is much easier to reason about.
-    context = context || this;
-    for (i = 0; i < len; ++i) {
-        if (hasOwn.call(childPaths, i)) {
-            callback.call(context, childPaths[i]);
-        }
-    }
-};
-
-Pp.map = function map(callback, context) {
-    var result = [];
-
-    this.each(function(childPath) {
-        result.push(callback.call(this, childPath));
-    }, context);
-
-    return result;
-};
-
-Pp.filter = function filter(callback, context) {
-    var result = [];
-
-    this.each(function(childPath) {
-        if (callback.call(this, childPath)) {
-            result.push(childPath);
-        }
-    }, context);
-
-    return result;
-};
-
-function emptyMoves() {}
-function getMoves(path, offset, start, end) {
-    isArray.assert(path.value);
-
-    if (offset === 0) {
-        return emptyMoves;
-    }
-
-    var length = path.value.length;
-    if (length < 1) {
-        return emptyMoves;
-    }
-
-    var argc = arguments.length;
-    if (argc === 2) {
-        start = 0;
-        end = length;
-    } else if (argc === 3) {
-        start = Math.max(start, 0);
-        end = length;
-    } else {
-        start = Math.max(start, 0);
-        end = Math.min(end, length);
-    }
-
-    isNumber.assert(start);
-    isNumber.assert(end);
-
-    var moves = Object.create(null);
-    var cache = getChildCache(path);
-
-    for (var i = start; i < end; ++i) {
-        if (hasOwn.call(path.value, i)) {
-            var childPath = path.get(i);
-            assert.strictEqual(childPath.name, i);
-            var newIndex = i + offset;
-            childPath.name = newIndex;
-            moves[newIndex] = childPath;
-            delete cache[i];
-        }
-    }
-
-    delete cache.length;
-
-    return function() {
-        for (var newIndex in moves) {
-            var childPath = moves[newIndex];
-            assert.strictEqual(childPath.name, +newIndex);
-            cache[newIndex] = childPath;
-            path.value[newIndex] = childPath.value;
-        }
-    };
-}
-
-Pp.shift = function shift() {
-    var move = getMoves(this, -1);
-    var result = this.value.shift();
-    move();
-    return result;
-};
-
-Pp.unshift = function unshift(node) {
-    var move = getMoves(this, arguments.length);
-    var result = this.value.unshift.apply(this.value, arguments);
-    move();
-    return result;
-};
-
-Pp.push = function push(node) {
-    isArray.assert(this.value);
-    delete getChildCache(this).length
-    return this.value.push.apply(this.value, arguments);
-};
-
-Pp.pop = function pop() {
-    isArray.assert(this.value);
-    var cache = getChildCache(this);
-    delete cache[this.value.length - 1];
-    delete cache.length;
-    return this.value.pop();
-};
-
-Pp.insertAt = function insertAt(index, node) {
-    var argc = arguments.length;
-    var move = getMoves(this, argc - 1, index);
-    if (move === emptyMoves) {
-        return this;
-    }
-
-    index = Math.max(index, 0);
-
-    for (var i = 1; i < argc; ++i) {
-        this.value[index + i - 1] = arguments[i];
-    }
-
-    move();
-
-    return this;
-};
-
-Pp.insertBefore = function insertBefore(node) {
-    var pp = this.parentPath;
-    var argc = arguments.length;
-    var insertAtArgs = [this.name];
-    for (var i = 0; i < argc; ++i) {
-        insertAtArgs.push(arguments[i]);
-    }
-    return pp.insertAt.apply(pp, insertAtArgs);
-};
-
-Pp.insertAfter = function insertAfter(node) {
-    var pp = this.parentPath;
-    var argc = arguments.length;
-    var insertAtArgs = [this.name + 1];
-    for (var i = 0; i < argc; ++i) {
-        insertAtArgs.push(arguments[i]);
-    }
-    return pp.insertAt.apply(pp, insertAtArgs);
-};
-
-function repairRelationshipWithParent(path) {
-    assert.ok(path instanceof Path);
-
-    var pp = path.parentPath;
-    if (!pp) {
-        // Orphan paths have no relationship to repair.
-        return path;
-    }
-
-    var parentValue = pp.value;
-    var parentCache = getChildCache(pp);
-
-    // Make sure parentCache[path.name] is populated.
-    if (parentValue[path.name] === path.value) {
-        parentCache[path.name] = path;
-    } else if (isArray.check(parentValue)) {
-        // Something caused path.name to become out of date, so attempt to
-        // recover by searching for path.value in parentValue.
-        var i = parentValue.indexOf(path.value);
-        if (i >= 0) {
-            parentCache[path.name = i] = path;
-        }
-    } else {
-        // If path.value disagrees with parentValue[path.name], and
-        // path.name is not an array index, let path.value become the new
-        // parentValue[path.name] and update parentCache accordingly.
-        parentValue[path.name] = path.value;
-        parentCache[path.name] = path;
-    }
-
-    assert.strictEqual(parentValue[path.name], path.value);
-    assert.strictEqual(path.parentPath.get(path.name), path);
-
-    return path;
-}
-
-Pp.replace = function replace(replacement) {
-    var results = [];
-    var parentValue = this.parentPath.value;
-    var parentCache = getChildCache(this.parentPath);
-    var count = arguments.length;
-
-    repairRelationshipWithParent(this);
-
-    if (isArray.check(parentValue)) {
-        var originalLength = parentValue.length;
-        var move = getMoves(this.parentPath, count - 1, this.name + 1);
-
-        var spliceArgs = [this.name, 1];
-        for (var i = 0; i < count; ++i) {
-            spliceArgs.push(arguments[i]);
-        }
-
-        var splicedOut = parentValue.splice.apply(parentValue, spliceArgs);
-
-        assert.strictEqual(splicedOut[0], this.value);
-        assert.strictEqual(
-            parentValue.length,
-            originalLength - 1 + count
-        );
-
-        move();
-
-        if (count === 0) {
-            delete this.value;
-            delete parentCache[this.name];
-            this.__childCache = null;
-
-        } else {
-            assert.strictEqual(parentValue[this.name], replacement);
-
-            if (this.value !== replacement) {
-                this.value = replacement;
-                this.__childCache = null;
-            }
-
-            for (i = 0; i < count; ++i) {
-                results.push(this.parentPath.get(this.name + i));
-            }
-
-            assert.strictEqual(results[0], this);
-        }
-
-    } else if (count === 1) {
-        if (this.value !== replacement) {
-            this.__childCache = null;
-        }
-        this.value = parentValue[this.name] = replacement;
-        results.push(this);
-
-    } else if (count === 0) {
-        delete parentValue[this.name];
-        delete this.value;
-        this.__childCache = null;
-
-        // Leave this path cached as parentCache[this.name], even though
-        // it no longer has a value defined.
-
-    } else {
-        assert.ok(false, "Could not replace path");
-    }
-
-    return results;
-};
-
-module.exports = Path;
-
-},{"./types":17,"assert":3}],15:[function(require,module,exports){
-var assert = require("assert");
-var types = require("./types");
-var Type = types.Type;
-var namedTypes = types.namedTypes;
-var Node = namedTypes.Node;
-var Expression = namedTypes.Expression;
-var isArray = types.builtInTypes.array;
-var hasOwn = Object.prototype.hasOwnProperty;
-var b = types.builders;
-
-function Scope(path, parentScope) {
-    assert.ok(this instanceof Scope);
-    assert.ok(path instanceof require("./node-path"));
-    ScopeType.assert(path.value);
-
-    var depth;
-
-    if (parentScope) {
-        assert.ok(parentScope instanceof Scope);
-        depth = parentScope.depth + 1;
-    } else {
-        parentScope = null;
-        depth = 0;
-    }
-
-    Object.defineProperties(this, {
-        path: { value: path },
-        node: { value: path.value },
-        isGlobal: { value: !parentScope, enumerable: true },
-        depth: { value: depth },
-        parent: { value: parentScope },
-        bindings: { value: {} }
-    });
-}
-
-var scopeTypes = [
-    // Program nodes introduce global scopes.
-    namedTypes.Program,
-
-    // Function is the supertype of FunctionExpression,
-    // FunctionDeclaration, ArrowExpression, etc.
-    namedTypes.Function,
-
-    // In case you didn't know, the caught parameter shadows any variable
-    // of the same name in an outer scope.
-    namedTypes.CatchClause
-];
-
-var ScopeType = Type.or.apply(Type, scopeTypes);
-
-Scope.isEstablishedBy = function(node) {
-    return ScopeType.check(node);
-};
-
-var Sp = Scope.prototype;
-
-// Will be overridden after an instance lazily calls scanScope.
-Sp.didScan = false;
-
-Sp.declares = function(name) {
-    this.scan();
-    return hasOwn.call(this.bindings, name);
-};
-
-Sp.declareTemporary = function(prefix) {
-    if (prefix) {
-        assert.ok(/^[a-z$_]/i.test(prefix), prefix);
-    } else {
-        prefix = "t$";
-    }
-
-    // Include this.depth in the name to make sure the name does not
-    // collide with any variables in nested/enclosing scopes.
-    prefix += this.depth.toString(36) + "$";
-
-    this.scan();
-
-    var index = 0;
-    while (this.declares(prefix + index)) {
-        ++index;
-    }
-
-    var name = prefix + index;
-    return this.bindings[name] = types.builders.identifier(name);
-};
-
-Sp.injectTemporary = function(identifier, init) {
-    identifier || (identifier = this.declareTemporary());
-
-    var bodyPath = this.path.get("body");
-    if (namedTypes.BlockStatement.check(bodyPath.value)) {
-        bodyPath = bodyPath.get("body");
-    }
-
-    bodyPath.unshift(
-        b.variableDeclaration(
-            "var",
-            [b.variableDeclarator(identifier, init || null)]
-        )
-    );
-
-    return identifier;
-};
-
-Sp.scan = function(force) {
-    if (force || !this.didScan) {
-        for (var name in this.bindings) {
-            // Empty out this.bindings, just in cases.
-            delete this.bindings[name];
-        }
-        scanScope(this.path, this.bindings);
-        this.didScan = true;
-    }
-};
-
-Sp.getBindings = function () {
-    this.scan();
-    return this.bindings;
-};
-
-function scanScope(path, bindings) {
-    var node = path.value;
-    ScopeType.assert(node);
-
-    if (namedTypes.CatchClause.check(node)) {
-        // A catch clause establishes a new scope but the only variable
-        // bound in that scope is the catch parameter. Any other
-        // declarations create bindings in the outer scope.
-        addPattern(path.get("param"), bindings);
-
-    } else {
-        recursiveScanScope(path, bindings);
-    }
-}
-
-function recursiveScanScope(path, bindings) {
-    var node = path.value;
-
-    if (path.parent &&
-        namedTypes.FunctionExpression.check(path.parent.node) &&
-        path.parent.node.id) {
-        addPattern(path.parent.get("id"), bindings);
-    }
-
-    if (!node) {
-        // None of the remaining cases matter if node is falsy.
-
-    } else if (isArray.check(node)) {
-        path.each(function(childPath) {
-            recursiveScanChild(childPath, bindings);
-        });
-
-    } else if (namedTypes.Function.check(node)) {
-        path.get("params").each(function(paramPath) {
-            addPattern(paramPath, bindings);
-        });
-
-        recursiveScanChild(path.get("body"), bindings);
-
-    } else if (namedTypes.VariableDeclarator.check(node)) {
-        addPattern(path.get("id"), bindings);
-        recursiveScanChild(path.get("init"), bindings);
-
-    } else if (node.type === "ImportSpecifier" ||
-               node.type === "ImportNamespaceSpecifier" ||
-               node.type === "ImportDefaultSpecifier") {
-        addPattern(
-            node.name ? path.get("name") : path.get("id"),
-            bindings
-        );
-
-    } else if (Node.check(node) && !Expression.check(node)) {
-        types.eachField(node, function(name, child) {
-            var childPath = path.get(name);
-            assert.strictEqual(childPath.value, child);
-            recursiveScanChild(childPath, bindings);
-        });
-    }
-}
-
-function recursiveScanChild(path, bindings) {
-    var node = path.value;
-
-    if (!node || Expression.check(node)) {
-        // Ignore falsy values and Expressions.
-
-    } else if (namedTypes.FunctionDeclaration.check(node)) {
-        addPattern(path.get("id"), bindings);
-
-    } else if (namedTypes.ClassDeclaration &&
-               namedTypes.ClassDeclaration.check(node)) {
-        addPattern(path.get("id"), bindings);
-
-    } else if (ScopeType.check(node)) {
-        if (namedTypes.CatchClause.check(node)) {
-            var catchParamName = node.param.name;
-            var hadBinding = hasOwn.call(bindings, catchParamName);
-
-            // Any declarations that occur inside the catch body that do
-            // not have the same name as the catch parameter should count
-            // as bindings in the outer scope.
-            recursiveScanScope(path.get("body"), bindings);
-
-            // If a new binding matching the catch parameter name was
-            // created while scanning the catch body, ignore it because it
-            // actually refers to the catch parameter and not the outer
-            // scope that we're currently scanning.
-            if (!hadBinding) {
-                delete bindings[catchParamName];
-            }
-        }
-
-    } else {
-        recursiveScanScope(path, bindings);
-    }
-}
-
-function addPattern(patternPath, bindings) {
-    var pattern = patternPath.value;
-    namedTypes.Pattern.assert(pattern);
-
-    if (namedTypes.Identifier.check(pattern)) {
-        if (hasOwn.call(bindings, pattern.name)) {
-            bindings[pattern.name].push(patternPath);
-        } else {
-            bindings[pattern.name] = [patternPath];
-        }
-
-    } else if (namedTypes.ObjectPattern &&
-               namedTypes.ObjectPattern.check(pattern)) {
-        patternPath.get('properties').each(function(propertyPath) {
-            var property = propertyPath.value;
-            if (namedTypes.Pattern.check(property)) {
-                addPattern(propertyPath, bindings);
-            } else  if (namedTypes.Property.check(property)) {
-                addPattern(propertyPath.get('value'), bindings);
-            } else if (namedTypes.SpreadProperty &&
-                       namedTypes.SpreadProperty.check(property)) {
-                addPattern(propertyPath.get('argument'), bindings);
-            }
-        });
-
-    } else if (namedTypes.ArrayPattern &&
-               namedTypes.ArrayPattern.check(pattern)) {
-        patternPath.get('elements').each(function(elementPath) {
-            var element = elementPath.value;
-            if (namedTypes.Pattern.check(element)) {
-                addPattern(elementPath, bindings);
-            } else if (namedTypes.SpreadElement &&
-                       namedTypes.SpreadElement.check(element)) {
-                addPattern(elementPath.get("argument"), bindings);
-            }
-        });
-
-    } else if (namedTypes.PropertyPattern &&
-               namedTypes.PropertyPattern.check(pattern)) {
-        addPattern(patternPath.get('pattern'), bindings);
-
-    } else if ((namedTypes.SpreadElementPattern &&
-                namedTypes.SpreadElementPattern.check(pattern)) ||
-               (namedTypes.SpreadPropertyPattern &&
-                namedTypes.SpreadPropertyPattern.check(pattern))) {
-        addPattern(patternPath.get('argument'), bindings);
-    }
-}
-
-Sp.lookup = function(name) {
-    for (var scope = this; scope; scope = scope.parent)
-        if (scope.declares(name))
-            break;
-    return scope;
-};
-
-Sp.getGlobalScope = function() {
-    var scope = this;
-    while (!scope.isGlobal)
-        scope = scope.parent;
-    return scope;
-};
-
-module.exports = Scope;
-
-},{"./node-path":12,"./types":17,"assert":3}],16:[function(require,module,exports){
-var types = require("../lib/types");
-var Type = types.Type;
-var builtin = types.builtInTypes;
-var isNumber = builtin.number;
-
-// An example of constructing a new type with arbitrary constraints from
-// an existing type.
-exports.geq = function(than) {
-    return new Type(function(value) {
-        return isNumber.check(value) && value >= than;
-    }, isNumber + " >= " + than);
-};
-
-// Default value-returning functions that may optionally be passed as a
-// third argument to Def.prototype.field.
-exports.defaults = {
-    // Functions were used because (among other reasons) that's the most
-    // elegant way to allow for the emptyArray one always to give a new
-    // array instance.
-    "null": function() { return null },
-    "emptyArray": function() { return [] },
-    "false": function() { return false },
-    "true": function() { return true },
-    "undefined": function() {}
-};
-
-var naiveIsPrimitive = Type.or(
-    builtin.string,
-    builtin.number,
-    builtin.boolean,
-    builtin.null,
-    builtin.undefined
-);
-
-exports.isPrimitive = new Type(function(value) {
-    if (value === null)
-        return true;
-    var type = typeof value;
-    return !(type === "object" ||
-             type === "function");
-}, naiveIsPrimitive.toString());
-
-},{"../lib/types":17}],17:[function(require,module,exports){
-var assert = require("assert");
-var Ap = Array.prototype;
-var slice = Ap.slice;
-var map = Ap.map;
-var each = Ap.forEach;
-var Op = Object.prototype;
-var objToStr = Op.toString;
-var funObjStr = objToStr.call(function(){});
-var strObjStr = objToStr.call("");
-var hasOwn = Op.hasOwnProperty;
-
-// A type is an object with a .check method that takes a value and returns
-// true or false according to whether the value matches the type.
-
-function Type(check, name) {
-    var self = this;
-    assert.ok(self instanceof Type, self);
-
-    // Unfortunately we can't elegantly reuse isFunction and isString,
-    // here, because this code is executed while defining those types.
-    assert.strictEqual(objToStr.call(check), funObjStr,
-                       check + " is not a function");
-
-    // The `name` parameter can be either a function or a string.
-    var nameObjStr = objToStr.call(name);
-    assert.ok(nameObjStr === funObjStr ||
-              nameObjStr === strObjStr,
-              name + " is neither a function nor a string");
-
-    Object.defineProperties(self, {
-        name: { value: name },
-        check: {
-            value: function(value, deep) {
-                var result = check.call(self, value, deep);
-                if (!result && deep && objToStr.call(deep) === funObjStr)
-                    deep(self, value);
-                return result;
-            }
-        }
-    });
-}
-
-var Tp = Type.prototype;
-
-// Throughout this file we use Object.defineProperty to prevent
-// redefinition of exported properties.
-exports.Type = Type;
-
-// Like .check, except that failure triggers an AssertionError.
-Tp.assert = function(value, deep) {
-    if (!this.check(value, deep)) {
-        var str = shallowStringify(value);
-        assert.ok(false, str + " does not match type " + this);
-        return false;
-    }
-    return true;
-};
-
-function shallowStringify(value) {
-    if (isObject.check(value))
-        return "{" + Object.keys(value).map(function(key) {
-            return key + ": " + value[key];
-        }).join(", ") + "}";
-
-    if (isArray.check(value))
-        return "[" + value.map(shallowStringify).join(", ") + "]";
-
-    return JSON.stringify(value);
-}
-
-Tp.toString = function() {
-    var name = this.name;
-
-    if (isString.check(name))
-        return name;
-
-    if (isFunction.check(name))
-        return name.call(this) + "";
-
-    return name + " type";
-};
-
-var builtInTypes = {};
-exports.builtInTypes = builtInTypes;
-
-function defBuiltInType(example, name) {
-    var objStr = objToStr.call(example);
-
-    Object.defineProperty(builtInTypes, name, {
-        enumerable: true,
-        value: new Type(function(value) {
-            return objToStr.call(value) === objStr;
-        }, name)
-    });
-
-    return builtInTypes[name];
-}
-
-// These types check the underlying [[Class]] attribute of the given
-// value, rather than using the problematic typeof operator. Note however
-// that no subtyping is considered; so, for instance, isObject.check
-// returns false for [], /./, new Date, and null.
-var isString = defBuiltInType("", "string");
-var isFunction = defBuiltInType(function(){}, "function");
-var isArray = defBuiltInType([], "array");
-var isObject = defBuiltInType({}, "object");
-var isRegExp = defBuiltInType(/./, "RegExp");
-var isDate = defBuiltInType(new Date, "Date");
-var isNumber = defBuiltInType(3, "number");
-var isBoolean = defBuiltInType(true, "boolean");
-var isNull = defBuiltInType(null, "null");
-var isUndefined = defBuiltInType(void 0, "undefined");
-
-// There are a number of idiomatic ways of expressing types, so this
-// function serves to coerce them all to actual Type objects. Note that
-// providing the name argument is not necessary in most cases.
-function toType(from, name) {
-    // The toType function should of course be idempotent.
-    if (from instanceof Type)
-        return from;
-
-    // The Def type is used as a helper for constructing compound
-    // interface types for AST nodes.
-    if (from instanceof Def)
-        return from.type;
-
-    // Support [ElemType] syntax.
-    if (isArray.check(from))
-        return Type.fromArray(from);
-
-    // Support { someField: FieldType, ... } syntax.
-    if (isObject.check(from))
-        return Type.fromObject(from);
-
-    // If isFunction.check(from), assume that from is a binary predicate
-    // function we can use to define the type.
-    if (isFunction.check(from))
-        return new Type(from, name);
-
-    // As a last resort, toType returns a type that matches any value that
-    // is === from. This is primarily useful for literal values like
-    // toType(null), but it has the additional advantage of allowing
-    // toType to be a total function.
-    return new Type(function(value) {
-        return value === from;
-    }, isUndefined.check(name) ? function() {
-        return from + "";
-    } : name);
-}
-
-// Returns a type that matches the given value iff any of type1, type2,
-// etc. match the value.
-Type.or = function(/* type1, type2, ... */) {
-    var types = [];
-    var len = arguments.length;
-    for (var i = 0; i < len; ++i)
-        types.push(toType(arguments[i]));
-
-    return new Type(function(value, deep) {
-        for (var i = 0; i < len; ++i)
-            if (types[i].check(value, deep))
-                return true;
-        return false;
-    }, function() {
-        return types.join(" | ");
-    });
-};
-
-Type.fromArray = function(arr) {
-    assert.ok(isArray.check(arr));
-    assert.strictEqual(
-        arr.length, 1,
-        "only one element type is permitted for typed arrays");
-    return toType(arr[0]).arrayOf();
-};
-
-Tp.arrayOf = function() {
-    var elemType = this;
-    return new Type(function(value, deep) {
-        return isArray.check(value) && value.every(function(elem) {
-            return elemType.check(elem, deep);
-        });
-    }, function() {
-        return "[" + elemType + "]";
-    });
-};
-
-Type.fromObject = function(obj) {
-    var fields = Object.keys(obj).map(function(name) {
-        return new Field(name, obj[name]);
-    });
-
-    return new Type(function(value, deep) {
-        return isObject.check(value) && fields.every(function(field) {
-            return field.type.check(value[field.name], deep);
-        });
-    }, function() {
-        return "{ " + fields.join(", ") + " }";
-    });
-};
-
-function Field(name, type, defaultFn, hidden) {
-    var self = this;
-
-    assert.ok(self instanceof Field);
-    isString.assert(name);
-
-    type = toType(type);
-
-    var properties = {
-        name: { value: name },
-        type: { value: type },
-        hidden: { value: !!hidden }
-    };
-
-    if (isFunction.check(defaultFn)) {
-        properties.defaultFn = { value: defaultFn };
-    }
-
-    Object.defineProperties(self, properties);
-}
-
-var Fp = Field.prototype;
-
-Fp.toString = function() {
-    return JSON.stringify(this.name) + ": " + this.type;
-};
-
-Fp.getValue = function(obj) {
-    var value = obj[this.name];
-
-    if (!isUndefined.check(value))
-        return value;
-
-    if (this.defaultFn)
-        value = this.defaultFn.call(obj);
-
-    return value;
-};
-
-// Define a type whose name is registered in a namespace (the defCache) so
-// that future definitions will return the same type given the same name.
-// In particular, this system allows for circular and forward definitions.
-// The Def object d returned from Type.def may be used to configure the
-// type d.type by calling methods such as d.bases, d.build, and d.field.
-Type.def = function(typeName) {
-    isString.assert(typeName);
-    return hasOwn.call(defCache, typeName)
-        ? defCache[typeName]
-        : defCache[typeName] = new Def(typeName);
-};
-
-// In order to return the same Def instance every time Type.def is called
-// with a particular name, those instances need to be stored in a cache.
-var defCache = Object.create(null);
-
-function Def(typeName) {
-    var self = this;
-    assert.ok(self instanceof Def);
-
-    Object.defineProperties(self, {
-        typeName: { value: typeName },
-        baseNames: { value: [] },
-        ownFields: { value: Object.create(null) },
-
-        // These two are populated during finalization.
-        allSupertypes: { value: Object.create(null) }, // Includes own typeName.
-        supertypeList: { value: [] }, // Linear inheritance hierarchy.
-        allFields: { value: Object.create(null) }, // Includes inherited fields.
-        fieldNames: { value: [] }, // Non-hidden keys of allFields.
-
-        type: {
-            value: new Type(function(value, deep) {
-                return self.check(value, deep);
-            }, typeName)
-        }
-    });
-}
-
-Def.fromValue = function(value) {
-    if (value && typeof value === "object") {
-        var type = value.type;
-        if (typeof type === "string" &&
-            hasOwn.call(defCache, type)) {
-            var d = defCache[type];
-            if (d.finalized) {
-                return d;
-            }
-        }
-    }
-
-    return null;
-};
-
-var Dp = Def.prototype;
-
-Dp.isSupertypeOf = function(that) {
-    if (that instanceof Def) {
-        assert.strictEqual(this.finalized, true);
-        assert.strictEqual(that.finalized, true);
-        return hasOwn.call(that.allSupertypes, this.typeName);
-    } else {
-        assert.ok(false, that + " is not a Def");
-    }
-};
-
-// Note that the list returned by this function is a copy of the internal
-// supertypeList, *without* the typeName itself as the first element.
-exports.getSupertypeNames = function(typeName) {
-    assert.ok(hasOwn.call(defCache, typeName));
-    var d = defCache[typeName];
-    assert.strictEqual(d.finalized, true);
-    return d.supertypeList.slice(1);
-};
-
-// Returns an object mapping from every known type in the defCache to the
-// most specific supertype whose name is an own property of the candidates
-// object.
-exports.computeSupertypeLookupTable = function(candidates) {
-    var table = {};
-    var typeNames = Object.keys(defCache);
-    var typeNameCount = typeNames.length;
-
-    for (var i = 0; i < typeNameCount; ++i) {
-        var typeName = typeNames[i];
-        var d = defCache[typeName];
-        assert.strictEqual(d.finalized, true);
-        for (var j = 0; j < d.supertypeList.length; ++j) {
-            var superTypeName = d.supertypeList[j];
-            if (hasOwn.call(candidates, superTypeName)) {
-                table[typeName] = superTypeName;
-                break;
-            }
-        }
-    }
-
-    return table;
-};
-
-Dp.checkAllFields = function(value, deep) {
-    var allFields = this.allFields;
-    assert.strictEqual(this.finalized, true);
-
-    function checkFieldByName(name) {
-        var field = allFields[name];
-        var type = field.type;
-        var child = field.getValue(value);
-        return type.check(child, deep);
-    }
-
-    return isObject.check(value)
-        && Object.keys(allFields).every(checkFieldByName);
-};
-
-Dp.check = function(value, deep) {
-    assert.strictEqual(
-        this.finalized, true,
-        "prematurely checking unfinalized type " + this.typeName);
-
-    // A Def type can only match an object value.
-    if (!isObject.check(value))
-        return false;
-
-    var vDef = Def.fromValue(value);
-    if (!vDef) {
-        // If we couldn't infer the Def associated with the given value,
-        // and we expected it to be a SourceLocation or a Position, it was
-        // probably just missing a "type" field (because Esprima does not
-        // assign a type property to such nodes). Be optimistic and let
-        // this.checkAllFields make the final decision.
-        if (this.typeName === "SourceLocation" ||
-            this.typeName === "Position") {
-            return this.checkAllFields(value, deep);
-        }
-
-        // Calling this.checkAllFields for any other type of node is both
-        // bad for performance and way too forgiving.
-        return false;
-    }
-
-    // If checking deeply and vDef === this, then we only need to call
-    // checkAllFields once. Calling checkAllFields is too strict when deep
-    // is false, because then we only care about this.isSupertypeOf(vDef).
-    if (deep && vDef === this)
-        return this.checkAllFields(value, deep);
-
-    // In most cases we rely exclusively on isSupertypeOf to make O(1)
-    // subtyping determinations. This suffices in most situations outside
-    // of unit tests, since interface conformance is checked whenever new
-    // instances are created using builder functions.
-    if (!this.isSupertypeOf(vDef))
-        return false;
-
-    // The exception is when deep is true; then, we recursively check all
-    // fields.
-    if (!deep)
-        return true;
-
-    // Use the more specific Def (vDef) to perform the deep check, but
-    // shallow-check fields defined by the less specific Def (this).
-    return vDef.checkAllFields(value, deep)
-        && this.checkAllFields(value, false);
-};
-
-Dp.bases = function() {
-    var bases = this.baseNames;
-
-    assert.strictEqual(this.finalized, false);
-
-    each.call(arguments, function(baseName) {
-        isString.assert(baseName);
-
-        // This indexOf lookup may be O(n), but the typical number of base
-        // names is very small, and indexOf is a native Array method.
-        if (bases.indexOf(baseName) < 0)
-            bases.push(baseName);
-    });
-
-    return this; // For chaining.
-};
-
-// False by default until .build(...) is called on an instance.
-Object.defineProperty(Dp, "buildable", { value: false });
-
-var builders = {};
-exports.builders = builders;
-
-// This object is used as prototype for any node created by a builder.
-var nodePrototype = {};
-
-// Call this function to define a new method to be shared by all AST
-// nodes. The replaced method (if any) is returned for easy wrapping.
-exports.defineMethod = function(name, func) {
-    var old = nodePrototype[name];
-
-    // Pass undefined as func to delete nodePrototype[name].
-    if (isUndefined.check(func)) {
-        delete nodePrototype[name];
-
-    } else {
-        isFunction.assert(func);
-
-        Object.defineProperty(nodePrototype, name, {
-            enumerable: true, // For discoverability.
-            configurable: true, // For delete proto[name].
-            value: func
-        });
-    }
-
-    return old;
-};
-
-// Calling the .build method of a Def simultaneously marks the type as
-// buildable (by defining builders[getBuilderName(typeName)]) and
-// specifies the order of arguments that should be passed to the builder
-// function to create an instance of the type.
-Dp.build = function(/* param1, param2, ... */) {
-    var self = this;
-
-    // Calling Def.prototype.build multiple times has the effect of merely
-    // redefining this property.
-    Object.defineProperty(self, "buildParams", {
-        value: slice.call(arguments),
-        writable: false,
-        enumerable: false,
-        configurable: true
-    });
-
-    assert.strictEqual(self.finalized, false);
-    isString.arrayOf().assert(self.buildParams);
-
-    if (self.buildable) {
-        // If this Def is already buildable, update self.buildParams and
-        // continue using the old builder function.
-        return self;
-    }
-
-    // Every buildable type will have its "type" field filled in
-    // automatically. This includes types that are not subtypes of Node,
-    // like SourceLocation, but that seems harmless (TODO?).
-    self.field("type", self.typeName, function() { return self.typeName });
-
-    // Override Dp.buildable for this Def instance.
-    Object.defineProperty(self, "buildable", { value: true });
-
-    Object.defineProperty(builders, getBuilderName(self.typeName), {
-        enumerable: true,
-
-        value: function() {
-            var args = arguments;
-            var argc = args.length;
-            var built = Object.create(nodePrototype);
-
-            assert.ok(
-                self.finalized,
-                "attempting to instantiate unfinalized type " + self.typeName);
-
-            function add(param, i) {
-                if (hasOwn.call(built, param))
-                    return;
-
-                var all = self.allFields;
-                assert.ok(hasOwn.call(all, param), param);
-
-                var field = all[param];
-                var type = field.type;
-                var value;
-
-                if (isNumber.check(i) && i < argc) {
-                    value = args[i];
-                } else if (field.defaultFn) {
-                    // Expose the partially-built object to the default
-                    // function as its `this` object.
-                    value = field.defaultFn.call(built);
-                } else {
-                    var message = "no value or default function given for field " +
-                        JSON.stringify(param) + " of " + self.typeName + "(" +
-                            self.buildParams.map(function(name) {
-                                return all[name];
-                            }).join(", ") + ")";
-                    assert.ok(false, message);
-                }
-
-                if (!type.check(value)) {
-                    assert.ok(
-                        false,
-                        shallowStringify(value) +
-                            " does not match field " + field +
-                            " of type " + self.typeName
-                    );
-                }
-
-                // TODO Could attach getters and setters here to enforce
-                // dynamic type safety.
-                built[param] = value;
-            }
-
-            self.buildParams.forEach(function(param, i) {
-                add(param, i);
-            });
-
-            Object.keys(self.allFields).forEach(function(param) {
-                add(param); // Use the default value.
-            });
-
-            // Make sure that the "type" field was filled automatically.
-            assert.strictEqual(built.type, self.typeName);
-
-            return built;
-        }
-    });
-
-    return self; // For chaining.
-};
-
-function getBuilderName(typeName) {
-    return typeName.replace(/^[A-Z]+/, function(upperCasePrefix) {
-        var len = upperCasePrefix.length;
-        switch (len) {
-        case 0: return "";
-        // If there's only one initial capital letter, just lower-case it.
-        case 1: return upperCasePrefix.toLowerCase();
-        default:
-            // If there's more than one initial capital letter, lower-case
-            // all but the last one, so that XMLDefaultDeclaration (for
-            // example) becomes xmlDefaultDeclaration.
-            return upperCasePrefix.slice(
-                0, len - 1).toLowerCase() +
-                upperCasePrefix.charAt(len - 1);
-        }
-    });
-}
-
-// The reason fields are specified using .field(...) instead of an object
-// literal syntax is somewhat subtle: the object literal syntax would
-// support only one key and one value, but with .field(...) we can pass
-// any number of arguments to specify the field.
-Dp.field = function(name, type, defaultFn, hidden) {
-    assert.strictEqual(this.finalized, false);
-    this.ownFields[name] = new Field(name, type, defaultFn, hidden);
-    return this; // For chaining.
-};
-
-var namedTypes = {};
-exports.namedTypes = namedTypes;
-
-// Like Object.keys, but aware of what fields each AST type should have.
-function getFieldNames(object) {
-    var d = Def.fromValue(object);
-    if (d) {
-        return d.fieldNames.slice(0);
-    }
-
-    if ("type" in object) {
-        assert.ok(
-            false,
-            "did not recognize object of type " +
-                JSON.stringify(object.type)
-        );
-    }
-
-    return Object.keys(object);
-}
-exports.getFieldNames = getFieldNames;
-
-// Get the value of an object property, taking object.type and default
-// functions into account.
-function getFieldValue(object, fieldName) {
-    var d = Def.fromValue(object);
-    if (d) {
-        var field = d.allFields[fieldName];
-        if (field) {
-            return field.getValue(object);
-        }
-    }
-
-    return object[fieldName];
-}
-exports.getFieldValue = getFieldValue;
-
-// Iterate over all defined fields of an object, including those missing
-// or undefined, passing each field name and effective value (as returned
-// by getFieldValue) to the callback. If the object has no corresponding
-// Def, the callback will never be called.
-exports.eachField = function(object, callback, context) {
-    getFieldNames(object).forEach(function(name) {
-        callback.call(this, name, getFieldValue(object, name));
-    }, context);
-};
-
-// Similar to eachField, except that iteration stops as soon as the
-// callback returns a truthy value. Like Array.prototype.some, the final
-// result is either true or false to indicates whether the callback
-// returned true for any element or not.
-exports.someField = function(object, callback, context) {
-    return getFieldNames(object).some(function(name) {
-        return callback.call(this, name, getFieldValue(object, name));
-    }, context);
-};
-
-// This property will be overridden as true by individual Def instances
-// when they are finalized.
-Object.defineProperty(Dp, "finalized", { value: false });
-
-Dp.finalize = function() {
-    // It's not an error to finalize a type more than once, but only the
-    // first call to .finalize does anything.
-    if (!this.finalized) {
-        var allFields = this.allFields;
-        var allSupertypes = this.allSupertypes;
-
-        this.baseNames.forEach(function(name) {
-            var def = defCache[name];
-            def.finalize();
-            extend(allFields, def.allFields);
-            extend(allSupertypes, def.allSupertypes);
-        });
-
-        // TODO Warn if fields are overridden with incompatible types.
-        extend(allFields, this.ownFields);
-        allSupertypes[this.typeName] = this;
-
-        this.fieldNames.length = 0;
-        for (var fieldName in allFields) {
-            if (hasOwn.call(allFields, fieldName) &&
-                !allFields[fieldName].hidden) {
-                this.fieldNames.push(fieldName);
-            }
-        }
-
-        // Types are exported only once they have been finalized.
-        Object.defineProperty(namedTypes, this.typeName, {
-            enumerable: true,
-            value: this.type
-        });
-
-        Object.defineProperty(this, "finalized", { value: true });
-
-        // A linearization of the inheritance hierarchy.
-        populateSupertypeList(this.typeName, this.supertypeList);
-    }
-};
-
-function populateSupertypeList(typeName, list) {
-    list.length = 0;
-    list.push(typeName);
-
-    var lastSeen = Object.create(null);
-
-    for (var pos = 0; pos < list.length; ++pos) {
-        typeName = list[pos];
-        var d = defCache[typeName];
-        assert.strictEqual(d.finalized, true);
-
-        // If we saw typeName earlier in the breadth-first traversal,
-        // delete the last-seen occurrence.
-        if (hasOwn.call(lastSeen, typeName)) {
-            delete list[lastSeen[typeName]];
-        }
-
-        // Record the new index of the last-seen occurrence of typeName.
-        lastSeen[typeName] = pos;
-
-        // Enqueue the base names of this type.
-        list.push.apply(list, d.baseNames);
-    }
-
-    // Compaction loop to remove array holes.
-    for (var to = 0, from = to, len = list.length; from < len; ++from) {
-        if (hasOwn.call(list, from)) {
-            list[to++] = list[from];
-        }
-    }
-
-    list.length = to;
-}
-
-function extend(into, from) {
-    Object.keys(from).forEach(function(name) {
-        into[name] = from[name];
-    });
-
-    return into;
-};
-
-exports.finalize = function() {
-    Object.keys(defCache).forEach(function(name) {
-        defCache[name].finalize();
-    });
-};
-
-},{"assert":3}],18:[function(require,module,exports){
-var types = require("./lib/types");
-
-// This core module of AST types captures ES5 as it is parsed today by
-// git://github.com/ariya/esprima.git#master.
-require("./def/core");
-
-// Feel free to add to or remove from this list of extension modules to
-// configure the precise type hierarchy that you need.
-require("./def/es6");
-require("./def/es7");
-require("./def/mozilla");
-require("./def/e4x");
-require("./def/fb-harmony");
-
-types.finalize();
-
-exports.Type = types.Type;
-exports.builtInTypes = types.builtInTypes;
-exports.namedTypes = types.namedTypes;
-exports.builders = types.builders;
-exports.defineMethod = types.defineMethod;
-exports.getFieldNames = types.getFieldNames;
-exports.getFieldValue = types.getFieldValue;
-exports.eachField = types.eachField;
-exports.someField = types.someField;
-exports.getSupertypeNames = types.getSupertypeNames;
-exports.astNodesAreEquivalent = require("./lib/equiv");
-exports.finalize = types.finalize;
-exports.NodePath = require("./lib/node-path");
-exports.PathVisitor = require("./lib/path-visitor");
-exports.visit = exports.PathVisitor.visit;
-
-},{"./def/core":5,"./def/e4x":6,"./def/es6":7,"./def/es7":8,"./def/fb-harmony":9,"./def/mozilla":10,"./lib/equiv":11,"./lib/node-path":12,"./lib/path-visitor":13,"./lib/types":17}],19:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -4418,7 +886,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],20:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 "use strict";
 
 var ListNode = function ListNode(value) {
@@ -4622,7 +1090,7 @@ LinkedList.fromArray = function (array) {
 };
 
 module.exports = LinkedList;
-},{}],21:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 
 var _prototypeProperties = function (child, staticProps, instanceProps) {
@@ -4673,12 +1141,12 @@ _prototypeProperties(Stack, null, {
 });
 
 module.exports = Stack;
-},{}],22:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 
 exports.LinkedList = require("./LinkedList");
 exports.Stack = require("./Stack");
-},{"./LinkedList":20,"./Stack":21}],23:[function(require,module,exports){
+},{"./LinkedList":6,"./Stack":7}],9:[function(require,module,exports){
 // breakable.js
 // MIT licensed, see LICENSE file
 // Copyright (c) 2013-2014 Olov Lassus <olov.lassus@gmail.com>
@@ -4716,9 +1184,9 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
     module.exports = breakable;
 }
 
-},{}],24:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 
-},{}],25:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -6270,14 +2738,14 @@ function blitBuffer (src, dst, offset, length) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":19,"ieee754":46,"isarray":26}],26:[function(require,module,exports){
+},{"base64-js":5,"ieee754":32,"isarray":12}],12:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],27:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -6388,7 +2856,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":48}],28:[function(require,module,exports){
+},{"../../is-buffer/index.js":34}],14:[function(require,module,exports){
 "use strict";
 
 var assert = require("assert");
@@ -7070,7 +3538,7 @@ function run(src, config) {
 
 module.exports = run;
 
-},{"./error":29,"./jshint_globals/vars.js":30,"./options":31,"./scope":32,"./stats":33,"alter":1,"assert":3,"ast-traverse":4,"breakable":23,"simple-fmt":102,"simple-is":103,"stringmap":116,"stringset":117}],29:[function(require,module,exports){
+},{"./error":15,"./jshint_globals/vars.js":16,"./options":17,"./scope":18,"./stats":19,"alter":1,"assert":3,"ast-traverse":4,"breakable":9,"simple-fmt":88,"simple-is":89,"stringmap":102,"stringset":103}],15:[function(require,module,exports){
 "use strict";
 
 var fmt = require("simple-fmt");
@@ -7100,7 +3568,7 @@ error.reset();
 
 module.exports = error;
 
-},{"assert":3,"simple-fmt":102}],30:[function(require,module,exports){
+},{"assert":3,"simple-fmt":88}],16:[function(require,module,exports){
 // jshint -W001
 
 "use strict";
@@ -7497,7 +3965,7 @@ exports.yui = {
 };
 
 
-},{}],31:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 // default configuration
 
 module.exports = {
@@ -7507,7 +3975,7 @@ module.exports = {
     parse: require("esprima-fb").parse,
 };
 
-},{"esprima-fb":34}],32:[function(require,module,exports){
+},{"esprima-fb":20}],18:[function(require,module,exports){
 "use strict";
 
 var assert = require("assert");
@@ -7733,7 +4201,7 @@ Scope.prototype.traverse = function(options) {
 
 module.exports = Scope;
 
-},{"./error":29,"./options":31,"assert":3,"simple-fmt":102,"simple-is":103,"stringmap":116,"stringset":117}],33:[function(require,module,exports){
+},{"./error":15,"./options":17,"assert":3,"simple-fmt":88,"simple-is":89,"stringmap":102,"stringset":103}],19:[function(require,module,exports){
 var fmt = require("simple-fmt");
 var is = require("simple-is");
 var assert = require("assert");
@@ -7785,7 +4253,7 @@ Stats.prototype.toString = function() {
 
 module.exports = Stats;
 
-},{"assert":3,"simple-fmt":102,"simple-is":103}],34:[function(require,module,exports){
+},{"assert":3,"simple-fmt":88,"simple-is":89}],20:[function(require,module,exports){
 /*
   Copyright (C) 2013 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2013 Thaddee Tyl <thaddee.tyl@gmail.com>
@@ -15562,7 +12030,7 @@ module.exports = Stats;
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],35:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 (function (global){
 /*
   Copyright (C) 2012-2014 Yusuke Suzuki <utatane.tea@gmail.com>
@@ -17955,7 +14423,7 @@ module.exports = Stats;
 /* vim: set sw=4 ts=4 et tw=80 : */
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./package.json":36,"estraverse":41,"esutils":45,"source-map":104}],36:[function(require,module,exports){
+},{"./package.json":22,"estraverse":27,"esutils":31,"source-map":90}],22:[function(require,module,exports){
 module.exports={
   "_args": [
     [
@@ -18068,7 +14536,7 @@ module.exports={
   "version": "1.4.4-dev"
 }
 
-},{}],37:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /*
   Copyright (C) 2012-2013 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2013 Alex Seville <hi@alexanderseville.com>
@@ -19192,7 +15660,7 @@ module.exports={
 }, this));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{"estraverse":38}],38:[function(require,module,exports){
+},{"estraverse":24}],24:[function(require,module,exports){
 /*
   Copyright (C) 2012-2013 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -20033,7 +16501,7 @@ module.exports={
 }(exports));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{"./package.json":39}],39:[function(require,module,exports){
+},{"./package.json":25}],25:[function(require,module,exports){
 module.exports={
   "_args": [
     [
@@ -20123,7 +16591,7 @@ module.exports={
   "version": "2.0.0"
 }
 
-},{}],40:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /*
   Copyright (C) 2013 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2013 Thaddee Tyl <thaddee.tyl@gmail.com>
@@ -27741,7 +24209,7 @@ parseYieldExpression: true, parseAwaitExpression: true
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],41:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 /*
   Copyright (C) 2012-2013 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -28588,7 +25056,7 @@ parseYieldExpression: true, parseAwaitExpression: true
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],42:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /*
   Copyright (C) 2013 Yusuke Suzuki <utatane.tea@gmail.com>
 
@@ -28734,7 +25202,7 @@ parseYieldExpression: true, parseAwaitExpression: true
 }());
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],43:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 /*
   Copyright (C) 2013-2014 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2014 Ivan Nikulin <ifaaan@gmail.com>
@@ -28837,7 +25305,7 @@ parseYieldExpression: true, parseAwaitExpression: true
 }());
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],44:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /*
   Copyright (C) 2013 Yusuke Suzuki <utatane.tea@gmail.com>
 
@@ -28976,7 +25444,7 @@ parseYieldExpression: true, parseAwaitExpression: true
 }());
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{"./code":43}],45:[function(require,module,exports){
+},{"./code":29}],31:[function(require,module,exports){
 /*
   Copyright (C) 2013 Yusuke Suzuki <utatane.tea@gmail.com>
 
@@ -29011,7 +25479,7 @@ parseYieldExpression: true, parseAwaitExpression: true
 }());
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{"./ast":42,"./code":43,"./keyword":44}],46:[function(require,module,exports){
+},{"./ast":28,"./code":29,"./keyword":30}],32:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -29097,7 +25565,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],47:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -29122,7 +25590,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],48:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /**
  * Determine if an object is Buffer
  *
@@ -29141,12 +25609,12 @@ module.exports = function (obj) {
     ))
 }
 
-},{}],49:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],50:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -29193,7 +25661,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],51:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -29421,7 +25889,7 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":54}],52:[function(require,module,exports){
+},{"_process":40}],38:[function(require,module,exports){
 "use strict";
 
 var originalObject = Object;
@@ -29552,7 +26020,7 @@ function makeAccessor(secretCreatorFn) {
 
 defProp(exports, "makeAccessor", makeAccessor);
 
-},{}],53:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -29576,7 +26044,7 @@ function nextTick(fn) {
 }
 
 }).call(this,require('_process'))
-},{"_process":54}],54:[function(require,module,exports){
+},{"_process":40}],40:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -29669,7 +26137,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],55:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /**
  * Copyright (c) 2014, Facebook, Inc.
  * All rights reserved.
@@ -30884,7 +27352,7 @@ Ep.explodeExpression = function(path, ignoreResult) {
   }
 };
 
-},{"./leap":57,"./meta":58,"./util":59,"assert":3,"recast":89}],56:[function(require,module,exports){
+},{"./leap":43,"./meta":44,"./util":45,"assert":3,"recast":75}],42:[function(require,module,exports){
 /**
  * Copyright (c) 2014, Facebook, Inc.
  * All rights reserved.
@@ -31039,7 +27507,7 @@ exports.hoist = function(funPath) {
   return b.variableDeclaration("var", declarations);
 };
 
-},{"assert":3,"recast":89}],57:[function(require,module,exports){
+},{"assert":3,"recast":75}],43:[function(require,module,exports){
 /**
  * Copyright (c) 2014, Facebook, Inc.
  * All rights reserved.
@@ -31218,7 +27686,7 @@ LMp.getContinueLoc = function(label) {
   return this._findLeapLocation("continueLoc", label);
 };
 
-},{"./emit":55,"assert":3,"recast":89,"util":121}],58:[function(require,module,exports){
+},{"./emit":41,"assert":3,"recast":75,"util":107}],44:[function(require,module,exports){
 /**
  * Copyright (c) 2014, Facebook, Inc.
  * All rights reserved.
@@ -31320,7 +27788,7 @@ for (var type in leapTypes) {
 exports.hasSideEffects = makePredicate("hasSideEffects", sideEffectTypes);
 exports.containsLeap = makePredicate("containsLeap", leapTypes);
 
-},{"assert":3,"private":52,"recast":89}],59:[function(require,module,exports){
+},{"assert":3,"private":38,"recast":75}],45:[function(require,module,exports){
 /**
  * Copyright (c) 2014, Facebook, Inc.
  * All rights reserved.
@@ -31423,7 +27891,7 @@ exports.isReference = function(path, name) {
   }
 };
 
-},{"assert":3,"recast":89}],60:[function(require,module,exports){
+},{"assert":3,"recast":75}],46:[function(require,module,exports){
 /**
  * Copyright (c) 2014, Facebook, Inc.
  * All rights reserved.
@@ -31828,7 +28296,7 @@ var awaitVisitor = types.PathVisitor.fromMethodsObject({
   }
 });
 
-},{"..":61,"./emit":55,"./hoist":56,"./util":59,"assert":3,"fs":122,"private":52,"recast":89}],61:[function(require,module,exports){
+},{"..":47,"./emit":41,"./hoist":42,"./util":45,"assert":3,"fs":108,"private":38,"recast":75}],47:[function(require,module,exports){
 (function (__dirname){
 /**
  * Copyright (c) 2014, Facebook, Inc.
@@ -31993,7 +28461,7 @@ exports.compile = compile;
 exports.transform = transform;
 
 }).call(this,"/node_modules/regenerator")
-},{"./lib/util":59,"./lib/visit":60,"./runtime":101,"assert":3,"defs":28,"esprima-fb":78,"fs":122,"path":51,"recast":89,"through":118}],62:[function(require,module,exports){
+},{"./lib/util":45,"./lib/visit":46,"./runtime":87,"assert":3,"defs":14,"esprima-fb":64,"fs":108,"path":37,"recast":75,"through":104}],48:[function(require,module,exports){
 require("./es7");
 
 var types = require("../lib/types");
@@ -32100,7 +28568,7 @@ def("CommentLine")
     .bases("Comment")
     .build("value", /*optional:*/ "leading", "trailing");
 
-},{"../lib/shared":75,"../lib/types":76,"./es7":66}],63:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62,"./es7":52}],49:[function(require,module,exports){
 var types = require("../lib/types");
 var Type = types.Type;
 var def = Type.def;
@@ -32461,7 +28929,7 @@ def("Comment")
     .field("leading", Boolean, defaults["true"])
     .field("trailing", Boolean, defaults["false"]);
 
-},{"../lib/shared":75,"../lib/types":76}],64:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62}],50:[function(require,module,exports){
 require("./core");
 var types = require("../lib/types");
 var def = types.Type.def;
@@ -32547,7 +29015,7 @@ def("XMLProcessingInstruction")
     .field("target", String)
     .field("contents", or(String, null));
 
-},{"../lib/types":76,"./core":63}],65:[function(require,module,exports){
+},{"../lib/types":62,"./core":49}],51:[function(require,module,exports){
 require("./core");
 var types = require("../lib/types");
 var def = types.Type.def;
@@ -32766,7 +29234,7 @@ def("TemplateElement")
     .field("value", {"cooked": String, "raw": String})
     .field("tail", Boolean);
 
-},{"../lib/shared":75,"../lib/types":76,"./core":63}],66:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62,"./core":49}],52:[function(require,module,exports){
 require("./es6");
 
 var types = require("../lib/types");
@@ -32804,7 +29272,7 @@ def("AwaitExpression")
     .field("argument", or(def("Expression"), null))
     .field("all", Boolean, defaults["false"]);
 
-},{"../lib/shared":75,"../lib/types":76,"./es6":65}],67:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62,"./es6":51}],53:[function(require,module,exports){
 require("./es7");
 
 var types = require("../lib/types");
@@ -32902,7 +29370,7 @@ def("Line")
     .bases("Comment")
     .build("value", /*optional:*/ "leading", "trailing");
 
-},{"../lib/shared":75,"../lib/types":76,"./es7":66}],68:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62,"./es7":52}],54:[function(require,module,exports){
 require("./es7");
 
 var types = require("../lib/types");
@@ -33231,7 +29699,7 @@ def("DeclareModule")
   .field("id", or(def("Identifier"), def("Literal")))
   .field("body", def("BlockStatement"));
 
-},{"../lib/shared":75,"../lib/types":76,"./es7":66}],69:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62,"./es7":52}],55:[function(require,module,exports){
 require("./core");
 var types = require("../lib/types");
 var def = types.Type.def;
@@ -33282,7 +29750,7 @@ def("GraphIndexExpression")
     .build("index")
     .field("index", geq(0));
 
-},{"../lib/shared":75,"../lib/types":76,"./core":63}],70:[function(require,module,exports){
+},{"../lib/shared":61,"../lib/types":62,"./core":49}],56:[function(require,module,exports){
 var types = require("../main");
 var getFieldNames = types.getFieldNames;
 var getFieldValue = types.getFieldValue;
@@ -33468,7 +29936,7 @@ function objectsAreEquivalent(a, b, problemPath) {
 
 module.exports = astNodesAreEquivalent;
 
-},{"../main":77}],71:[function(require,module,exports){
+},{"../main":63}],57:[function(require,module,exports){
 var types = require("./types");
 var n = types.namedTypes;
 var b = types.builders;
@@ -33944,7 +30412,7 @@ function cleanUpIfStatementAfterPrune(ifStatement) {
 
 module.exports = NodePath;
 
-},{"./path":73,"./scope":74,"./types":76}],72:[function(require,module,exports){
+},{"./path":59,"./scope":60,"./types":62}],58:[function(require,module,exports){
 var types = require("./types");
 var NodePath = require("./node-path");
 var Printable = types.namedTypes.Printable;
@@ -34365,7 +30833,7 @@ sharedContextProtoMethods.abort = function abort() {
 
 module.exports = PathVisitor;
 
-},{"./node-path":71,"./types":76}],73:[function(require,module,exports){
+},{"./node-path":57,"./types":62}],59:[function(require,module,exports){
 var Op = Object.prototype;
 var hasOwn = Op.hasOwnProperty;
 var types = require("./types");
@@ -34733,7 +31201,7 @@ Pp.replace = function replace(replacement) {
 
 module.exports = Path;
 
-},{"./types":76}],74:[function(require,module,exports){
+},{"./types":62}],60:[function(require,module,exports){
 var types = require("./types");
 var Type = types.Type;
 var namedTypes = types.namedTypes;
@@ -35030,9 +31498,50 @@ Sp.getGlobalScope = function() {
 
 module.exports = Scope;
 
-},{"./node-path":71,"./types":76}],75:[function(require,module,exports){
-arguments[4][16][0].apply(exports,arguments)
-},{"../lib/types":76,"dup":16}],76:[function(require,module,exports){
+},{"./node-path":57,"./types":62}],61:[function(require,module,exports){
+var types = require("../lib/types");
+var Type = types.Type;
+var builtin = types.builtInTypes;
+var isNumber = builtin.number;
+
+// An example of constructing a new type with arbitrary constraints from
+// an existing type.
+exports.geq = function(than) {
+    return new Type(function(value) {
+        return isNumber.check(value) && value >= than;
+    }, isNumber + " >= " + than);
+};
+
+// Default value-returning functions that may optionally be passed as a
+// third argument to Def.prototype.field.
+exports.defaults = {
+    // Functions were used because (among other reasons) that's the most
+    // elegant way to allow for the emptyArray one always to give a new
+    // array instance.
+    "null": function() { return null },
+    "emptyArray": function() { return [] },
+    "false": function() { return false },
+    "true": function() { return true },
+    "undefined": function() {}
+};
+
+var naiveIsPrimitive = Type.or(
+    builtin.string,
+    builtin.number,
+    builtin.boolean,
+    builtin.null,
+    builtin.undefined
+);
+
+exports.isPrimitive = new Type(function(value) {
+    if (value === null)
+        return true;
+    var type = typeof value;
+    return !(type === "object" ||
+             type === "function");
+}, naiveIsPrimitive.toString());
+
+},{"../lib/types":62}],62:[function(require,module,exports){
 var Ap = Array.prototype;
 var slice = Ap.slice;
 var map = Ap.map;
@@ -35862,7 +32371,7 @@ exports.finalize = function() {
     });
 };
 
-},{}],77:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 var types = require("./lib/types");
 
 // This core module of AST types captures ES5 as it is parsed today by
@@ -35897,9 +32406,9 @@ exports.NodePath = require("./lib/node-path");
 exports.PathVisitor = require("./lib/path-visitor");
 exports.visit = exports.PathVisitor.visit;
 
-},{"./def/babel":62,"./def/core":63,"./def/e4x":64,"./def/es6":65,"./def/es7":66,"./def/esprima":67,"./def/fb-harmony":68,"./def/mozilla":69,"./lib/equiv":70,"./lib/node-path":71,"./lib/path-visitor":72,"./lib/types":76}],78:[function(require,module,exports){
-arguments[4][34][0].apply(exports,arguments)
-},{"dup":34}],79:[function(require,module,exports){
+},{"./def/babel":48,"./def/core":49,"./def/e4x":50,"./def/es6":51,"./def/es7":52,"./def/esprima":53,"./def/fb-harmony":54,"./def/mozilla":55,"./lib/equiv":56,"./lib/node-path":57,"./lib/path-visitor":58,"./lib/types":62}],64:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],65:[function(require,module,exports){
 var assert = require("assert");
 var types = require("./types");
 var n = types.namedTypes;
@@ -36251,7 +32760,7 @@ exports.printComments = function(path, print) {
     return concat(leadingParts);
 };
 
-},{"./lines":81,"./types":87,"./util":88,"assert":3,"private":52}],80:[function(require,module,exports){
+},{"./lines":67,"./types":73,"./util":74,"assert":3,"private":38}],66:[function(require,module,exports){
 var assert = require("assert");
 var types = require("./types");
 var n = types.namedTypes;
@@ -36725,7 +33234,7 @@ FPp.firstInStatement = function() {
     return true;
 };
 
-},{"./types":87,"assert":3}],81:[function(require,module,exports){
+},{"./types":73,"assert":3}],67:[function(require,module,exports){
 var assert = require("assert");
 var sourceMap = require("source-map");
 var normalizeOptions = require("./options").normalize;
@@ -37581,7 +34090,7 @@ Lp.concat = function(other) {
 // Lines.prototype will be fully populated.
 var emptyLines = fromString("");
 
-},{"./mapping":82,"./options":83,"./types":87,"./util":88,"assert":3,"private":52,"source-map":100}],82:[function(require,module,exports){
+},{"./mapping":68,"./options":69,"./types":73,"./util":74,"assert":3,"private":38,"source-map":86}],68:[function(require,module,exports){
 var assert = require("assert");
 var types = require("./types");
 var isString = types.builtInTypes.string;
@@ -37860,7 +34369,7 @@ function skipChars(
     return sourceCursor;
 }
 
-},{"./lines":81,"./types":87,"./util":88,"assert":3}],83:[function(require,module,exports){
+},{"./lines":67,"./types":73,"./util":74,"assert":3}],69:[function(require,module,exports){
 var defaults = {
     // If you want to use a different branch of esprima, or any other
     // module that supports a .parse function, pass that module object to
@@ -37957,7 +34466,7 @@ exports.normalize = function(options) {
     };
 };
 
-},{"esprima-fb":78,"os":50}],84:[function(require,module,exports){
+},{"esprima-fb":64,"os":36}],70:[function(require,module,exports){
 var assert = require("assert");
 var types = require("./types");
 var n = types.namedTypes;
@@ -38101,7 +34610,7 @@ TCp.copy = function(node) {
     return copy;
 };
 
-},{"./comments":79,"./lines":81,"./options":83,"./patcher":85,"./types":87,"./util":88,"assert":3}],85:[function(require,module,exports){
+},{"./comments":65,"./lines":67,"./options":69,"./patcher":71,"./types":73,"./util":74,"assert":3}],71:[function(require,module,exports){
 var assert = require("assert");
 var linesModule = require("./lines");
 var types = require("./types");
@@ -38583,7 +35092,7 @@ function findChildReprints(newPath, oldPath, reprints) {
     return true;
 }
 
-},{"./fast-path":80,"./lines":81,"./types":87,"./util":88,"assert":3}],86:[function(require,module,exports){
+},{"./fast-path":66,"./lines":67,"./types":73,"./util":74,"assert":3}],72:[function(require,module,exports){
 var assert = require("assert");
 var sourceMap = require("source-map");
 var printComments = require("./comments").printComments;
@@ -40348,14 +36857,14 @@ function maybeAddSemicolon(lines) {
     return lines;
 }
 
-},{"./comments":79,"./fast-path":80,"./lines":81,"./options":83,"./patcher":85,"./types":87,"./util":88,"assert":3,"source-map":100}],87:[function(require,module,exports){
+},{"./comments":65,"./fast-path":66,"./lines":67,"./options":69,"./patcher":71,"./types":73,"./util":74,"assert":3,"source-map":86}],73:[function(require,module,exports){
 // This module was originally created so that Recast could add its own
 // custom types to the AST type system (in particular, the File type), but
 // those types are now incorporated into ast-types, so this module doesn't
 // have much to do anymore. Still, it might prove useful in the future.
 module.exports = require("ast-types");
 
-},{"ast-types":77}],88:[function(require,module,exports){
+},{"ast-types":63}],74:[function(require,module,exports){
 var assert = require("assert");
 var types = require("./types");
 var getFieldValue = types.getFieldValue;
@@ -40507,7 +37016,7 @@ exports.fixFaultyLocations = function(node) {
     }
 };
 
-},{"./types":87,"assert":3,"source-map":100}],89:[function(require,module,exports){
+},{"./types":73,"assert":3,"source-map":86}],75:[function(require,module,exports){
 (function (process){
 var types = require("./lib/types");
 var parse = require("./lib/parser").parse;
@@ -40610,7 +37119,7 @@ Object.defineProperties(exports, {
 });
 
 }).call(this,require('_process'))
-},{"./lib/parser":84,"./lib/printer":86,"./lib/types":87,"_process":54,"fs":122}],90:[function(require,module,exports){
+},{"./lib/parser":70,"./lib/printer":72,"./lib/types":73,"_process":40,"fs":108}],76:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -40716,7 +37225,7 @@ Object.defineProperties(exports, {
   exports.ArraySet = ArraySet;
 }
 
-},{"./util":99}],91:[function(require,module,exports){
+},{"./util":85}],77:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -40859,7 +37368,7 @@ Object.defineProperties(exports, {
   };
 }
 
-},{"./base64":92}],92:[function(require,module,exports){
+},{"./base64":78}],78:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -40929,7 +37438,7 @@ Object.defineProperties(exports, {
   };
 }
 
-},{}],93:[function(require,module,exports){
+},{}],79:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -41043,7 +37552,7 @@ Object.defineProperties(exports, {
   };
 }
 
-},{}],94:[function(require,module,exports){
+},{}],80:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2014 Mozilla Foundation and contributors
@@ -41125,7 +37634,7 @@ Object.defineProperties(exports, {
   exports.MappingList = MappingList;
 }
 
-},{"./util":99}],95:[function(require,module,exports){
+},{"./util":85}],81:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -41242,7 +37751,7 @@ Object.defineProperties(exports, {
   };
 }
 
-},{}],96:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -42326,7 +38835,7 @@ Object.defineProperties(exports, {
   exports.IndexedSourceMapConsumer = IndexedSourceMapConsumer;
 }
 
-},{"./array-set":90,"./base64-vlq":91,"./binary-search":93,"./quick-sort":95,"./util":99}],97:[function(require,module,exports){
+},{"./array-set":76,"./base64-vlq":77,"./binary-search":79,"./quick-sort":81,"./util":85}],83:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -42724,7 +39233,7 @@ Object.defineProperties(exports, {
   exports.SourceMapGenerator = SourceMapGenerator;
 }
 
-},{"./array-set":90,"./base64-vlq":91,"./mapping-list":94,"./util":99}],98:[function(require,module,exports){
+},{"./array-set":76,"./base64-vlq":77,"./mapping-list":80,"./util":85}],84:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -43134,7 +39643,7 @@ Object.defineProperties(exports, {
   exports.SourceNode = SourceNode;
 }
 
-},{"./source-map-generator":97,"./util":99}],99:[function(require,module,exports){
+},{"./source-map-generator":83,"./util":85}],85:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -43505,7 +40014,7 @@ Object.defineProperties(exports, {
   exports.compareByGeneratedPositionsInflated = compareByGeneratedPositionsInflated;
 }
 
-},{}],100:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 /*
  * Copyright 2009-2011 Mozilla Foundation and contributors
  * Licensed under the New BSD license. See LICENSE.txt or:
@@ -43515,7 +40024,7 @@ exports.SourceMapGenerator = require('./lib/source-map-generator').SourceMapGene
 exports.SourceMapConsumer = require('./lib/source-map-consumer').SourceMapConsumer;
 exports.SourceNode = require('./lib/source-node').SourceNode;
 
-},{"./lib/source-map-consumer":96,"./lib/source-map-generator":97,"./lib/source-node":98}],101:[function(require,module,exports){
+},{"./lib/source-map-consumer":82,"./lib/source-map-generator":83,"./lib/source-node":84}],87:[function(require,module,exports){
 (function (process,global){
 /**
  * Copyright (c) 2014, Facebook, Inc.
@@ -44187,7 +40696,7 @@ exports.SourceNode = require('./lib/source-node').SourceNode;
 );
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":54}],102:[function(require,module,exports){
+},{"_process":40}],88:[function(require,module,exports){
 // simple-fmt.js
 // MIT licensed, see LICENSE file
 // Copyright (c) 2013 Olov Lassus <olov.lassus@gmail.com>
@@ -44222,7 +40731,7 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
     module.exports = fmt;
 }
 
-},{}],103:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 // simple-is.js
 // MIT licensed, see LICENSE file
 // Copyright (c) 2013 Olov Lassus <olov.lassus@gmail.com>
@@ -44280,7 +40789,7 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
     module.exports = is;
 }
 
-},{}],104:[function(require,module,exports){
+},{}],90:[function(require,module,exports){
 /*
  * Copyright 2009-2011 Mozilla Foundation and contributors
  * Licensed under the New BSD license. See LICENSE.txt or:
@@ -44290,7 +40799,7 @@ exports.SourceMapGenerator = require('./source-map/source-map-generator').Source
 exports.SourceMapConsumer = require('./source-map/source-map-consumer').SourceMapConsumer;
 exports.SourceNode = require('./source-map/source-node').SourceNode;
 
-},{"./source-map/source-map-consumer":110,"./source-map/source-map-generator":111,"./source-map/source-node":112}],105:[function(require,module,exports){
+},{"./source-map/source-map-consumer":96,"./source-map/source-map-generator":97,"./source-map/source-node":98}],91:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -44389,7 +40898,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./util":113,"amdefine":2}],106:[function(require,module,exports){
+},{"./util":99,"amdefine":2}],92:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -44533,7 +41042,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./base64":107,"amdefine":2}],107:[function(require,module,exports){
+},{"./base64":93,"amdefine":2}],93:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -44577,7 +41086,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":2}],108:[function(require,module,exports){
+},{"amdefine":2}],94:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -44659,7 +41168,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":2}],109:[function(require,module,exports){
+},{"amdefine":2}],95:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2014 Mozilla Foundation and contributors
@@ -44747,7 +41256,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./util":113,"amdefine":2}],110:[function(require,module,exports){
+},{"./util":99,"amdefine":2}],96:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -45324,7 +41833,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./array-set":105,"./base64-vlq":106,"./binary-search":108,"./util":113,"amdefine":2}],111:[function(require,module,exports){
+},{"./array-set":91,"./base64-vlq":92,"./binary-search":94,"./util":99,"amdefine":2}],97:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -45726,7 +42235,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./array-set":105,"./base64-vlq":106,"./mapping-list":109,"./util":113,"amdefine":2}],112:[function(require,module,exports){
+},{"./array-set":91,"./base64-vlq":92,"./mapping-list":95,"./util":99,"amdefine":2}],98:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -46142,7 +42651,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./source-map-generator":111,"./util":113,"amdefine":2}],113:[function(require,module,exports){
+},{"./source-map-generator":97,"./util":99,"amdefine":2}],99:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -46463,7 +42972,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":2}],114:[function(require,module,exports){
+},{"amdefine":2}],100:[function(require,module,exports){
 //! stable.js 0.1.5, https://github.com/Two-Screen/stable
 //! © 2014 Angry Bytes and contributors. MIT licensed.
 
@@ -46576,7 +43085,7 @@ else {
 
 })();
 
-},{}],115:[function(require,module,exports){
+},{}],101:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -46799,7 +43308,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":25}],116:[function(require,module,exports){
+},{"buffer":11}],102:[function(require,module,exports){
 // stringmap.js
 // MIT licensed, see LICENSE file
 // Copyright (c) 2013 Olov Lassus <olov.lassus@gmail.com>
@@ -47045,7 +43554,7 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
     module.exports = StringMap;
 }
 
-},{}],117:[function(require,module,exports){
+},{}],103:[function(require,module,exports){
 // stringset.js
 // MIT licensed, see LICENSE file
 // Copyright (c) 2013 Olov Lassus <olov.lassus@gmail.com>
@@ -47228,7 +43737,7 @@ if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
     module.exports = StringSet;
 }
 
-},{}],118:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 (function (process){
 var Stream = require('stream')
 
@@ -47340,7 +43849,7 @@ function through (write, end, opts) {
 
 
 }).call(this,require('_process'))
-},{"_process":54,"stream":134}],119:[function(require,module,exports){
+},{"_process":40,"stream":120}],105:[function(require,module,exports){
 (function (global){
 
 /**
@@ -47411,14 +43920,14 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],120:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],121:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -48008,9 +44517,9 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":120,"_process":54,"inherits":47}],122:[function(require,module,exports){
-arguments[4][24][0].apply(exports,arguments)
-},{"dup":24}],123:[function(require,module,exports){
+},{"./support/isBuffer":106,"_process":40,"inherits":33}],108:[function(require,module,exports){
+arguments[4][10][0].apply(exports,arguments)
+},{"dup":10}],109:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -48310,10 +44819,10 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],124:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":125}],125:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":111}],111:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -48397,7 +44906,7 @@ function forEach (xs, f) {
   }
 }
 
-},{"./_stream_readable":127,"./_stream_writable":129,"core-util-is":27,"inherits":47,"process-nextick-args":53}],126:[function(require,module,exports){
+},{"./_stream_readable":113,"./_stream_writable":115,"core-util-is":13,"inherits":33,"process-nextick-args":39}],112:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -48426,7 +44935,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./_stream_transform":128,"core-util-is":27,"inherits":47}],127:[function(require,module,exports){
+},{"./_stream_transform":114,"core-util-is":13,"inherits":33}],113:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -49405,7 +45914,7 @@ function indexOf (xs, x) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":125,"_process":54,"buffer":25,"core-util-is":27,"events":123,"inherits":47,"isarray":49,"process-nextick-args":53,"string_decoder/":115,"util":24}],128:[function(require,module,exports){
+},{"./_stream_duplex":111,"_process":40,"buffer":11,"core-util-is":13,"events":109,"inherits":33,"isarray":35,"process-nextick-args":39,"string_decoder/":101,"util":10}],114:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -49604,7 +46113,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./_stream_duplex":125,"core-util-is":27,"inherits":47}],129:[function(require,module,exports){
+},{"./_stream_duplex":111,"core-util-is":13,"inherits":33}],115:[function(require,module,exports){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
 // the drain event emission and buffering.
@@ -50135,10 +46644,10 @@ function endWritable(stream, state, cb) {
   state.ended = true;
 }
 
-},{"./_stream_duplex":125,"buffer":25,"core-util-is":27,"events":123,"inherits":47,"process-nextick-args":53,"util-deprecate":119}],130:[function(require,module,exports){
+},{"./_stream_duplex":111,"buffer":11,"core-util-is":13,"events":109,"inherits":33,"process-nextick-args":39,"util-deprecate":105}],116:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":126}],131:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":112}],117:[function(require,module,exports){
 var Stream = (function (){
   try {
     return require('st' + 'ream'); // hack to fix a circular dependency issue when used with browserify
@@ -50152,13 +46661,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":125,"./lib/_stream_passthrough.js":126,"./lib/_stream_readable.js":127,"./lib/_stream_transform.js":128,"./lib/_stream_writable.js":129}],132:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":111,"./lib/_stream_passthrough.js":112,"./lib/_stream_readable.js":113,"./lib/_stream_transform.js":114,"./lib/_stream_writable.js":115}],118:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":128}],133:[function(require,module,exports){
+},{"./lib/_stream_transform.js":114}],119:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":129}],134:[function(require,module,exports){
+},{"./lib/_stream_writable.js":115}],120:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -50287,7 +46796,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":123,"inherits":47,"readable-stream/duplex.js":124,"readable-stream/passthrough.js":130,"readable-stream/readable.js":131,"readable-stream/transform.js":132,"readable-stream/writable.js":133}],135:[function(require,module,exports){
+},{"events":109,"inherits":33,"readable-stream/duplex.js":110,"readable-stream/passthrough.js":116,"readable-stream/readable.js":117,"readable-stream/transform.js":118,"readable-stream/writable.js":119}],121:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -50585,7 +47094,7 @@ var Debugger = function () {
 
 module.exports = Debugger;
 
-},{"./runtime/runtime":137,"./scheduler":138,"./stepper":139,"./transform":140}],136:[function(require,module,exports){
+},{"./runtime/runtime":123,"./scheduler":124,"./stepper":125,"./transform":126}],122:[function(require,module,exports){
 "use strict";
 
 /**
@@ -50935,7 +47444,7 @@ exports.forEach = forEach;
 exports.every = every;
 exports.some = some;
 
-},{}],137:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -50981,7 +47490,7 @@ self.setInterval = function (callback, delay) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./array":136}],138:[function(require,module,exports){
+},{"./array":122}],124:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -51099,14 +47608,14 @@ var Scheduler = function () {
 
 module.exports = Scheduler;
 
-},{"basic-ds":22}],139:[function(require,module,exports){
+},{"basic-ds":8}],125:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/*global recast, esprima, escodegen, injector */
+/*global esprima, escodegen, injector */
 
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 
@@ -51444,24 +47953,79 @@ var Stepper = function () {
 
 module.exports = Stepper;
 
-},{"../node_modules/basic-ds/lib/Stack":21}],140:[function(require,module,exports){
+},{"../node_modules/basic-ds/lib/Stack":7}],126:[function(require,module,exports){
 "use strict";
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 
 var LinkedList = require("basic-ds").LinkedList;
 var Stack = require("basic-ds").Stack;
-var b = require("ast-types").builders;
 var escodegen = require("escodegen");
 var escope = require("escope");
 var esprima = require("esprima-fb");
 var estraverse = require("estraverse");
 var regenerator = require("regenerator");
 
+var expressionStatement = function expressionStatement(expression) {
+    return {
+        type: "ExpressionStatement",
+        expression: expression
+    };
+};
+
+var yieldExpression = function yieldExpression(expression) {
+    return {
+        type: "YieldExpression",
+        argument: expression
+    };
+};
+
+var assignmentExpression = function assignmentExpression(operator, left, right) {
+    return {
+        type: "AssignmentExpression",
+        operator: operator,
+        left: left,
+        right: right
+    };
+};
+
 var assignmentStatement = function assignmentStatement(left, right, loc) {
-    var stmt = b.expressionStatement(b.assignmentExpression("=", left, right));
+    var stmt = expressionStatement(assignmentExpression("=", left, right));
     stmt.loc = loc;
     return stmt;
+};
+
+var functionDeclaration = function functionDeclaration(id, params, body, generator) {
+    return {
+        type: "FunctionDeclaration",
+        id: id,
+        params: params,
+        body: body,
+        generator: generator
+    };
+};
+
+var functionExpression = function functionExpression(params, body, generator) {
+    return {
+        type: "FunctionExpression",
+        params: params,
+        body: body,
+        generator: generator
+    };
+};
+
+var blockStatement = function blockStatement(body) {
+    return {
+        type: "BlockStatement",
+        body: body
+    };
+};
+
+var sequenceExpression = function sequenceExpression(expressions) {
+    return {
+        type: "SequenceExpression",
+        expressions: expressions
+    };
 };
 
 var rewriteVariableDeclarations = function rewriteVariableDeclarations(bodyList) {
@@ -51480,7 +48044,7 @@ var rewriteVariableDeclarations = function rewriteVariableDeclarations(bodyList)
                 var name = decl.id.name;
                 var scopeName = scopeNameForName(name);
                 if (scopeName) {
-                    replacements.push(assignmentStatement(memberExpression(scopeName, name), decl.init, decl.loc));
+                    replacements.push(assignmentStatement(memberExpression(identifier(scopeName), identifier(name)), decl.init, decl.loc));
                 }
             }
         });
@@ -51510,10 +48074,10 @@ var makeLocNode = function makeLocNode(loc) {
     // TODO: create a function to handle creating nested object expressions
     // differentiate from objectExpression which assumes that properties
     // that are objects are already AST nodes
-    var start = b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.start.line)), b.property("init", b.identifier("column"), b.literal(loc.start.column))]);
-    var end = b.objectExpression([b.property("init", b.identifier("line"), b.literal(loc.end.line)), b.property("init", b.identifier("column"), b.literal(loc.end.column))]);
+    var start = objectExpression([property(identifier("line"), literal(loc.start.line)), property(identifier("column"), literal(loc.start.column))]);
+    var end = objectExpression([property(identifier("line"), literal(loc.end.line)), property(identifier("column"), literal(loc.end.column))]);
 
-    return b.objectExpression([b.property("init", b.identifier("start"), start), b.property("init", b.identifier("end"), end)]);
+    return objectExpression([property(identifier("start"), start), property(identifier("end"), end)]);
 };
 
 var insertYields = function insertYields(bodyList) {
@@ -51597,7 +48161,7 @@ var isReference = function isReference(node, parent) {
 };
 
 var assignmentForDeclarator = function assignmentForDeclarator(scopeName, decl) {
-    var ae = b.assignmentExpression("=", memberExpression(scopeName, decl.id.name), decl.init);
+    var ae = assignmentExpression("=", memberExpression(identifier(scopeName), identifier(decl.id.name)), decl.init);
     ae.loc = decl.loc;
     return ae;
 };
@@ -51620,30 +48184,97 @@ var scopeNameForName = function scopeNameForName(name) {
     }
 };
 
+var callExpression = function callExpression(callee, args) {
+    return {
+        type: "CallExpression",
+        callee: callee,
+        arguments: args
+    };
+};
+
 var callInstantiate = function callInstantiate(node) {
     var name = stringForId(node.callee);
-    node.arguments.unshift(b.literal(name)); // constructor name
+    node.arguments.unshift(literal(name)); // constructor name
     node.arguments.unshift(node.callee); // constructor
-    return b.callExpression(memberExpression(contextName, "__instantiate__"), node.arguments);
+    return callExpression(memberExpression(identifier(contextName), identifier("__instantiate__")), node.arguments);
+};
+
+var variableDeclaration = function variableDeclaration(declarations) {
+    var kind = arguments.length <= 1 || arguments[1] === undefined ? "var" : arguments[1];
+
+    return {
+        type: "VariableDeclaration",
+        declarations: declarations,
+        kind: kind
+    };
+};
+
+var variableDeclarator = function variableDeclarator(id) {
+    var init = arguments.length <= 1 || arguments[1] === undefined ? null : arguments[1];
+
+    return {
+        type: "VariableDeclarator",
+        id: id,
+        init: init
+    };
 };
 
 var declareVariable = function declareVariable(name, value) {
-    return b.variableDeclaration("var", [b.variableDeclarator(b.identifier(name), value)]);
+    return variableDeclaration([variableDeclarator(identifier(name), value)]);
 };
 
-var memberExpression = function memberExpression(objName, propName) {
-    return b.memberExpression(b.identifier(objName), b.identifier(propName), false);
+var memberExpression = function memberExpression(object, property) {
+    var computed = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+
+    return {
+        type: "MemberExpression",
+        object: object,
+        property: property,
+        computed: computed
+    };
 };
 
-var objectExpression = function objectExpression(obj) {
-    return b.objectExpression(Object.keys(obj).map(function (key) {
-        var val = _typeof(obj[key]) === "object" ? obj[key] : b.literal(obj[key]);
-        return b.property("init", b.identifier(key), val);
+var identifier = function identifier(name) {
+    return {
+        type: "Identifier",
+        name: name
+    };
+};
+
+var literal = function literal(value) {
+    return {
+        type: "Literal",
+        value: value
+    };
+};
+
+var property = function property(key, value) {
+    var kind = arguments.length <= 2 || arguments[2] === undefined ? "init" : arguments[2];
+
+    return {
+        type: "Property",
+        key: key,
+        value: value,
+        kind: kind
+    };
+};
+
+var objectExpression = function objectExpression(properties) {
+    return {
+        type: "ObjectExpression",
+        properties: properties
+    };
+};
+
+var shallowObjectExpression = function shallowObjectExpression(obj) {
+    return objectExpression(Object.keys(obj).map(function (key) {
+        var val = _typeof(obj[key]) === "object" ? obj[key] : literal(obj[key]);
+        return property(identifier(key), val);
     }));
 };
 
 var yieldObject = function yieldObject(obj, loc) {
-    var stmt = b.expressionStatement(b.yieldExpression(objectExpression(obj)));
+    var stmt = expressionStatement(yieldExpression(shallowObjectExpression(obj)));
     if (loc) {
         stmt.loc = loc;
     }
@@ -51659,7 +48290,7 @@ var wrapExpression = function wrapExpression(expr, nextExpr) {
     } else {
         obj.stepAgain = true;
     }
-    return b.yieldExpression(objectExpression(obj));
+    return yieldExpression(shallowObjectExpression(obj));
 };
 
 var wrapSequenceExpressions = function wrapSequenceExpressions(seqNode, nextExpr) {
@@ -51676,11 +48307,11 @@ var addScopeDict = function addScopeDict(bodyList) {
     var scopeName = "$scope$" + (scopeStack.size - 1);
     var scope = scopeStack.peek();
 
-    bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("scope"), b.identifier(scopeName)));
+    bodyList.first.value.expression.argument.properties.push(property(identifier("scope"), identifier(scopeName)));
 
-    var scopeDict = b.objectExpression(Object.keys(scope).map(function (name) {
+    var scopeDict = objectExpression(Object.keys(scope).map(function (name) {
         var value = scope[name].type === "Parameter" ? name : "undefined";
-        return b.property("init", b.identifier(name), b.identifier(value));
+        return property(identifier(name), identifier(value));
     }));
 
     bodyList.push_front(declareVariable(scopeName, scopeDict));
@@ -51708,9 +48339,7 @@ var compile = function compile(ast, options) {
     } else {
         var entry = {
             type: "Program",
-            body: [b.functionDeclaration(b.identifier("entry"), [b.identifier(contextName)], b.blockStatement(ast.body), true, // generator
-            false // expression
-            )]
+            body: [functionDeclaration(identifier("entry"), [identifier(contextName)], blockStatement(ast.body), true)]
         };
 
         debugCode = escodegen.generate(regenerator.transform(entry));
@@ -51785,7 +48414,7 @@ var transform = function transform(code, _context, options) {
 
                 if (node.type === "FunctionDeclaration") {
                     var scopeName = "$scope$" + (scopeStack.size - 1);
-                    return assignmentStatement(memberExpression(scopeName, node.id.name), b.functionExpression(null, node.params, node.body, true, false), node.loc);
+                    return assignmentStatement(memberExpression(identifier(scopeName), identifier(node.id.name)), functionExpression(node.params, node.body, true), node.loc);
                 }
             } else if (node.type === "Program" || node.type === "BlockStatement") {
                 var bodyList = LinkedList.fromArray(node.body);
@@ -51804,7 +48433,7 @@ var transform = function transform(code, _context, options) {
                 if (functionName) {
                     // modify the first yield statement so that the object
                     // returned contains the function's name
-                    bodyList.first.value.expression.argument.properties.push(b.property("init", b.identifier("name"), b.literal(functionName)));
+                    bodyList.first.value.expression.argument.properties.push(property(identifier("name"), literal(functionName)));
 
                     addScopeDict(bodyList);
                     scopeStack.pop();
@@ -51814,12 +48443,9 @@ var transform = function transform(code, _context, options) {
             } else if (node.type === "CatchClause") {
                 scopeStack.pop();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                var obj = {
-                    value: node.type === "NewExpression" ? callInstantiate(node) : node,
-                    stepAgain: true
-                };
+                var properties = [property(identifier("value"), node.type === "NewExpression" ? callInstantiate(node) : node), property(identifier("stepAgain"), literal(true))];
 
-                var expr = b.yieldExpression(objectExpression(obj));
+                var expr = yieldExpression(objectExpression(properties));
                 expr.loc = node.loc;
                 return expr;
             } else if (node.type === "DebuggerStatement") {
@@ -51831,7 +48457,7 @@ var transform = function transform(code, _context, options) {
                 if (isReference(node, parent)) {
                     var scopeName = scopeNameForName(node.name);
                     if (scopeName) {
-                        return memberExpression(scopeName, node.name);
+                        return memberExpression(identifier(scopeName), identifier(node.name));
                     }
                 }
             } else if (node.type === "ForStatement") {
@@ -51881,7 +48507,7 @@ var transform = function transform(code, _context, options) {
                         };
                     } else if (replacements.length > 1) {
                         return {
-                            v: b.sequenceExpression(replacements)
+                            v: sequenceExpression(replacements)
                         };
                     } else {
                         return {
@@ -51893,9 +48519,9 @@ var transform = function transform(code, _context, options) {
                 if ((typeof _ret2 === "undefined" ? "undefined" : _typeof(_ret2)) === "object") return _ret2.v;
             } else if (node.type === "MemberExpression" && node.object.type === "MemberExpression" && node.property.name === "prototype") {
 
-                return b.callExpression(memberExpression(contextName, "__getPrototype__"), [node.object]);
+                return callExpression(memberExpression(identifier(contextName), identifier("__getPrototype__")), [node.object]);
             } else if (node.type === "AssignmentExpression" && node.left.type === "CallExpression") {
-                return b.callExpression(memberExpression(contextName, "__assignPrototype__"), [node.left.arguments[0], node.right.argument.properties[0].value // access the yield statement to grab the right hand side
+                return callExpression(memberExpression(identifier(contextName), identifier("__assignPrototype__")), [node.left.arguments[0], node.right.argument.properties[0].value // access the yield statement to grab the right hand side
                 ]);
             }
 
@@ -51909,5 +48535,5 @@ var transform = function transform(code, _context, options) {
 
 module.exports = transform;
 
-},{"ast-types":18,"basic-ds":22,"escodegen":35,"escope":37,"esprima-fb":40,"estraverse":41,"regenerator":61}]},{},[135])(135)
+},{"basic-ds":8,"escodegen":21,"escope":23,"esprima-fb":26,"estraverse":27,"regenerator":47}]},{},[121])(121)
 });

@@ -1,4 +1,4 @@
-/*global recast, esprima, escodegen, injector */
+/*global esprima, escodegen, injector */
 
 var Stack = require("../node_modules/basic-ds/lib/Stack");
 

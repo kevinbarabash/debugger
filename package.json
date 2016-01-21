@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha ./test/*-spec.js",
-    "build": "browserify ./src/debugger.js -o ./build/debugger.js -s Debugger -t [ babelify --presets [ es2015 ] ]",
-    "watch": "watchify ./src/debugger.js -o ./build/debugger.js -s Debugger -v -t [ babelify --presets [ es2015 ] ]",
+    "build": "browserify ./src/debugger.js -o ./build/debugger.js -s Debugger -t [ babelify ]",
+    "watch": "watchify ./src/debugger.js -o ./build/debugger.js -s Debugger -v -t [ babelify ]",
     "processing": "browserify ./src/processing-debugger.js -o ./build/processing-debugger.js --exclude ./src/debugger.js -s ProcessingDebugger -t [ babelify --presets [ es2015 ] ]"
   },
   "repository": {
@@ -33,7 +33,6 @@
     "watchify": "^3.6.1"
   },
   "dependencies": {
-    "ast-types": "~0.6.1",
     "basic-ds": "git://github.com/kevinb7/basic-ds.git",
     "escodegen": "git://github.com/kevinb7/escodegen.git#yield_with_parentheses",
     "escope": "^1.0.1",
