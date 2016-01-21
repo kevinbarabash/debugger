@@ -48436,6 +48436,11 @@ var transform = function transform(code, _context, options) {
                     bodyList.first.value.expression.argument.properties.push(property(identifier("name"), literal(functionName)));
 
                     addScopeDict(bodyList);
+
+                    bodyList.push_front(assignmentStatement(identifier("that"), {
+                        type: "ThisExpression"
+                    }));
+
                     scopeStack.pop();
                 }
 

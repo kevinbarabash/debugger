@@ -505,6 +505,11 @@ var transform = function(code, _context, options) {
                     );
 
                     addScopeDict(bodyList);
+
+                    bodyList.push_front(assignmentStatement(identifier("that"), {
+                        type: "ThisExpression"
+                    }));
+
                     scopeStack.pop();
                 }
 

@@ -45,7 +45,7 @@ if (typeof require !== "undefined") {
 
             _debugger = new Debugger({
                 nativeGenerators: nativeGenerators,
-                debug: true
+                debug: false
             });
             _debugger.context = context;
         });
