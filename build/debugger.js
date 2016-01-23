@@ -47623,7 +47623,7 @@ var frameProps = ["scope", "name", "loc", "stepInAgain"];
 
 var Stepper = function () {
     function Stepper(genObj, options) {
-        var _this = this;
+        var _this2 = this;
 
         _classCallCheck(this, Stepper);
 
@@ -47646,8 +47646,8 @@ var Stepper = function () {
         });
 
         this.stack.poppedLastItem = function () {
-            _this._stopped = true;
-            _this.doneCallback();
+            _this2._stopped = true;
+            _this2.doneCallback();
         };
 
         this._retVal = undefined;
@@ -47658,30 +47658,37 @@ var Stepper = function () {
         value: function stepIn() {
             var result;
             if (result = this._step()) {
-                if (result.value && result.value.hasOwnProperty("value")) {
-                    var value = result.value.value;
-
-                    if (this._isGenerator(value)) {
-                        this.stack.push({
-                            gen: value,
-                            line: this.line
-                        });
-                        this.stepIn();
-                        return "stepIn";
-                    } else {
-                        this._retVal = value;
-                        if (result.value.stepAgain) {
-                            return this.stepIn();
-                        }
-                    }
-                }
-
                 if (result.done) {
                     // when the generator is done, result.value contains the return value
                     // of the generator function
                     this._popAndStoreReturnValue(result.value);
                     return "stepOut";
                 }
+
+                var value = result.value.value;
+                if (result.value.type === 'call') {
+                    var _result$value = result.value;
+                    var fn = _result$value.fn;
+                    var args = _result$value.args;
+                    var _this = _result$value._this;
+
+                    value = fn.apply(_this, args);
+                }
+
+                if (this._isGenerator(value)) {
+                    this.stack.push({
+                        gen: value,
+                        line: this.line
+                    });
+                    this.stepIn();
+                    return "stepIn";
+                } else {
+                    this._retVal = value;
+                    if (result.value.stepAgain) {
+                        return this.stepIn();
+                    }
+                }
+
                 return "stepOver";
             }
         }
@@ -47690,29 +47697,36 @@ var Stepper = function () {
         value: function stepOver() {
             var result;
             if (result = this._step()) {
-                if (result.value && result.value.hasOwnProperty("value")) {
-                    var value = result.value.value;
-
-                    if (this._isGenerator(value)) {
-                        this._runScope(value);
-                        if (result.value.stepAgain) {
-                            this.stepOver();
-                        }
-                        return "stepOver";
-                    } else {
-                        this._retVal = value;
-                        if (result.value.stepAgain) {
-                            return this.stepOver();
-                        }
-                    }
-                }
-
                 if (result.done) {
                     // when the generator is done, result.value contains the return value
                     // of the generator function
                     this._popAndStoreReturnValue(result.value);
                     return "stepOut";
                 }
+
+                var value = result.value.value;
+                if (result.value.type === 'call') {
+                    var _result$value2 = result.value;
+                    var fn = _result$value2.fn;
+                    var args = _result$value2.args;
+                    var _this = _result$value2._this;
+
+                    value = fn.apply(_this, args);
+                }
+
+                if (this._isGenerator(value)) {
+                    this._runScope(value);
+                    if (result.value.stepAgain) {
+                        this.stepOver();
+                    }
+                    return "stepOver";
+                } else {
+                    this._retVal = value;
+                    if (result.value.stepAgain) {
+                        return this.stepOver();
+                    }
+                }
+
                 return "stepOver";
             }
         }
@@ -47722,9 +47736,17 @@ var Stepper = function () {
             var result;
             if (result = this._step()) {
                 while (!result.done) {
-                    if (result.value.hasOwnProperty("value")) {
-                        var value = result.value.value;
+                    var value = result.value.value;
+                    if (result.value.type === 'call') {
+                        var _result$value3 = result.value;
+                        var fn = _result$value3.fn;
+                        var args = _result$value3.args;
+                        var _this = _result$value3._this;
 
+                        value = fn.apply(_this, args);
+                    }
+
+                    if (value) {
                         if (this._isGenerator(value)) {
                             this._runScope(value);
                         } else {
@@ -47871,7 +47893,17 @@ var Stepper = function () {
             var result = this._step();
             while (!result.done) {
                 var value = result.value.value;
-                if (result.value.value) {
+
+                if (result.value.type === 'call') {
+                    var _result$value4 = result.value;
+                    var fn = _result$value4.fn;
+                    var args = _result$value4.args;
+                    var _this = _result$value4._this;
+
+                    value = fn.apply(_this, args);
+                }
+
+                if (value) {
                     if (this._isGenerator(value)) {
                         this._runScope(value);
                     } else {
@@ -48448,7 +48480,19 @@ var transform = function transform(code, _context, options) {
             } else if (node.type === "CatchClause") {
                 scopeStack.pop();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
-                var properties = [property(identifier("value"), node.type === "NewExpression" ? callInstantiate(node) : node), property(identifier("stepAgain"), literal(true))];
+                var call = node.type === "NewExpression" ? callInstantiate(node) : node;
+                var that = literal(null);
+                if (call.callee.type === "MemberExpression") {
+                    that = call.callee.object;
+                }
+                if (that.type === "ThisExpression") {
+                    that = identifier("that");
+                }
+
+                var properties = [property(identifier("type"), literal("call")), property(identifier("fn"), call.callee), property(identifier("args"), {
+                    type: "ArrayExpression",
+                    elements: call.arguments
+                }), property(identifier("_this"), that), property(identifier("stepAgain"), literal(true))];
 
                 var expr = yieldExpression(objectExpression(properties));
                 expr.loc = node.loc;
@@ -48526,7 +48570,8 @@ var transform = function transform(code, _context, options) {
 
                 return callExpression(memberExpression(identifier(contextName), identifier("__getPrototype__")), [node.object]);
             } else if (node.type === "AssignmentExpression" && node.left.type === "CallExpression") {
-                return callExpression(memberExpression(identifier(contextName), identifier("__assignPrototype__")), [node.left.arguments[0], node.right.argument.properties[0].value // access the yield statement to grab the right hand side
+                // TODO: check that others things that might be assigned to a class's prototype work as well
+                return callExpression(memberExpression(identifier(contextName), identifier("__assignPrototype__")), [node.left.arguments[0], node.right.argument.properties[2].value.elements[0] // access the yield statement to grab the original Object.create() call
                 ]);
             }
 

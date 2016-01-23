@@ -35,30 +35,33 @@ class Stepper {
     stepIn() {
         var result;
         if (result = this._step()) {
-            if (result.value && result.value.hasOwnProperty("value")) {
-                var value = result.value.value;
-
-                if (this._isGenerator(value)) {
-                    this.stack.push({
-                        gen: value,
-                        line: this.line
-                    });
-                    this.stepIn();
-                    return "stepIn";
-                } else {
-                    this._retVal = value;
-                    if (result.value.stepAgain) {
-                        return this.stepIn();
-                    }
-                }
-            }
-
             if (result.done) {
                 // when the generator is done, result.value contains the return value
                 // of the generator function
                 this._popAndStoreReturnValue(result.value);
                 return "stepOut";
             }
+
+            var value = result.value.value;
+            if (result.value.type === 'call') {
+                const { fn, args, _this } = result.value;
+                value = fn.apply(_this, args);
+            }
+
+            if (this._isGenerator(value)) {
+                this.stack.push({
+                    gen: value,
+                    line: this.line
+                });
+                this.stepIn();
+                return "stepIn";
+            } else {
+                this._retVal = value;
+                if (result.value.stepAgain) {
+                    return this.stepIn();
+                }
+            }
+
             return "stepOver";
         }
     }
@@ -66,29 +69,32 @@ class Stepper {
     stepOver() {
         var result;
         if (result = this._step()) {
-            if (result.value && result.value.hasOwnProperty("value")) {
-                var value = result.value.value;
-
-                if (this._isGenerator(value)) {
-                    this._runScope(value);
-                    if (result.value.stepAgain) {
-                        this.stepOver();
-                    }
-                    return "stepOver";
-                } else {
-                    this._retVal = value;
-                    if (result.value.stepAgain) {
-                        return this.stepOver();
-                    }
-                }
-            }
-
             if (result.done) {
                 // when the generator is done, result.value contains the return value
                 // of the generator function
                 this._popAndStoreReturnValue(result.value);
                 return "stepOut";
             }
+
+            var value = result.value.value;
+            if (result.value.type === 'call') {
+                const { fn, args, _this } = result.value;
+                value = fn.apply(_this, args);
+            }
+
+            if (this._isGenerator(value)) {
+                this._runScope(value);
+                if (result.value.stepAgain) {
+                    this.stepOver();
+                }
+                return "stepOver";
+            } else {
+                this._retVal = value;
+                if (result.value.stepAgain) {
+                    return this.stepOver();
+                }
+            }
+
             return "stepOver";
         }
     }
@@ -97,9 +103,13 @@ class Stepper {
         var result;
         if (result = this._step()) {
             while (!result.done) {
-                if (result.value.hasOwnProperty("value")) {
-                    var value = result.value.value;
+                var value = result.value.value;
+                if (result.value.type === 'call') {
+                    const { fn, args, _this } = result.value;
+                    value = fn.apply(_this, args);
+                }
 
+                if (value) {
                     if (this._isGenerator(value)) {
                         this._runScope(value);
                     } else {
@@ -262,7 +272,13 @@ class Stepper {
         var result = this._step();
         while (!result.done) {
             var value = result.value.value;
-            if (result.value.value) {
+
+            if (result.value.type === 'call') {
+                const { fn, args, _this } = result.value;
+                value = fn.apply(_this, args);
+            }
+
+            if (value) {
                 if (this._isGenerator(value)) {
                     this._runScope(value);
                 } else {

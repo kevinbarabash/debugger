@@ -517,8 +517,23 @@ var transform = function(code, _context, options) {
             } else if (node.type === "CatchClause") {
                 scopeStack.pop();
             } else if (node.type === "CallExpression" || node.type === "NewExpression") {
+                let call = node.type === "NewExpression" ? callInstantiate(node) : node;
+                let that = literal(null);
+                if (call.callee.type === "MemberExpression") {
+                    that = call.callee.object;
+                }
+                if (that.type === "ThisExpression") {
+                    that = identifier("that");
+                }
+
                 let properties = [
-                    property(identifier("value"), node.type === "NewExpression" ? callInstantiate(node) : node),
+                    property(identifier("type"), literal("call")),
+                    property(identifier("fn"), call.callee),
+                    property(identifier("args"), {
+                        type: "ArrayExpression",
+                        elements: call.arguments
+                    }),
+                    property(identifier("_this"), that),
                     property(identifier("stepAgain"), literal(true))
                 ];
 
@@ -591,11 +606,12 @@ var transform = function(code, _context, options) {
                      [node.object] 
                 ); 
             } else if (node.type === "AssignmentExpression" && node.left.type === "CallExpression") {
+                // TODO: check that others things that might be assigned to a class's prototype work as well
                 return callExpression(
                     memberExpression(identifier(contextName), identifier("__assignPrototype__")),
                     [
                         node.left.arguments[0],
-                        node.right.argument.properties[0].value // access the yield statement to grab the right hand side
+                        node.right.argument.properties[2].value.elements[0] // access the yield statement to grab the original Object.create() call
                     ]
                 );
             }
