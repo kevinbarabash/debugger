@@ -30,6 +30,7 @@ class Stepper {
         };
 
         this._retVal = undefined;
+        this._call = undefined;
     }
 
     stepIn() {
@@ -99,24 +100,35 @@ class Stepper {
         }
     }
 
+    makeStepOutCall() {
+        if (this._call) {
+            const { fn, args, _this } = this._call;
+            const value = fn.apply(_this, args);
+            this._call = undefined;
+
+            if (value) {
+                if (this._isGenerator(value)) {
+                    this._runScope(value);
+                } else {
+                    this._retVal = value;
+                }
+            }
+        }
+    }
+
     stepOut() {
         var result;
-        if (result = this._step()) {
+        // TODO: figure out a test case where makeStepOutCall is req'd here
+        if (result = this._step(() => this.makeStepOutCall())) {
             while (!result.done) {
                 var value = result.value.value;
                 if (result.value.type === 'call') {
-                    const { fn, args, _this } = result.value;
-                    value = fn.apply(_this, args);
+                    this._call = result.value;
+                } else {
+                    this._retVal = value;
                 }
 
-                if (value) {
-                    if (this._isGenerator(value)) {
-                        this._runScope(value);
-                    } else {
-                        this._retVal = value;
-                    }
-                }
-                result = this._step();
+                result = this._step(() => this.makeStepOutCall());
             }
 
             // when the generator is done, result.value contains the return value
@@ -205,11 +217,14 @@ class Stepper {
         //};
     }
 
-    _step() {
+    _step(makeCall) {
         if (this.stack.isEmpty) {
             return;
         }
         try {
+            if (makeCall) {
+                makeCall();
+            }
             var frame = this.stack.peek();
             var result = frame.gen.next(this._retVal);
             this._retVal = undefined;
@@ -240,23 +255,6 @@ class Stepper {
             if (result) {
                 var frame = this.stack.peek();
                 this._retVal = undefined;
-
-                // if the result.value contains scope information add it to the
-                // current stack frame
-                // TODO: make this list static
-
-                if (result.value) {
-                    frameProps.forEach(prop => {
-                        if (result.value.hasOwnProperty(prop)) {
-                            frame[prop] = result.value[prop];
-                        }
-                    });
-
-                    if (result.value.breakpoint) {
-                        this._paused = true;
-                        this.breakCallback();
-                    }
-                }
             }
         }
 

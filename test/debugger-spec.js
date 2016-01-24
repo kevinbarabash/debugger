@@ -1061,6 +1061,7 @@ if (typeof require !== "undefined") {
                 _debugger.stepOut();
                 _debugger.stepOut();
 
+                window.context = context;
                 expect(context.print.calledWith(5)).to.be(true);
             });
 

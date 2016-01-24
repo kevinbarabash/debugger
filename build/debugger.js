@@ -47651,6 +47651,7 @@ var Stepper = function () {
         };
 
         this._retVal = undefined;
+        this._call = undefined;
     }
 
     _createClass(Stepper, [{
@@ -47731,29 +47732,47 @@ var Stepper = function () {
             }
         }
     }, {
+        key: "makeStepOutCall",
+        value: function makeStepOutCall() {
+            if (this._call) {
+                var _call = this._call;
+                var fn = _call.fn;
+                var args = _call.args;
+                var _this = _call._this;
+
+                var value = fn.apply(_this, args);
+                this._call = undefined;
+
+                if (value) {
+                    if (this._isGenerator(value)) {
+                        this._runScope(value);
+                    } else {
+                        this._retVal = value;
+                    }
+                }
+            }
+        }
+    }, {
         key: "stepOut",
         value: function stepOut() {
+            var _this3 = this;
+
             var result;
-            if (result = this._step()) {
+            // TODO: figure out a test case where makeStepOutCall is req'd here
+            if (result = this._step(function () {
+                return _this3.makeStepOutCall();
+            })) {
                 while (!result.done) {
                     var value = result.value.value;
                     if (result.value.type === 'call') {
-                        var _result$value3 = result.value;
-                        var fn = _result$value3.fn;
-                        var args = _result$value3.args;
-                        var _this = _result$value3._this;
-
-                        value = fn.apply(_this, args);
+                        this._call = result.value;
+                    } else {
+                        this._retVal = value;
                     }
 
-                    if (value) {
-                        if (this._isGenerator(value)) {
-                            this._runScope(value);
-                        } else {
-                            this._retVal = value;
-                        }
-                    }
-                    result = this._step();
+                    result = this._step(function () {
+                        return _this3.makeStepOutCall();
+                    });
                 }
 
                 // when the generator is done, result.value contains the return value
@@ -47825,11 +47844,14 @@ var Stepper = function () {
         }
     }, {
         key: "_step",
-        value: function _step() {
+        value: function _step(makeCall) {
             if (this.stack.isEmpty) {
                 return;
             }
             try {
+                if (makeCall) {
+                    makeCall();
+                }
                 var frame = this.stack.peek();
                 var result = frame.gen.next(this._retVal);
                 this._retVal = undefined;
@@ -47860,23 +47882,6 @@ var Stepper = function () {
                 if (result) {
                     var frame = this.stack.peek();
                     this._retVal = undefined;
-
-                    // if the result.value contains scope information add it to the
-                    // current stack frame
-                    // TODO: make this list static
-
-                    if (result.value) {
-                        frameProps.forEach(function (prop) {
-                            if (result.value.hasOwnProperty(prop)) {
-                                frame[prop] = result.value[prop];
-                            }
-                        });
-
-                        if (result.value.breakpoint) {
-                            this._paused = true;
-                            this.breakCallback();
-                        }
-                    }
                 }
             }
 
@@ -47895,10 +47900,10 @@ var Stepper = function () {
                 var value = result.value.value;
 
                 if (result.value.type === 'call') {
-                    var _result$value4 = result.value;
-                    var fn = _result$value4.fn;
-                    var args = _result$value4.args;
-                    var _this = _result$value4._this;
+                    var _result$value3 = result.value;
+                    var fn = _result$value3.fn;
+                    var args = _result$value3.args;
+                    var _this = _result$value3._this;
 
                     value = fn.apply(_this, args);
                 }
