@@ -33,6 +33,30 @@ class Stepper {
         this._call = undefined;
     }
 
+    makeStepInCall() {
+        if (this._call) {
+            const { fn, args, _this, stepAgain } = this._call;
+            const value = fn.apply(_this, args);
+            this._call = undefined;
+
+            if (this._isGenerator(value)) {
+                this.stack.push({
+                    gen: value,
+                    line: this.line
+                });
+                this.stepIn();
+                return "stepIn";
+            } else {
+                this._retVal = value;
+                if (stepAgain) {
+                    return this.stepIn();
+                }
+            }
+        }
+
+        return "stepOver";
+    }
+
     stepIn() {
         var result;
         if (result = this._step()) {
@@ -44,32 +68,55 @@ class Stepper {
             }
 
             var value = result.value.value;
-            if (result.value.type === 'call') {
-                const { fn, args, _this } = result.value;
-                value = fn.apply(_this, args);
-            }
 
-            if (this._isGenerator(value)) {
-                this.stack.push({
-                    gen: value,
-                    line: this.line
-                });
-                this.stepIn();
-                return "stepIn";
+            if (result.value.type === 'call') {
+                this._call = result.value;
             } else {
-                this._retVal = value;
-                if (result.value.stepAgain) {
-                    return this.stepIn();
+                // we might actual return a generator as a value in the case of callbacks
+                if (this._isGenerator(value)) {
+                    this.stack.push({
+                        gen: value,
+                        line: this.line
+                    });
+                    this.stepIn();
+                    return "stepIn";
+                } else {
+                    this._retVal = value;
+                    if (result.value.stepAgain) {
+                        return this.stepIn();
+                    }
                 }
             }
 
-            return "stepOver";
+            return this.makeStepInCall();
         }
+    }
+
+    makeStepOverCall() {
+        if (this._call) {
+            const { fn, args, _this, stepAgain } = this._call;
+            const value = fn.apply(_this, args);
+            this._call = undefined;
+
+            if (this._isGenerator(value)) {
+                this._runScope(value);
+                if (stepAgain) {
+                    this.stepOver();
+                }
+            } else {
+                this._retVal = value;
+                if (stepAgain) {
+                    this.stepOver();
+                }
+            }
+        }
+
+        return "stepOver";
     }
 
     stepOver() {
         var result;
-        if (result = this._step()) {
+        if (result = this._step(() => this.makeStepOverCall())) {
             if (result.done) {
                 // when the generator is done, result.value contains the return value
                 // of the generator function
@@ -78,17 +125,9 @@ class Stepper {
             }
 
             var value = result.value.value;
-            if (result.value.type === 'call') {
-                const { fn, args, _this } = result.value;
-                value = fn.apply(_this, args);
-            }
 
-            if (this._isGenerator(value)) {
-                this._runScope(value);
-                if (result.value.stepAgain) {
-                    this.stepOver();
-                }
-                return "stepOver";
+            if (result.value.type === 'call') {
+                this._call = result.value;
             } else {
                 this._retVal = value;
                 if (result.value.stepAgain) {
@@ -96,7 +135,25 @@ class Stepper {
                 }
             }
 
-            return "stepOver";
+            return this.makeStepOverCall();
+
+            //if (result.value.type === 'call') {
+            //    const { fn, args, _this } = result.value;
+            //    value = fn.apply(_this, args);
+            //}
+            //
+            //if (this._isGenerator(value)) {
+            //    this._runScope(value);
+            //    if (result.value.stepAgain) {
+            //        this.stepOver();
+            //    }
+            //    return "stepOver";
+            //} else {
+            //    this._retVal = value;
+            //    if (result.value.stepAgain) {
+            //        return this.stepOver();
+            //    }
+            //}
         }
     }
 
