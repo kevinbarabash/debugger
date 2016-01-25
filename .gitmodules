@@ -1,6 +1,6 @@
 [submodule "external/object-browser"]
 	path = external/object-browser
-	url = https://github.com/kevinb7/object-browser.git
+	url = https://github.com/kevinbarabash/object-browser.git
 [submodule "external/processing-js"]
 	path = external/processing-js
-	url = https://github.com/kevinb7/processing-js.git
+	url = https://github.com/kevinbarabash/processing-js.git

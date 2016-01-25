@@ -7,7 +7,7 @@ This project is currently focused on debugging processing.js programs being
 run in Khan Academy's live-editor.  Eventually make the debugger more general 
 purpose.  That being said, it already supports a lot of JavaScript constructs.
 
-[live demo](http://kevinb7.github.io/debugger/demo/index.html)
+[live demo](http://kevinbarabash.github.io/debugger/demo/index.html)
 
 ## Features ##
 
